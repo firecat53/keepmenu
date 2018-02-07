@@ -22,7 +22,7 @@ Requirements
 1. Python 2.7+ or 3.2+
 2. Pykeepass_
 3. Dmenu. Basic support is included for Rofi_, but most Rofi configuration/theming should be done via Xresources.
-7. (optional) Pinentry. Make sure to set which flavor of pinentry command to use in the config file.
+4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use in the config file.
 
 Installation
 ------------
@@ -39,9 +39,7 @@ Usage
 -----
 
 - Run script or bind to keystroke combination
-- If desired, dmenu or Rofi options can be passed on the command line instead of
-  or in addition to the config file. These will override options in the config
-  file.
+- If desired, dmenu or Rofi options can be passed on the command line instead of or in addition to the config file. These will override options in the config file.
 
 .. _Rofi: https://davedavenport.github.io/rofi/
 .. _Pykeepass: https://github.com/pschmitt/pykeepass

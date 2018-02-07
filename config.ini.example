@@ -20,3 +20,8 @@ fn = -*-terminus-medium-*-*-*-16-*-*-*-*-*-*-*
 # nf = #222222
 # nb = #222222
 # rofi_obscure = True
+
+[database]
+# database_n = <path/to/database> ~ for $HOME is ok
+# keyfile_n = <path/to/keyfile>
+# password_n = database password  **INSECURE**
