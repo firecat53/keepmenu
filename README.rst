@@ -1,15 +1,23 @@
 Keepmenu
 ========
 
-Read and copy entries from Keepass databases using dmenu or Rofi_.
+Select entries from Keepass databases using dmenu or Rofi_ and type username and/or password into the active window.
+
+Inspired in part by Passhole_, but I wanted something more dmenu and less command line focused.
+
+I'm very aware of pass and passmenu, but I've found that the Keepass options for other platforms are much easier to use, especially for the non-technically oriented. Thus...synchronized passwords and everyone is happy!
 
 Features
 --------
 
 - Set multiple databases in the config file, including key files.
-- Auto-type username and/or password on selection.
-- Enter database password and optionally(TODO) store it in a running gpg-agent instance.
-- Optional Pinentry support for secure passphrase entry
+- Auto-type username and/or password on selection. No clipboard copy/paste involved.
+- Enter database passphrase and optionally gpg encrypt and cache it using an existing gpg-agent key.
+- Set cache expiration time for saving the database passphrase
+- Optional Pinentry support for secure passphrase entry.
+- Possible future features:
+  + Add/edit/delete entries
+  + View/copy password notes
 
 License
 -------
@@ -20,19 +28,23 @@ Requirements
 ------------
 
 1. Python 2.7+ or 3.2+
-2. Pykeepass_ and PyUserInput_. Install via pip or your distribution's package manager, if available.
+2. Pykeepass_, PyUserInput_, and pygpgme_. Install via pip or your distribution's package manager, if available.
 3. Dmenu. Basic support is included for Rofi_, but most Rofi configuration/theming should be done via Xresources.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use in the config file.
 
 Installation
 ------------
 
-- Set your dmenu_command in config.ini if it's not 'dmenu' (for example dmenu_run or rofi). The alternate command should still respect the -l, -p and -i flags.
-- Copy config.ini.example to ~/.config/keepmenu/config.ini and edit.
+- Copy config.ini.example to ~/.config/keepmenu/config.ini
+
+  + Add your database(s) and keyfile(s)
+  + Add `gpg_key` if you want the database passphrase cached
+  + Set the dmenu_command to `rofi` if you are using that instead
+
 - If using Rofi, you can try some of the command line options in config.ini or set them using the `dmenu_command` setting, but I haven't tested most of them so I'd suggest configuring via .Xresources where possible. 
-- Copy script somewhere in $PATH
-- If desired, copy the keepmenu.desktop to /usr/share/applications or ~/.local/share/applications.
 - If using dmenu for passphrase entry (pinentry not set), dmenu options in the [dmenu_passphrase] section of config.ini will override those in [dmenu] so you can, for example, set the normal foreground and background colors to be the same to obscure the passphrase.
+
+.. warning:: If you choose to store your database password into config.ini, make sure to `chmod 600 config.ini`. This is not secure and I only added it as a convenience for testing.
 
 Usage
 -----
@@ -40,5 +52,7 @@ Usage
 - Run script or bind to keystroke combination
 
 .. _Rofi: https://davedavenport.github.io/rofi/
+.. _Passhole: https://github.com/purduelug/passhole
 .. _Pykeepass: https://github.com/pschmitt/pykeepass
 .. _PyUserInput: https://github.com/PyUserInput/PyUserInput
+.. _pygpgme: https://pypi.python.org/pypi/pygpgme

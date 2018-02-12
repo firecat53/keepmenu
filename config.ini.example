@@ -25,3 +25,5 @@ fn = -*-terminus-medium-*-*-*-16-*-*-*-*-*-*-*
 # database_n = <path/to/database> ~ for $HOME is ok
 # keyfile_n = <path/to/keyfile>
 # password_n = database password  **INSECURE**
+# gpg_key = <fingerprint - last 8 characters is fine>
+# pw_cache_period = <hours to cache database password>

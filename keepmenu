@@ -6,6 +6,12 @@ Add dmenu formatting options and default terminal if desired to
 ~/.config/keepmenu/config.ini
 
 """
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+from datetime import datetime, timedelta
+from io import BytesIO
 import itertools
 import locale
 import os
@@ -13,6 +19,7 @@ from os.path import expanduser
 import shlex
 import sys
 from subprocess import Popen, PIPE
+import gpgme
 from pykeepass import PyKeePass
 from pykeyboard import PyKeyboard
 
@@ -24,10 +31,21 @@ except ImportError:
 ENV = os.environ.copy()
 ENV['LC_ALL'] = 'C'
 ENC = locale.getpreferredencoding()
-CONF = "~/.config/keepmenu/config.ini"
+CACHE_FILE = expanduser("~/.cache/keepmenu")
+CACHE_EXPIRY_FILE = expanduser("~/.cache/keepmenu_exp")
+CACHE_PERIOD_DEFAULT = 6
+CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
+CONF = configparser.ConfigParser()
+CONF.read(CONF_FILE)
+if CONF.has_option("database", "pw_cache_period"):
+    CACHE_PERIOD = int(CONF.get("database", "pw_cache_period"))
+else:
+    CACHE_PERIOD = CACHE_PERIOD_DEFAULT
+GPG = gpgme.Context()
 
 if sys.version_info.major < 3:
     str = unicode
+
 
 def dmenu_cmd(num_lines, prompt="Entries"):  # pylint: disable=too-many-branches
     """Parse config.ini for dmenu options
@@ -39,12 +57,10 @@ def dmenu_cmd(num_lines, prompt="Entries"):  # pylint: disable=too-many-branches
 
     """
     dmenu_command = "dmenu"
-    conf = configparser.ConfigParser()
-    conf.read(expanduser(CONF))
-    if not conf.has_section('dmenu'):
+    if not CONF.has_section('dmenu'):
         dmenu = [dmenu_command, "-i", "-l", str(num_lines), "-p", str(prompt)]
     else:
-        args = conf.items('dmenu')
+        args = CONF.items('dmenu')
         args_dict = dict(args)
         dmenu_args = []
         if "dmenu_command" in args_dict:
@@ -71,12 +87,12 @@ def dmenu_cmd(num_lines, prompt="Entries"):  # pylint: disable=too-many-branches
         if "pinentry" in args_dict:
             del args_dict["pinentry"]
     if prompt == "Passphrase":
-        if conf.has_section('dmenu_passphrase'):
-            args = conf.items('dmenu_passphrase')
+        if CONF.has_section('dmenu_passphrase'):
+            args = CONF.items('dmenu_passphrase')
             args_dict.update(args)
         rofi_obscure = True
-        if conf.has_option('dmenu_passphrase', 'rofi_obscure'):
-            rofi_obscure = conf.getboolean('dmenu_passphrase', 'rofi_obscure')
+        if CONF.has_option('dmenu_passphrase', 'rofi_obscure'):
+            rofi_obscure = CONF.getboolean('dmenu_passphrase', 'rofi_obscure')
             del args_dict["rofi_obscure"]
         if rofi_obscure is True and "rofi" in dmenu_command:
             dmenu_args.extend(["-password"])
@@ -89,17 +105,24 @@ def dmenu_cmd(num_lines, prompt="Entries"):  # pylint: disable=too-many-branches
     return dmenu
 
 
+def dmenu_err(prompt):
+    """Pops up a dmenu prompt with an error message
+
+    """
+    Popen(dmenu_cmd(1, prompt), stdin=PIPE, stdout=PIPE,
+          env=ENV).communicate(input='')
+    return
+
+
 def get_databases():
-    """Parse config.ini and return all available databases
+    """Return all available databases from config.ini
 
     Returns: [(database name, keyfile, passphrase), (database2, kf, pw), ...]
     """
-    conf = configparser.ConfigParser()
-    conf.read(expanduser(CONF))
-    if not conf.has_section('database'):
-        print("No databases defined in {}".format(CONF))
+    if not CONF.has_section('database'):
+        dmenu_err("No databases defined in {}".format(CONF_FILE))
         sys.exit()
-    args = conf.items('database')
+    args = CONF.items('database')
     args_dict = dict(args)
     dbs = []
     idx = 1
@@ -131,46 +154,87 @@ def open_database(dbo):
     dbf, keyfile, password = dbo
     if not password:
         password = get_passphrase()
+        if CONF.has_option("database", "gpg_key"):
+            cache_passphrase(password)
     try:
         kpo = PyKeePass(dbf, password, keyfile=keyfile)
     except FileNotFoundError:
-        Popen(dmenu_cmd(1, "Database does not exist"), stdin=PIPE, stdout=PIPE,
-              env=ENV).communicate(input='')
+        dmenu_err("Database does not exists")
         sys.exit()
     except OSError:
-        Popen(dmenu_cmd(1, "Invalid Password or keyfile"), stdin=PIPE,
-              stdout=PIPE, env=ENV).communicate(input='')
+        dmenu_err("Invalid Password or keyfile")
         sys.exit()
     return kpo
 
 
+def get_cached_passphrase():
+    """Retrieve cached passphrase if possible
+
+    """
+    # First check if the cache file exists and if it is expired
+    try:
+        with open(CACHE_EXPIRY_FILE, 'rb') as cef:
+            expiry = pickle.load(cef)
+    except FileNotFoundError:
+        return ""
+    if datetime.now() > expiry:
+        return ""
+    with BytesIO() as data:
+        try:
+            with open(CACHE_FILE, 'rb') as cache:
+                GPG.decrypt(cache, data)
+                password = data.getvalue().decode(ENC).rstrip('\n')
+        except FileNotFoundError:
+            return ""
+        except gpgme.GpgmeError:
+            return ""
+    return password
+
+
+def cache_passphrase(password):
+    """Save passphrase to cache file
+
+    """
+    key = CONF.get("database", "gpg_key")
+    gpg_key = GPG.get_key(key)
+    with BytesIO(password.encode(ENC)) as data:
+        try:
+            with open(CACHE_FILE, 'wb') as cache:
+                GPG.encrypt([gpg_key], 0, data, cache)
+        except gpgme.GpgmeError:
+            dmenu_err("Gpg error...unable to cache passphrase")
+    with open(CACHE_EXPIRY_FILE, 'wb') as cef:
+        pickle.dump(datetime.now() + timedelta(hours=CACHE_PERIOD), cef, -1)
+
+
 def get_passphrase():
-    """Get a password
+    """Get a database password from dmenu, pinentry or cached gpg encrypted file
 
     Returns: string
 
     """
-
-    conf = configparser.ConfigParser()
-    conf.read(expanduser(CONF))
     pinentry = None
-    if conf.has_option("dmenu", "pinentry"):
-        pinentry = conf.get("dmenu", "pinentry")
+    if CONF.has_option("database", "gpg_key"):
+        password = get_cached_passphrase()
+    if password:
+        return password
+    if CONF.has_option("dmenu", "pinentry"):
+        pinentry = CONF.get("dmenu", "pinentry")
     if pinentry:
-        pin = ""
+        password = ""
         out = Popen(pinentry,
                     stdout=PIPE,
                     stdin=PIPE).communicate( \
-                            input=b'setdesc Get database password\ngetpin\n')[0]
+                            input=b'setdesc Enter database password\ngetpin\n')[0]
         if out:
             res = out.decode(ENC).split("\n")[2]
             if res.startswith("D "):
-                pin = res.split("D ")[1]
-        return pin
+                password = res.split("D ")[1]
     else:
-        return Popen(dmenu_cmd(0, "Passphrase"),
-                     stdin=PIPE,
-                     stdout=PIPE).communicate()[0].decode(ENC).rstrip('\n')
+        password = Popen(dmenu_cmd(0, "Passphrase"),
+                         stdin=PIPE,
+                         stdout=PIPE).communicate()[0].decode(ENC).rstrip('\n')
+    return password
 
 
 def type_entry(entry):
