@@ -2,14 +2,7 @@
 # encoding:utf8
 """Read and copy Keepass database entries using dmenu or rofi
 
-Add dmenu formatting options and default terminal if desired to
-~/.config/keepmenu/config.ini
-
 """
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 from datetime import datetime, timedelta
 from io import BytesIO
 import itertools
@@ -23,6 +16,10 @@ import gpgme
 from pykeepass import PyKeePass
 from pykeyboard import PyKeyboard
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 try:
     import configparser as configparser
 except ImportError:
