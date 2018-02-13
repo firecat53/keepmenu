@@ -35,6 +35,16 @@ Requirements
 Installation
 ------------
 
+- Installation
+
+  + In a virtualenv with pip. Link to the executable in <path/to/virtualenv/bin/keepmenu> ::
+
+        mkvirtualenv keepmenu
+        pip install keepmenu
+
+  + From git. Just clone, install requirements and run
+  + Available in `Archlinux AUR`_. 
+
 - Copy config.ini.example to ~/.config/keepmenu/config.ini
 
   + Add your database(s) and keyfile(s)
@@ -56,3 +66,4 @@ Usage
 .. _Pykeepass: https://github.com/pschmitt/pykeepass
 .. _PyUserInput: https://github.com/PyUserInput/PyUserInput
 .. _pygpgme: https://pypi.python.org/pypi/pygpgme
+.. _Archlinux AUR: https://aur.archlinux.org/packages/python-keepmenu-git
