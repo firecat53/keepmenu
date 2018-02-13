@@ -155,7 +155,7 @@ def open_database(dbo):
             cache_passphrase(password)
     try:
         kpo = PyKeePass(dbf, password, keyfile=keyfile)
-    except FileNotFoundError:
+    except IOError:
         dmenu_err("Database does not exists")
         sys.exit()
     except OSError:
@@ -172,7 +172,7 @@ def get_cached_passphrase():
     try:
         with open(CACHE_EXPIRY_FILE, 'rb') as cef:
             expiry = pickle.load(cef)
-    except FileNotFoundError:
+    except IOError:
         return ""
     if datetime.now() > expiry:
         return ""
@@ -181,7 +181,7 @@ def get_cached_passphrase():
             with open(CACHE_FILE, 'rb') as cache:
                 GPG.decrypt(cache, data)
                 password = data.getvalue().decode(ENC).rstrip('\n')
-        except FileNotFoundError:
+        except IOError:
             return ""
         except gpgme.GpgmeError:
             return ""
