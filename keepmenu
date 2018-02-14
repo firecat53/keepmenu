@@ -4,6 +4,7 @@
 
 """
 from datetime import datetime, timedelta
+import errno
 from io import BytesIO
 import itertools
 import locale
@@ -116,18 +117,13 @@ def get_databases():
 
     Returns: [(database name, keyfile, passphrase), (database2, kf, pw), ...]
     """
-    if not CONF.has_section('database'):
-        dmenu_err("No databases defined in {}".format(CONF_FILE))
-        sys.exit()
     args = CONF.items('database')
     args_dict = dict(args)
+    dbases = [i for i in args_dict if i.startswith('database')]
     dbs = []
-    idx = 1
-    while True:
-        try:
-            dbn = expanduser(args_dict['database_{}'.format(idx)])
-        except KeyError:
-            break
+    for dbase in dbases:
+        dbn = expanduser(args_dict[dbase])
+        idx = dbase.rsplit('_', 1)[-1]
         try:
             keyfile = expanduser(args_dict['keyfile_{}'.format(idx)])
         except KeyError:
@@ -137,7 +133,9 @@ def get_databases():
         except KeyError:
             passw = ''
         dbs.append((dbn, keyfile, passw))
-        idx += 1
+    if not dbs:
+        dmenu_err("No databases defined in {}".format(CONF_FILE))
+        sys.exit()
     return dbs
 
 
@@ -151,16 +149,19 @@ def open_database(dbo):
     dbf, keyfile, password = dbo
     if not password:
         password = get_passphrase()
-        if CONF.has_option("database", "gpg_key"):
-            cache_passphrase(password)
     try:
         kpo = PyKeePass(dbf, password, keyfile=keyfile)
-    except IOError:
-        dmenu_err("Database does not exists")
+    except (IOError, OSError, IndexError) as e:  ## pylint: disable=invalid-name
+        if e.args[0] == "Master key invalid." or e.args[0] == "No credentials found.":
+            dmenu_err("Invalid Password or keyfile")
+            # Invalidate cached pw if keyfile/password are wrong
+            with open(CACHE_EXPIRY_FILE, 'wb') as cef:
+                pickle.dump(datetime.now(), cef, -1)
+        elif e.errno == errno.ENOENT:
+            dmenu_err("Database does not exist")
         sys.exit()
-    except OSError:
-        dmenu_err("Invalid Password or keyfile")
-        sys.exit()
+    if CONF.has_option("database", "gpg_key"):
+        cache_passphrase(password)
     return kpo
 
 
