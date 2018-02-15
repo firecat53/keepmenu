@@ -39,6 +39,11 @@ if CONF.has_option("database", "pw_cache_period"):
     CACHE_PERIOD = int(CONF.get("database", "pw_cache_period"))
 else:
     CACHE_PERIOD = CACHE_PERIOD_DEFAULT
+if CONF.has_option("dmenu", "l"):
+    DMENU_LEN = int(CONF.get("dmenu", "l"))
+else:
+    DMENU_LEN = 24
+
 GPG = gpgme.Context()
 
 if sys.version_info.major < 3:
@@ -56,7 +61,8 @@ def dmenu_cmd(num_lines, prompt="Entries"):  # pylint: disable=too-many-branches
     """
     dmenu_command = "dmenu"
     if not CONF.has_section('dmenu'):
-        dmenu = [dmenu_command, "-i", "-l", str(num_lines), "-p", str(prompt)]
+        dmenu = [dmenu_command, "-i", "-l",
+                 str(min(DMENU_LEN, num_lines)), "-p", str(prompt)]
     else:
         args = CONF.items('dmenu')
         args_dict = dict(args)
@@ -236,7 +242,8 @@ def get_passphrase():
 
 
 def type_entry(entry):
-    """Use PyUserInput to type the selected entry
+    """Use PyUserInput to type the selected entry username and/or password and
+    then 'Enter'.
 
     """
     kbd = PyKeyboard()
@@ -248,6 +255,70 @@ def type_entry(entry):
         kbd.type_string(entry.password)
     # Not sure why we need n=2, but only seems to work that way
     kbd.tap_key(kbd.enter_key, n=2)
+
+
+def type_text(data):
+    """Use PyUserInput to type the given text data
+
+    """
+    kbd = PyKeyboard()
+    kbd.type_string(data)
+
+
+def view_all_entries(options, kp_entries):
+    """Generate numbered list of all Keepass entries and open with dmenu.
+
+    Returns: dmenu selection
+
+    """
+    num_align = len(str(len(kp_entries)))
+    kp_entry_pattern = "{:>{na}} - {} - {} - {}"  # Path,username,url
+    # Have to number each entry to capture duplicates correctly
+    kp_entries_b = "\n".join([kp_entry_pattern.format(j, i.path, i.username, i.url, na=num_align)
+                              for j, i in enumerate(kp_entries)]).encode(ENC)
+    if options:
+        options_b = ("\n".join(options) + "\n").encode(ENC)
+        entries_b = options_b + kp_entries_b
+    else:
+        entries_b = kp_entries_b
+    return Popen(dmenu_cmd(min(DMENU_LEN, len(options) + len(kp_entries))),
+                 stdin=PIPE, stdout=PIPE, env=ENV).communicate(input=entries_b)[0].decode(ENC).rstrip()
+
+
+def view_entry(kp_entry):
+    """Show title, username, password, url and notes for an entry.
+
+    Returns: dmenu selection
+
+    """
+    fields = [kp_entry.path or "Title: None",
+              kp_entry.username or "Username: None",
+              '**********' if kp_entry.password else "Password: None",
+              kp_entry.url or "URL: None",
+              "Notes: <Enter to view>" if kp_entry.notes else "Notes: None"]
+    kp_entries_b = "\n".join(fields).encode(ENC)
+    sel = Popen(dmenu_cmd(len(fields)), stdin=PIPE, stdout=PIPE,
+                env=ENV).communicate(input=kp_entries_b)[0].decode(ENC).rstrip()
+    if sel == "Notes: <Enter to view>":
+        sel = view_notes(kp_entry.notes)
+    elif sel == "Notes: None":
+        sel = ""
+    elif sel == '**********':
+        sel = kp_entry.password
+    return sel
+
+
+def view_notes(notes):
+    """View the 'Notes' field line-by-line within dmenu.
+
+    Returns: text of the selected line for typing
+
+    """
+    notes_l = notes.split('\n')
+    notes_b = "\n".join(notes_l).encode(ENC)
+    sel = Popen(dmenu_cmd(min(DMENU_LEN, len(notes_l))), stdin=PIPE, stdout=PIPE,
+                env=ENV).communicate(input=notes_b)[0].decode(ENC).rstrip()
+    return sel
 
 
 def run():
@@ -262,18 +333,20 @@ def run():
         if not sel.rstrip():
             sys.exit()
         keepass = open_database([i for i in databases if i[0] == sel.strip()][0])
-    entries = keepass.entries
-    num_align = len(str(len(entries)))
-    entry_pattern = "{:>{na}} - {} - {} - {}"  # Path,username,url
-    # Have to number each entry to capture duplicates correctly
-    entries_b = "\n".join([entry_pattern.format(j, i.path, i.username, i.url, na=num_align)
-                           for j, i in enumerate(entries)]).encode(ENC)
-    sel = Popen(dmenu_cmd(min(24, len(entries))), stdin=PIPE, stdout=PIPE,
-                env=ENV).communicate(input=entries_b)[0].decode(ENC)
-    if not sel.rstrip():
+    kp_entries = keepass.entries
+    options = ['View/Type Individual entries']
+    sel = view_all_entries(options, kp_entries)
+    if not sel:
         sys.exit()
-    entry = entries[int(sel.split('-', 1)[0])]
-    type_entry(entry)
+    if sel in options:
+        options = []
+        sel = view_all_entries(options, kp_entries)
+        entry = kp_entries[int(sel.split('-', 1)[0])]
+        text = view_entry(entry)
+        type_text(text)
+    else:
+        entry = kp_entries[int(sel.split('-', 1)[0])]
+        type_entry(entry)
 
 
 if __name__ == '__main__':
