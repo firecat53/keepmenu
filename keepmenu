@@ -58,8 +58,19 @@ def process_config():
     if not exists(CONF_FILE):
         with open(CONF_FILE, 'w') as conf_file:
             CONF.add_section('dmenu')
+            CONF.set('dmenu', 'dmenu_command', '')
+            CONF.set('dmenu', 'pinentry', '')
+            CONF.set('dmenu', 'l', '24')
+            CONF.set('dmenu', 'fn', '')
+            CONF.add_section('dmenu_passphrase')
+            CONF.set('dmenu_passphrase', 'nf', '#222222')
+            CONF.set('dmenu_passphrase', 'nb', '#222222')
+            CONF.set('dmenu_passphrase', 'rofi_obscure', 'True')
             CONF.add_section('database')
             CONF.set('database', 'database_1', '')
+            CONF.set('database', 'keyfile_1', '')
+            CONF.set('database', 'gpg_key', '')
+            CONF.set('database', 'pw_cache_period', str(CACHE_PERIOD_DEFAULT))
             CONF.write(conf_file)
     CONF.read(CONF_FILE)
     if CONF.has_option("database", "pw_cache_period"):
