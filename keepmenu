@@ -9,7 +9,7 @@ from io import BytesIO
 import itertools
 import locale
 import os
-from os.path import expanduser
+from os.path import exists, expanduser
 import shlex
 import sys
 from subprocess import Popen, PIPE
@@ -26,28 +26,50 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-ENV = os.environ.copy()
-ENV['LC_ALL'] = 'C'
-ENC = locale.getpreferredencoding()
-CACHE_FILE = expanduser("~/.cache/keepmenu")
-CACHE_EXPIRY_FILE = expanduser("~/.cache/keepmenu_exp")
-CACHE_PERIOD_DEFAULT = 6
-CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
-CONF = configparser.ConfigParser()
-CONF.read(CONF_FILE)
-if CONF.has_option("database", "pw_cache_period"):
-    CACHE_PERIOD = int(CONF.get("database", "pw_cache_period"))
-else:
-    CACHE_PERIOD = CACHE_PERIOD_DEFAULT
-if CONF.has_option("dmenu", "l"):
-    DMENU_LEN = int(CONF.get("dmenu", "l"))
-else:
-    DMENU_LEN = 24
 
 GPG = gpgme.Context()
 
 if sys.version_info.major < 3:
     str = unicode
+
+
+def process_config():
+    """Set global variables. Read the config file. Create default config file if
+    one doesn't exist.
+
+    """
+    global CACHE_EXPIRY_FILE, \
+           CACHE_FILE, \
+           CACHE_PERIOD, \
+           CACHE_PERIOD_DEFAULT, \
+           CONF, \
+           CONF_FILE, \
+           DMENU_LEN, \
+           ENV, \
+           ENC
+    ENV = os.environ.copy()
+    ENV['LC_ALL'] = 'C'
+    ENC = locale.getpreferredencoding()
+    CACHE_FILE = expanduser("~/.cache/keepmenu")
+    CACHE_EXPIRY_FILE = expanduser("~/.cache/keepmenu_exp")
+    CACHE_PERIOD_DEFAULT = 6
+    CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
+    CONF = configparser.ConfigParser()
+    if not exists(CONF_FILE):
+        with open(CONF_FILE, 'w') as conf_file:
+            CONF.add_section('dmenu')
+            CONF.add_section('database')
+            CONF.set('database', 'database_1', '')
+            CONF.write(conf_file)
+    CONF.read(CONF_FILE)
+    if CONF.has_option("database", "pw_cache_period"):
+        CACHE_PERIOD = int(CONF.get("database", "pw_cache_period"))
+    else:
+        CACHE_PERIOD = CACHE_PERIOD_DEFAULT
+    if CONF.has_option("dmenu", "l"):
+        DMENU_LEN = int(CONF.get("dmenu", "l"))
+    else:
+        DMENU_LEN = 24
 
 
 def dmenu_cmd(num_lines, prompt="Entries"):  # pylint: disable=too-many-branches
@@ -350,6 +372,7 @@ def run():
 
 
 if __name__ == '__main__':
+    process_config()
     run()
 
 # vim: set et ts=4 sw=4 :
