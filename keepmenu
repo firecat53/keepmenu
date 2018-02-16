@@ -254,7 +254,11 @@ def cache_passphrase(password):
 
     """
     key = CONF.get("database", "gpg_key")
-    gpg_key = GPG.get_key(key)
+    try:
+        gpg_key = GPG.get_key(key)
+    except gpgme.GpgmeError:
+        dmenu_err("Gpg error...invalid key. Unable to cache passphrase.")
+        return
     with BytesIO(password.encode(ENC)) as data:
         try:
             with open(CACHE_FILE, 'wb') as cache:
