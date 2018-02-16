@@ -14,6 +14,8 @@ oriented. Thus...synchronized passwords and everyone is happy!
 Features
 --------
 
+- Prompts for and saves initial database and keyfile locations if config file
+  isn't setup before first run.
 - Set multiple databases in the config file, including key files.
 - Auto-type username and/or password on selection. No clipboard copy/paste
   involved.
@@ -58,7 +60,11 @@ Installation
   + From git. Just clone, install requirements and run
   + Available in `Archlinux AUR`_. 
 
-- Copy config.ini.example to ~/.config/keepmenu/config.ini
+- If you start keepmenu for the first time without a config file, it will prompt
+  you for database and keyfile locations and save them.
+
+- Copy config.ini.example to ~/.config/keepmenu/config.ini, or use it as a
+  reference for additional options.
 
   + Add your database(s) and keyfile(s)
   + Add `gpg_key` if you want the database passphrase cached
