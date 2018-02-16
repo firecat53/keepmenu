@@ -217,11 +217,11 @@ def get_passphrase():
     Returns: string
 
     """
-    pinentry = None
     if CONF.has_option("database", "gpg_key"):
         password = get_cached_passphrase()
-    if password:
-        return password
+        if password:
+            return password
+    pinentry = None
     if CONF.has_option("dmenu", "pinentry"):
         pinentry = CONF.get("dmenu", "pinentry")
     if pinentry:
