@@ -405,7 +405,10 @@ def run():
         text = view_entry(entry)
         type_text(text)
     else:
-        entry = kp_entries[int(sel.split('-', 1)[0])]
+        try:
+            entry = kp_entries[int(sel.split('-', 1)[0])]
+        except ValueError:
+            sys.exit()
         type_entry(entry)
 
 
