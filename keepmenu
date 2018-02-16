@@ -160,11 +160,35 @@ def get_databases():
             passw = args_dict['password_{}'.format(idx)]
         except KeyError:
             passw = ''
-        dbs.append((dbn, keyfile, passw))
+        if dbn:
+            dbs.append((dbn, keyfile, passw))
     if not dbs:
         dmenu_err("No databases defined in {}".format(CONF_FILE))
-        sys.exit()
+        get_initial_db()
+        dbs = get_databases()
     return dbs
+
+
+def get_initial_db():
+    """Ask for initial database name and keyfile if not entered in config file
+
+    """
+    db_name = Popen(dmenu_cmd(0, "Enter path to existing"
+                                 "Keepass database. ~/ for $HOME is ok"),
+                    stdin=PIPE,
+                    stdout=PIPE).communicate()[0].decode(ENC).rstrip('\n')
+    if not db_name:
+        dmenu_err("No database entered. Set in ~/.config/keepmenu/config.ini")
+        sys.exit()
+    keyfile_name = Popen(dmenu_cmd(0, "Enter path to keyfile. "
+                                   "~/ for $HOME is ok"),
+                         stdin=PIPE,
+                         stdout=PIPE).communicate()[0].decode(ENC).rstrip('\n')
+    with open(CONF_FILE, 'w') as conf_file:
+        CONF.set('database', 'database_1', db_name)
+        if keyfile_name:
+            CONF.set('database', 'keyfile_1', keyfile_name)
+        CONF.write(conf_file)
 
 
 def open_database(dbo):
