@@ -58,10 +58,7 @@ def process_config():
     if not exists(CONF_FILE):
         with open(CONF_FILE, 'w') as conf_file:
             CONF.add_section('dmenu')
-            CONF.set('dmenu', 'dmenu_command', '')
-            CONF.set('dmenu', 'pinentry', '')
-            CONF.set('dmenu', 'l', '24')
-            CONF.set('dmenu', 'fn', '')
+            CONF.set('dmenu', 'dmenu_command', 'dmenu')
             CONF.add_section('dmenu_passphrase')
             CONF.set('dmenu_passphrase', 'nf', '#222222')
             CONF.set('dmenu_passphrase', 'nb', '#222222')
