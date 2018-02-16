@@ -386,7 +386,9 @@ def run():
         keepass = open_database(databases[0])
     else:
         inp_bytes = "\n".join(i[0] for i in databases).encode(ENC)
-        sel = Popen(dmenu_cmd(len(databases)), stdin=PIPE, stdout=PIPE,
+        sel = Popen(dmenu_cmd(len(databases), "Select Database"),
+                    stdin=PIPE,
+                    stdout=PIPE,
                     env=ENV).communicate(input=inp_bytes)[0].decode(ENC)
         if not sel.rstrip():
             sys.exit()
