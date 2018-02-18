@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python  # pylint: disable=missing-docstring
 
 from setuptools import setup
 

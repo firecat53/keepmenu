@@ -25,10 +25,14 @@ if sys.version_info.major < 3:
     # https://stackoverflow.com/questions/6512884/properly-disconnect-multiprocessing-remote-manager#9936835
     def _new_init_timeout():
         return time.time() + 0.1
+    # pragma pylint: disable=protected-access,line-too-long
     sys.modules['multiprocessing'].__dict__['managers'].__dict__['connection']._init_timeout = _new_init_timeout
+    # pragma pylint: enable=protected-access,line-too-long
 
-from multiprocessing.managers import BaseManager  # pylint: disable=ungrouped-imports,wrong-import-order
-from multiprocessing import Event, Process  # pylint: disable=ungrouped-imports,wrong-import-order
+# pragma pylint: disable=ungrouped-imports,wrong-import-order,wrong-import-position
+from multiprocessing.managers import BaseManager
+from multiprocessing import Event, Process
+# pragma pylint: enable=ungrouped-imports,wrong-import-order,wrong-import-position
 
 try:
     import configparser as configparser
@@ -37,7 +41,7 @@ except ImportError:
 
 
 if sys.version_info.major < 3:
-    str = unicode
+    str = unicode  # pylint: disable=undefined-variable, invalid-name, redefined-builtin
 
 
 def find_free_port():
@@ -66,6 +70,7 @@ def process_config():
     one doesn't exist.
 
     """
+    # pragma pylint: disable=global-variable-undefined
     global CACHE_PERIOD_MIN, \
            CACHE_PERIOD_DEFAULT_MIN, \
            CONF, \
@@ -73,6 +78,7 @@ def process_config():
            DMENU_LEN, \
            ENV, \
            ENC
+    # pragma pylint: enable=global-variable-undefined
     ENV = os.environ.copy()
     ENV['LC_ALL'] = 'C'
     ENC = locale.getpreferredencoding()
@@ -497,7 +503,7 @@ class Server(Process):
         self.start_flag.set()
 
     def run(self):
-        serv = self.server()
+        serv = self.server()  # pylint: disable=unused-variable
         self.kill_flag.wait()
 
     def server(self):
@@ -533,8 +539,8 @@ def run():
 
 if __name__ == '__main__':
     try:
-        manager = client()
-        manager.set_event()
+        MANAGER = client()
+        MANAGER.set_event()  # pylint: disable=no-member
     except socket.error:  ## Use socket.error for Python 2 & 3 compat.
         process_config()
         run()
