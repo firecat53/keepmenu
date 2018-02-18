@@ -28,10 +28,6 @@ from multiprocessing.managers import BaseManager  # pylint: disable=ungrouped-im
 from multiprocessing import Event, Process  # pylint: disable=ungrouped-imports,wrong-import-order
 
 try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-try:
     import configparser as configparser
 except ImportError:
     import ConfigParser as configparser
@@ -396,6 +392,7 @@ class DmenuRunner(Process):
         self.cache_timer.daemon = True
         self.cache_timer.start()
         self.server.cache_time_expired.clear()
+
 
 class Server(Process):
     """Run BaseManager server to listen for dmenu calling events
