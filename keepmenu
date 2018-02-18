@@ -80,6 +80,10 @@ def process_config():
     CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
     CONF = configparser.ConfigParser()
     if not exists(CONF_FILE):
+        try:
+            os.mkdir(os.path.dirname(CONF_FILE))
+        except OSError:
+            pass
         with open(CONF_FILE, 'w') as conf_file:
             CONF.add_section('dmenu')
             CONF.set('dmenu', 'dmenu_command', 'dmenu')
