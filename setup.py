@@ -3,13 +3,13 @@
 from setuptools import setup
 
 setup(name="keepmenu",
-      version="0.3.0",
+      version="0.4.0",
       description="Dmenu interface for Keepass",
       long_description=open('README.rst', 'rb').read().decode('utf-8'),
       author="Scott Hansen",
       author_email="firecat4153@gmail.com",
       url="https://github.com/firecat53/keepmenu",
-      download_url="https://github.com/firecat53/keepmenu/tarball/0.3.0",
+      download_url="https://github.com/firecat53/keepmenu/tarball/0.4.0",
       scripts=['keepmenu'],
       data_files=[('share/doc/keepmenu', ['README.rst', 'LICENSE.txt',
                                           'config.ini.example'])],
