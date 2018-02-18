@@ -3,14 +3,17 @@
 """Read and copy Keepass database entries using dmenu or rofi
 
 """
+from contextlib import closing
 import errno
 import itertools
 import locale
 from multiprocessing import managers  # pylint: disable=unused-import
 import os
 from os.path import exists, expanduser
+import random
 import shlex
 import socket
+import string
 import sys
 from subprocess import Popen, PIPE
 from threading import Timer
@@ -35,6 +38,27 @@ except ImportError:
 
 if sys.version_info.major < 3:
     str = unicode
+
+
+def find_free_port():
+    """Find random free port to use for BaseManager server
+
+    Returns: int Port
+
+    """
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        sock.bind(('127.0.0.1', 0))  # pylint:disable=no-member
+        return sock.getsockname()[1]  # pylint:disable=no-member
+
+
+def random_str():
+    """Generate random auth string for BaseManager
+
+    Returns: string
+
+    """
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(15))
 
 
 def process_config():
@@ -77,6 +101,25 @@ def process_config():
         DMENU_LEN = int(CONF.get("dmenu", "l"))
     else:
         DMENU_LEN = 24
+
+
+def get_auth():
+    """Generate and save port and authkey to ~/.cache/.keepmenu-auth
+
+    Returns: int port, bytestring authkey
+
+    """
+    auth_file = expanduser("~/.cache/.keepmenu-auth")
+    auth = configparser.ConfigParser()
+    if not exists(auth_file):
+        with open(auth_file, 'w') as a_file:
+            auth.set('DEFAULT', 'port', str(find_free_port()))
+            auth.set('DEFAULT', 'authkey', random_str())
+            auth.write(a_file)
+    auth.read(auth_file)
+    port = int(auth.get('DEFAULT', 'port'))
+    authkey = auth.get('DEFAULT', 'authkey').encode()
+    return port, authkey
 
 
 def dmenu_cmd(num_lines, prompt="Entries"):  # pylint: disable=too-many-branches
@@ -340,9 +383,9 @@ def client():
     """Define client connection to server BaseManager
 
     Returns: BaseManager object
-
     """
-    mgr = BaseManager(address=('', 50001), authkey=b'abc')
+    port, auth = get_auth()
+    mgr = BaseManager(address=('', port), authkey=auth)
     mgr.register('set_event')
     mgr.register('kill')
     mgr.connect()
@@ -400,6 +443,7 @@ class Server(Process):
     """
     def __init__(self):
         Process.__init__(self)
+        self.port, self.authkey = get_auth()
         self.start_flag = Event()
         self.kill_flag = Event()
         self.cache_time_expired = Event()
@@ -413,7 +457,8 @@ class Server(Process):
         """Set up BaseManager server
 
         """
-        mgr = BaseManager(address=('127.0.0.1', 50001), authkey=b'abc')
+        mgr = BaseManager(address=('127.0.0.1', self.port),
+                          authkey=self.authkey)
         mgr.register('set_event', callable=self.start_flag.set)
         mgr.register('kill', callable=self.kill_flag.set)
         mgr.start()
@@ -468,6 +513,8 @@ def run():
     server.start()
     dmenu.start()
     server.join()
+    if exists(expanduser("~/.cache/.keepmenu-auth")):
+        os.remove(expanduser("~/.cache/.keepmenu-auth"))
 
 
 if __name__ == '__main__':
