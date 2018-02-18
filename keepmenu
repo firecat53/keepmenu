@@ -396,6 +396,7 @@ def client():
     port, auth = get_auth()
     mgr = BaseManager(address=('', port), authkey=auth)
     mgr.register('set_event')
+    mgr.register('expire_cache')
     mgr.register('kill')
     mgr.connect()
     return mgr
@@ -422,7 +423,7 @@ class DmenuRunner(Process):
             if not self.entries:
                 pass
             else:
-                dmenu_run(self.entries)
+                self.dmenu_run()
             if self.server.kill_flag.is_set():
                 break
             self.server.start_flag.clear()
@@ -445,6 +446,42 @@ class DmenuRunner(Process):
         self.cache_timer.daemon = True
         self.cache_timer.start()
         self.server.cache_time_expired.clear()
+
+    def dmenu_run(self):
+        """Run dmenu with the given list of Keepass Entry objects
+
+        Args: kp_entries - list of Keepass Entry objects
+
+        """
+        options = ['View/Type Individual entries',
+                   'Reload database',
+                   'Kill Keepmenu daemon']
+        sel = view_all_entries(options, self.entries)
+        if not sel:
+            return
+        if sel == options[0]:
+            options = []
+            sel = view_all_entries(options, self.entries)
+            try:
+                entry = self.entries[int(sel.split('-', 1)[0])]
+            except ValueError:
+                return
+            text = view_entry(entry)
+            type_text(text)
+        elif sel == options[1]:
+            self.cache_timer_reset()
+            self.dmenu_run()
+        elif sel == options[2]:
+            try:
+                self.server.kill_flag.set()
+            except (EOFError, IOError):
+                return
+        else:
+            try:
+                entry = self.entries[int(sel.split('-', 1)[0])]
+            except ValueError:
+                return
+            type_entry(entry)
 
 
 class Server(Process):
@@ -470,42 +507,10 @@ class Server(Process):
         mgr = BaseManager(address=('127.0.0.1', self.port),
                           authkey=self.authkey)
         mgr.register('set_event', callable=self.start_flag.set)
+        mgr.register('expire_cache', callable=self.cache_time_expired.set)
         mgr.register('kill', callable=self.kill_flag.set)
         mgr.start()
         return mgr
-
-
-def dmenu_run(kp_entries):
-    """Run dmenu with the given list of Keepass Entry objects
-
-    Args: kp_entries - list of Keepass Entry objects
-
-    """
-    options = ['View/Type Individual entries', 'Kill Keepmenu daemon']
-    sel = view_all_entries(options, kp_entries)
-    if not sel:
-        return
-    if sel == options[0]:
-        options = []
-        sel = view_all_entries(options, kp_entries)
-        try:
-            entry = kp_entries[int(sel.split('-', 1)[0])]
-        except ValueError:
-            return
-        text = view_entry(entry)
-        type_text(text)
-    elif sel == options[1]:
-        manager = client()
-        try:
-            manager.kill()
-        except (EOFError, IOError):
-            return
-    else:
-        try:
-            entry = kp_entries[int(sel.split('-', 1)[0])]
-        except ValueError:
-            return
-        type_entry(entry)
 
 
 def run():
