@@ -26,4 +26,4 @@
 # password_1 = database password  **INSECURE**
 # database_2 = <path/to/second database>
 # etc....
-# pw_cache_period_hrs = <hours to cache database password>
+# pw_cache_period_min = <minutes to cache database password>

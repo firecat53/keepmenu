@@ -66,8 +66,8 @@ def process_config():
     one doesn't exist.
 
     """
-    global CACHE_PERIOD_HRS, \
-           CACHE_PERIOD_DEFAULT_HRS, \
+    global CACHE_PERIOD_MIN, \
+           CACHE_PERIOD_DEFAULT_MIN, \
            CONF, \
            CONF_FILE, \
            DMENU_LEN, \
@@ -76,7 +76,7 @@ def process_config():
     ENV = os.environ.copy()
     ENV['LC_ALL'] = 'C'
     ENC = locale.getpreferredencoding()
-    CACHE_PERIOD_DEFAULT_HRS = 6
+    CACHE_PERIOD_DEFAULT_MIN = 360
     CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
     CONF = configparser.ConfigParser()
     if not exists(CONF_FILE):
@@ -90,13 +90,13 @@ def process_config():
             CONF.add_section('database')
             CONF.set('database', 'database_1', '')
             CONF.set('database', 'keyfile_1', '')
-            CONF.set('database', 'pw_cache_period_hrs', str(CACHE_PERIOD_DEFAULT_HRS))
+            CONF.set('database', 'pw_cache_period_min', str(CACHE_PERIOD_DEFAULT_MIN))
             CONF.write(conf_file)
     CONF.read(CONF_FILE)
-    if CONF.has_option("database", "pw_cache_period_hrs"):
-        CACHE_PERIOD_HRS = int(CONF.get("database", "pw_cache_period_hrs"))
+    if CONF.has_option("database", "pw_cache_period_min"):
+        CACHE_PERIOD_MIN = int(CONF.get("database", "pw_cache_period_min"))
     else:
-        CACHE_PERIOD_HRS = CACHE_PERIOD_DEFAULT_HRS
+        CACHE_PERIOD_MIN = CACHE_PERIOD_DEFAULT_MIN
     if CONF.has_option("dmenu", "l"):
         DMENU_LEN = int(CONF.get("dmenu", "l"))
     else:
@@ -400,7 +400,7 @@ class DmenuRunner(Process):
         Process.__init__(self)
         self.server = server
         self.entries = entries
-        self.cache_timer = Timer(CACHE_PERIOD_HRS * 3600, self.cache_time)
+        self.cache_timer = Timer(CACHE_PERIOD_MIN * 60, self.cache_time)
         self.cache_timer.daemon = True
         self.cache_timer.start()
 
@@ -431,7 +431,7 @@ class DmenuRunner(Process):
         self.entries = get_entries(self.database)
         if not self.entries:
             return
-        self.cache_timer = Timer(CACHE_PERIOD_HRS  * 3600, self.cache_time)
+        self.cache_timer = Timer(CACHE_PERIOD_MIN  * 60, self.cache_time)
         self.cache_timer.daemon = True
         self.cache_timer.start()
         self.server.cache_time_expired.clear()
