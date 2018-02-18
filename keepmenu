@@ -273,6 +273,8 @@ def get_entries(dbo):
 
     """
     dbf, keyfile, password = dbo
+    if dbf is None:
+        return None
     if not password:
         password = get_passphrase()
     try:
