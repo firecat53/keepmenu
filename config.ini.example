@@ -1,10 +1,10 @@
 [dmenu]
-fn = -*-terminus-medium-*-*-*-16-*-*-*-*-*-*-*
 # dmenu_command = /usr/bin/dmenu
 # # Note that dmenu_command can contain arguments as well like `rofi -width 30`
 # # Rofi and dmenu are set to case insensitive by default `-i`
 # l = number of lines to display (default 24 max)
-# fn = font string
+# fn = Inconsolata-12
+# fn = -*-terminus-medium-*-*-*-16-*-*-*-*-*-*-*
 # nb = normal background (name, #RGB, or #RRGGBB)
 # nf = normal foreground
 # sb = selected background
@@ -21,8 +21,9 @@ fn = -*-terminus-medium-*-*-*-16-*-*-*-*-*-*-*
 # rofi_obscure = True
 
 [database]
-# database_n = <path/to/database> ~ for $HOME is ok
-# keyfile_n = <path/to/keyfile>
-# password_n = database password  **INSECURE**
-# gpg_key = <fingerprint - last 8 characters is fine>
-# pw_cache_period = <hours to cache database password>
+# database_1 = <path/to/database> ~ for $HOME is ok
+# keyfile_1 = <path/to/keyfile>
+# password_1 = database password  **INSECURE**
+# database_2 = <path/to/second database>
+# etc....
+# pw_cache_period_hrs = <hours to cache database password>

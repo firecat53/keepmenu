@@ -16,19 +16,17 @@ Features
 
 - Prompts for and saves initial database and keyfile locations if config file
   isn't setup before first run.
-- Set multiple databases in the config file, including key files.
+- Set multiple databases and keyfiles in the config file.
 - Auto-type username and/or password on selection. No clipboard copy/paste
   involved.
 - Alternatively, select any single field and have it type into the active
   window. Notes fields can be viewed line-by-line from within dmenu and the
   selected line will be typed.
-- Enter database passphrase and optionally gpg encrypt and cache it using an
-  existing gpg-agent key.
-- Set cache expiration time for saving the database passphrase
+- Keepmenu runs in the background after initial startup and will retain the
+  entered passphrase for the set `pw_cache_period_hrs`
 - Optional Pinentry support for secure passphrase entry.
 - Possible future features:
   + Add/edit/delete entries
-  + View/copy password notes
 
 License
 -------
@@ -39,8 +37,8 @@ Requirements
 ------------
 
 1. Python 2.7+ or 3.2+
-2. Pykeepass_, PyUserInput_, and pygpgme_. Install via pip or your
-   distribution's package manager, if available.
+2. Pykeepass_ and PyUserInput_. Install via pip or your distribution's package
+   manager, if available.
 3. Dmenu. Basic support is included for Rofi_, but most Rofi
    configuration/theming should be done via Xresources.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
@@ -61,13 +59,13 @@ Installation
   + Available in `Archlinux AUR`_. 
 
 - If you start keepmenu for the first time without a config file, it will prompt
-  you for database and keyfile locations and save them.
+  you for database and keyfile locations and save them in a default config file.
 
 - Copy config.ini.example to ~/.config/keepmenu/config.ini, or use it as a
   reference for additional options.
 
   + Add your database(s) and keyfile(s)
-  + Add `gpg_key` if you want the database passphrase cached
+  + Adjust `pw_cache_period_hrs` if desired. Default is 6 hours.
   + Set the dmenu_command to `rofi` if you are using that instead
 
 - If using Rofi, you can try some of the command line options in config.ini or
@@ -78,7 +76,7 @@ Installation
   can, for example, set the normal foreground and background colors to be the
   same to obscure the passphrase.
 
-.. warning:: If you choose to store your database password into config.ini, make
+.. Warning:: If you choose to store your database password into config.ini, make
    sure to `chmod 600 config.ini`. This is not secure and I only added it as a
    convenience for testing.
 
@@ -86,6 +84,8 @@ Usage
 -----
 
 - Run script or bind to keystroke combination
+- Enter database and keyfile if not entered into config.ini already.
+- Start typing to match entries.
 - Hit Enter immediately after dmenu opens ("`View/Type individual entries`") to
   switch modes to view and/or type the individual fields for the entry.
 
@@ -93,5 +93,4 @@ Usage
 .. _Passhole: https://github.com/purduelug/passhole
 .. _Pykeepass: https://github.com/pschmitt/pykeepass
 .. _PyUserInput: https://github.com/PyUserInput/PyUserInput
-.. _pygpgme: https://pypi.python.org/pypi/pygpgme
 .. _Archlinux AUR: https://aur.archlinux.org/packages/python-keepmenu-git

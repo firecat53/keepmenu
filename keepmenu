@@ -3,19 +3,29 @@
 """Read and copy Keepass database entries using dmenu or rofi
 
 """
-from datetime import datetime, timedelta
 import errno
-from io import BytesIO
 import itertools
 import locale
+from multiprocessing import managers  # pylint: disable=unused-import
 import os
 from os.path import exists, expanduser
 import shlex
+import socket
 import sys
 from subprocess import Popen, PIPE
-import gpgme
+from threading import Timer
+import time
 from pykeepass import PyKeePass
 from pykeyboard import PyKeyboard
+if sys.version_info.major < 3:
+    # hack to reduce client connect timeout for python 2.7 (defaults to 20 seconds)
+    # https://stackoverflow.com/questions/6512884/properly-disconnect-multiprocessing-remote-manager#9936835
+    def _new_init_timeout():
+        return time.time() + 0.1
+    sys.modules['multiprocessing'].__dict__['managers'].__dict__['connection']._init_timeout = _new_init_timeout
+
+from multiprocessing.managers import BaseManager  # pylint: disable=ungrouped-imports,wrong-import-order
+from multiprocessing import Event, Process  # pylint: disable=ungrouped-imports,wrong-import-order
 
 try:
     import cPickle as pickle
@@ -27,8 +37,6 @@ except ImportError:
     import ConfigParser as configparser
 
 
-GPG = gpgme.Context()
-
 if sys.version_info.major < 3:
     str = unicode
 
@@ -38,10 +46,8 @@ def process_config():
     one doesn't exist.
 
     """
-    global CACHE_EXPIRY_FILE, \
-           CACHE_FILE, \
-           CACHE_PERIOD, \
-           CACHE_PERIOD_DEFAULT, \
+    global CACHE_PERIOD_HRS, \
+           CACHE_PERIOD_DEFAULT_HRS, \
            CONF, \
            CONF_FILE, \
            DMENU_LEN, \
@@ -50,9 +56,7 @@ def process_config():
     ENV = os.environ.copy()
     ENV['LC_ALL'] = 'C'
     ENC = locale.getpreferredencoding()
-    CACHE_FILE = expanduser("~/.cache/keepmenu")
-    CACHE_EXPIRY_FILE = expanduser("~/.cache/keepmenu_exp")
-    CACHE_PERIOD_DEFAULT = 6
+    CACHE_PERIOD_DEFAULT_HRS = 6
     CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
     CONF = configparser.ConfigParser()
     if not exists(CONF_FILE):
@@ -66,14 +70,13 @@ def process_config():
             CONF.add_section('database')
             CONF.set('database', 'database_1', '')
             CONF.set('database', 'keyfile_1', '')
-            CONF.set('database', 'gpg_key', '')
-            CONF.set('database', 'pw_cache_period', str(CACHE_PERIOD_DEFAULT))
+            CONF.set('database', 'pw_cache_period_hrs', str(CACHE_PERIOD_DEFAULT_HRS))
             CONF.write(conf_file)
     CONF.read(CONF_FILE)
-    if CONF.has_option("database", "pw_cache_period"):
-        CACHE_PERIOD = int(CONF.get("database", "pw_cache_period"))
+    if CONF.has_option("database", "pw_cache_period_hrs"):
+        CACHE_PERIOD_HRS = int(CONF.get("database", "pw_cache_period_hrs"))
     else:
-        CACHE_PERIOD = CACHE_PERIOD_DEFAULT
+        CACHE_PERIOD_HRS = CACHE_PERIOD_DEFAULT_HRS
     if CONF.has_option("dmenu", "l"):
         DMENU_LEN = int(CONF.get("dmenu", "l"))
     else:
@@ -148,10 +151,11 @@ def dmenu_err(prompt):
     return
 
 
-def get_databases():
-    """Return all available databases from config.ini
+def get_database():
+    """Read databases from config or ask for user input.
 
-    Returns: [(database name, keyfile, passphrase), (database2, kf, pw), ...]
+    Returns: (database name, keyfile, passphrase)
+
     """
     args = CONF.items('database')
     args_dict = dict(args)
@@ -171,10 +175,18 @@ def get_databases():
         if dbn:
             dbs.append((dbn, keyfile, passw))
     if not dbs:
-        dmenu_err("No databases defined in {}".format(CONF_FILE))
         get_initial_db()
-        dbs = get_databases()
-    return dbs
+        dbs = [get_database()]
+    if len(dbs) > 1:
+        inp_bytes = "\n".join(i[0] for i in dbs).encode(ENC)
+        sel = Popen(dmenu_cmd(len(dbs), "Select Database"),
+                    stdin=PIPE,
+                    stdout=PIPE,
+                    env=ENV).communicate(input=inp_bytes)[0].decode(ENC).rstrip('\n')
+        dbs = [i for i in dbs if i[0] == sel]
+        if not sel:
+            dbs = get_database()
+    return dbs[0]
 
 
 def get_initial_db():
@@ -186,8 +198,8 @@ def get_initial_db():
                     stdin=PIPE,
                     stdout=PIPE).communicate()[0].decode(ENC).rstrip('\n')
     if not db_name:
-        dmenu_err("No database entered. Set in ~/.config/keepmenu/config.ini")
-        sys.exit()
+        dmenu_err("No database entered. Try again.")
+        get_initial_db()
     keyfile_name = Popen(dmenu_cmd(0, "Enter path to keyfile. "
                                    "~/ for $HOME is ok"),
                          stdin=PIPE,
@@ -199,11 +211,11 @@ def get_initial_db():
         CONF.write(conf_file)
 
 
-def open_database(dbo):
-    """Open keepass database and return the PyKeePass object
+def get_entries(dbo):
+    """Open keepass database and return the PyKeePass entries
 
         Args: dbo: tuple (db path, keyfile path, password)
-        Returns: PyKeePass object
+        Returns: PyKeePass list of Entry objects
 
     """
     dbf, keyfile, password = dbo
@@ -214,71 +226,18 @@ def open_database(dbo):
     except (IOError, OSError, IndexError) as e:  ## pylint: disable=invalid-name
         if e.args[0] == "Master key invalid." or e.args[0] == "No credentials found.":
             dmenu_err("Invalid Password or keyfile")
-            # Invalidate cached pw if keyfile/password are wrong
-            with open(CACHE_EXPIRY_FILE, 'wb') as cef:
-                pickle.dump(datetime.now(), cef, -1)
         elif e.errno == errno.ENOENT:
             dmenu_err("Database does not exist")
-        sys.exit()
-    if CONF.has_option("database", "gpg_key"):
-        cache_passphrase(password)
-    return kpo
-
-
-def get_cached_passphrase():
-    """Retrieve cached passphrase if possible
-
-    """
-    # First check if the cache file exists and if it is expired
-    try:
-        with open(CACHE_EXPIRY_FILE, 'rb') as cef:
-            expiry = pickle.load(cef)
-    except IOError:
-        return ""
-    if datetime.now() > expiry:
-        return ""
-    with BytesIO() as data:
-        try:
-            with open(CACHE_FILE, 'rb') as cache:
-                GPG.decrypt(cache, data)
-                password = data.getvalue().decode(ENC).rstrip('\n')
-        except IOError:
-            return ""
-        except gpgme.GpgmeError:
-            return ""
-    return password
-
-
-def cache_passphrase(password):
-    """Save passphrase to cache file
-
-    """
-    key = CONF.get("database", "gpg_key")
-    try:
-        gpg_key = GPG.get_key(key)
-    except gpgme.GpgmeError:
-        dmenu_err("Gpg error...invalid key. Unable to cache passphrase.")
-        return
-    with BytesIO(password.encode(ENC)) as data:
-        try:
-            with open(CACHE_FILE, 'wb') as cache:
-                GPG.encrypt([gpg_key], 0, data, cache)
-        except gpgme.GpgmeError:
-            dmenu_err("Gpg error...unable to cache passphrase")
-    with open(CACHE_EXPIRY_FILE, 'wb') as cef:
-        pickle.dump(datetime.now() + timedelta(hours=CACHE_PERIOD), cef, -1)
+        return None
+    return kpo.entries
 
 
 def get_passphrase():
-    """Get a database password from dmenu, pinentry or cached gpg encrypted file
+    """Get a database password from dmenu or pinentry
 
     Returns: string
 
     """
-    if CONF.has_option("database", "gpg_key"):
-        password = get_cached_passphrase()
-        if password:
-            return password
     pinentry = None
     if CONF.has_option("dmenu", "pinentry"):
         pinentry = CONF.get("dmenu", "pinentry")
@@ -340,7 +299,9 @@ def view_all_entries(options, kp_entries):
     else:
         entries_b = kp_entries_b
     return Popen(dmenu_cmd(min(DMENU_LEN, len(options) + len(kp_entries))),
-                 stdin=PIPE, stdout=PIPE, env=ENV).communicate(input=entries_b)[0].decode(ENC).rstrip()
+                 stdin=PIPE,
+                 stdout=PIPE,
+                 env=ENV).communicate(input=entries_b)[0].decode(ENC).rstrip('\n')
 
 
 def view_entry(kp_entry):
@@ -356,7 +317,7 @@ def view_entry(kp_entry):
               "Notes: <Enter to view>" if kp_entry.notes else "Notes: None"]
     kp_entries_b = "\n".join(fields).encode(ENC)
     sel = Popen(dmenu_cmd(len(fields)), stdin=PIPE, stdout=PIPE,
-                env=ENV).communicate(input=kp_entries_b)[0].decode(ENC).rstrip()
+                env=ENV).communicate(input=kp_entries_b)[0].decode(ENC).rstrip('\n')
     if sel == "Notes: <Enter to view>":
         sel = view_notes(kp_entry.notes)
     elif sel == "Notes: None":
@@ -375,45 +336,149 @@ def view_notes(notes):
     notes_l = notes.split('\n')
     notes_b = "\n".join(notes_l).encode(ENC)
     sel = Popen(dmenu_cmd(min(DMENU_LEN, len(notes_l))), stdin=PIPE, stdout=PIPE,
-                env=ENV).communicate(input=notes_b)[0].decode(ENC).rstrip()
+                env=ENV).communicate(input=notes_b)[0].decode(ENC).rstrip('\n')
     return sel
 
 
-def run():
-    """Main script entrypoint"""
-    databases = get_databases()
-    if len(databases) == 1:
-        keepass = open_database(databases[0])
-    else:
-        inp_bytes = "\n".join(i[0] for i in databases).encode(ENC)
-        sel = Popen(dmenu_cmd(len(databases), "Select Database"),
-                    stdin=PIPE,
-                    stdout=PIPE,
-                    env=ENV).communicate(input=inp_bytes)[0].decode(ENC)
-        if not sel.rstrip():
-            sys.exit()
-        keepass = open_database([i for i in databases if i[0] == sel.strip()][0])
-    kp_entries = keepass.entries
-    options = ['View/Type Individual entries']
+def client():
+    """Define client connection to server BaseManager
+
+    Returns: BaseManager object
+
+    """
+    mgr = BaseManager(address=('', 50001), authkey=b'abc')
+    mgr.register('set_event')
+    mgr.register('kill')
+    mgr.connect()
+    return mgr
+
+
+class DmenuRunner(Process):
+    """Listen for dmenu calling event and run keepmenu
+
+    """
+    def __init__(self, server, entries):
+        Process.__init__(self)
+        self.server = server
+        self.entries = entries
+        self.cache_timer = Timer(CACHE_PERIOD_HRS * 3600, self.cache_time)
+        self.cache_timer.daemon = True
+        self.cache_timer.start()
+
+    def run(self):
+        while True:
+            self.server.start_flag.wait()
+            if self.server.cache_time_expired.is_set():
+                self.cache_timer_reset()
+            if not self.entries:
+                dmenu_err("Problem opening database. Try again.")
+            else:
+                dmenu_run(self.entries)
+            if self.server.kill_flag.is_set():
+                break
+            self.server.start_flag.clear()
+
+    def cache_time(self):
+        """Reset keepass Entries list when cache timer expires
+
+        """
+        self.server.cache_time_expired.set()
+
+    def cache_timer_reset(self):
+        """Reset cache timer and reload entries
+
+        """
+        self.database = get_database()
+        self.entries = get_entries(self.database)
+        if not self.entries:
+            return
+        self.cache_timer = Timer(CACHE_PERIOD_HRS  * 3600, self.cache_time)
+        self.cache_timer.daemon = True
+        self.cache_timer.start()
+        self.server.cache_time_expired.clear()
+
+class Server(Process):
+    """Run BaseManager server to listen for dmenu calling events
+
+    """
+    def __init__(self):
+        Process.__init__(self)
+        self.start_flag = Event()
+        self.kill_flag = Event()
+        self.cache_time_expired = Event()
+        self.start_flag.set()
+
+    def run(self):
+        serv = self.server()
+        self.kill_flag.wait()
+
+    def server(self):
+        """Set up BaseManager server
+
+        """
+        mgr = BaseManager(address=('127.0.0.1', 50001), authkey=b'abc')
+        mgr.register('set_event', callable=self.start_flag.set)
+        mgr.register('kill', callable=self.kill_flag.set)
+        mgr.start()
+        return mgr
+
+
+def dmenu_run(kp_entries):
+    """Run dmenu with the given list of Keepass Entry objects
+
+    Args: kp_entries - list of Keepass Entry objects
+
+    """
+    options = ['View/Type Individual entries', 'Kill Keepmenu daemon']
     sel = view_all_entries(options, kp_entries)
     if not sel:
-        sys.exit()
-    if sel in options:
+        return
+    if sel == options[0]:
         options = []
         sel = view_all_entries(options, kp_entries)
-        entry = kp_entries[int(sel.split('-', 1)[0])]
+        try:
+            entry = kp_entries[int(sel.split('-', 1)[0])]
+        except ValueError:
+            return
         text = view_entry(entry)
         type_text(text)
+    elif sel == options[1]:
+        manager = client()
+        try:
+            manager.kill()
+        except (EOFError, IOError):
+            return
     else:
         try:
             entry = kp_entries[int(sel.split('-', 1)[0])]
         except ValueError:
-            sys.exit()
+            return
         type_entry(entry)
 
 
+def run():
+    """Main entrypoint. Start the background Manager and Dmenu runner processes.
+
+    """
+    database = get_database()
+    entries = get_entries(database)
+    if not entries:
+        dmenu_err("No database entered. Try again.")
+        sys.exit()
+    server = Server()
+    dmenu = DmenuRunner(server, entries)
+    dmenu.daemon = True
+    server.start()
+    dmenu.start()
+    server.join()
+
+
 if __name__ == '__main__':
-    process_config()
-    run()
+    try:
+        manager = client()
+        manager.set_event()
+    except socket.error:  ## Use socket.error for Python 2 & 3 compat.
+        process_config()
+        run()
 
 # vim: set et ts=4 sw=4 :

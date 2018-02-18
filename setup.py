@@ -13,7 +13,7 @@ setup(name="keepmenu",
       scripts=['keepmenu'],
       data_files=[('share/doc/keepmenu', ['README.rst', 'LICENSE.txt',
                                           'config.ini.example'])],
-      install_requires=["PyUserInput", "pykeepass", "pygpgme"],
+      install_requires=["PyUserInput", "pykeepass"],
       license="MIT",
       classifiers=[
           'Development Status :: 4 - Beta',
