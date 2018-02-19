@@ -269,7 +269,7 @@ def get_entries(dbo):
     """Open keepass database and return the PyKeePass entries
 
         Args: dbo: tuple (db path, keyfile path, password)
-        Returns: PyKeePass list of Entry objects
+        Returns: PyKeePass object
 
     """
     dbf, keyfile, password = dbo
@@ -285,7 +285,7 @@ def get_entries(dbo):
         elif e.errno == errno.ENOENT:
             dmenu_err("Database does not exist. Edit ~/.config/keepmenu/config.ini")
         return None
-    return kpo.entries
+    return kpo
 
 
 def get_passphrase():
@@ -383,6 +383,33 @@ def view_entry(kp_entry):
     return sel
 
 
+def edit_entry(kpo, kp_entry):
+    """Edit title, username, password and url for an entry.
+
+    Args: kpo - Keepass object
+          kp_entry - selected Entry object
+
+    """
+    fields = ["Title: {}".format(kp_entry.title),
+              "Username: {}".format(kp_entry.username),
+              "Password: {}".format(kp_entry.password),
+              "Url: {}".format(kp_entry.url)]
+    kp_entries_b = "\n".join(fields).encode(ENC)
+    sel = Popen(dmenu_cmd(len(fields)),
+                stdin=PIPE,
+                stdout=PIPE,
+                env=ENV).communicate(input=kp_entries_b)[0].decode(ENC).rstrip('\n')
+    field, sel = sel.split(": ", 1)
+    field = field.lower()
+    edit_b = sel.encode(ENC) + b"\n"
+    sel = Popen(dmenu_cmd(1, "{}".format(field.capitalize())),
+                stdin=PIPE,
+                stdout=PIPE,
+                env=ENV).communicate(input=edit_b)[0].decode(ENC).rstrip('\n')
+    setattr(kp_entry, field, sel)
+    kpo.save()
+
+
 def view_notes(notes):
     """View the 'Notes' field line-by-line within dmenu.
 
@@ -413,12 +440,14 @@ def client():
 class DmenuRunner(Process):
     """Listen for dmenu calling event and run keepmenu
 
+    Args: server - Server object
+          kpo - Keepass object
     """
-    def __init__(self, server, entries):
+    def __init__(self, server, kpo):
         Process.__init__(self)
         self.server = server
         self.database = (None, None, None)
-        self.entries = entries
+        self.kpo = kpo
         self.cache_timer = Timer(CACHE_PERIOD_MIN * 60, self.cache_time)
         self.cache_timer.daemon = True
         self.cache_timer.start()
@@ -428,7 +457,7 @@ class DmenuRunner(Process):
             self.server.start_flag.wait()
             if self.server.cache_time_expired.is_set():
                 self.cache_timer_reset()
-            if not self.entries:
+            if not self.kpo:
                 pass
             else:
                 self.dmenu_run()
@@ -447,8 +476,8 @@ class DmenuRunner(Process):
 
         """
         self.database = get_database()
-        self.entries = get_entries(self.database)
-        if not self.entries:
+        self.kpo = get_entries(self.database)
+        if not self.kpo:
             return
         self.cache_timer = Timer(CACHE_PERIOD_MIN  * 60, self.cache_time)
         self.cache_timer.daemon = True
@@ -458,35 +487,44 @@ class DmenuRunner(Process):
     def dmenu_run(self):
         """Run dmenu with the given list of Keepass Entry objects
 
-        Args: kp_entries - list of Keepass Entry objects
+        Args: self.kpo - Keepass object
 
         """
         options = ['View/Type Individual entries',
+                   'Edit entries',
                    'Reload database',
                    'Kill Keepmenu daemon']
-        sel = view_all_entries(options, self.entries)
+        sel = view_all_entries(options, self.kpo.entries)
         if not sel:
             return
-        if sel == options[0]:
+        if sel == options[0]:  # ViewType Individual entries
             options = []
-            sel = view_all_entries(options, self.entries)
+            sel = view_all_entries(options, self.kpo.entries)
             try:
-                entry = self.entries[int(sel.split('-', 1)[0])]
+                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
             except ValueError:
                 return
             text = view_entry(entry)
             type_text(text)
-        elif sel == options[1]:
+        elif sel == options[1]:  # Edit entries
+            options = []
+            sel = view_all_entries(options, self.kpo.entries)
+            try:
+                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
+            except ValueError:
+                return
+            edit_entry(self.kpo, entry)
+        elif sel == options[2]:  # Reload database
             self.cache_timer_reset()
             self.dmenu_run()
-        elif sel == options[2]:
+        elif sel == options[3]:  # Kill keepmenu daemon
             try:
                 self.server.kill_flag.set()
             except (EOFError, IOError):
                 return
         else:
             try:
-                entry = self.entries[int(sel.split('-', 1)[0])]
+                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
             except ValueError:
                 return
             type_entry(entry)
@@ -526,11 +564,11 @@ def run():
 
     """
     database = get_database()
-    entries = get_entries(database)
-    if not entries:
+    kpo = get_entries(database)
+    if not kpo:
         sys.exit()
     server = Server()
-    dmenu = DmenuRunner(server, entries)
+    dmenu = DmenuRunner(server, kpo)
     dmenu.daemon = True
     server.start()
     dmenu.start()
