@@ -15,7 +15,8 @@ import shlex
 import socket
 import string
 import sys
-from subprocess import Popen, PIPE
+from subprocess import call, Popen, PIPE
+import tempfile
 from threading import Timer
 import time
 from pykeepass import PyKeePass
@@ -420,7 +421,8 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements
     fields = ["Title: {}".format(kp_entry.title),
               "Username: {}".format(kp_entry.username),
               "Password: {}".format(kp_entry.password),
-              "Url: {}".format(kp_entry.url)]
+              "Url: {}".format(kp_entry.url),
+              "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None"]
     kp_entries_b = "\n".join(fields).encode(ENC)
     sel = Popen(dmenu_cmd(len(fields)),
                 stdin=PIPE,
@@ -472,16 +474,56 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements
                 return True
             spec = False if spec == 'False' else True
             sel = gen_passwd(length, digits, spec)
-    if field != 'password' or pw_choice:
+    if (field != 'password' and field != 'notes') or pw_choice:
         sel = Popen(dmenu_cmd(1, "{}".format(field.capitalize())),
                     stdin=PIPE,
                     stdout=PIPE,
                     env=ENV).communicate(input=edit_b)[0].decode(ENC).rstrip('\n')
         if not sel:
             return True
+    elif field == 'notes':
+        sel = edit_notes(kp_entry.notes)
     setattr(kp_entry, field, sel)
     kpo.save()
     return True
+
+
+def edit_notes(note):
+    """Use $EDITOR (or 'vim' if not set) to edit the notes entry
+
+    In configuration file:
+        Set 'gui_editor' for things like emacs, gvim, leafpad
+        Set 'editor' for vim, emacs -nw, nano unless $EDITOR is defined
+        Set 'terminal' if using a non-gui editor
+
+    Args: note - string
+    Returns: note - string
+
+    """
+    if CONF.has_option("database", "gui_editor"):
+        editor = CONF.get("database", "gui_editor")
+    else:
+        if CONF.has_option("database", "editor"):
+            editor = CONF.get("database", "editor")
+        else:
+            editor = os.environ.get('EDITOR', 'vim')
+        if CONF.has_option("database", "terminal"):
+            terminal = CONF.get("database", "terminal")
+        else:
+            terminal = "xterm"
+        terminal = shlex.split(terminal)
+        editor = shlex.split(editor)
+        editor = terminal + ["-e"] + editor
+    note = b'' if note is None else note.encode(ENC)
+    with tempfile.NamedTemporaryFile(suffix=".tmp") as fn:
+        fn.write(note)
+        fn.flush()
+        editor.append(fn.name)
+        call(editor)
+        fn.seek(0)
+        note = fn.read()
+    note = None if not note else note.decode(ENC)
+    return note
 
 
 def view_notes(notes):

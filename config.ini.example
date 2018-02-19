@@ -27,3 +27,10 @@
 # database_2 = <path/to/second database>
 # etc....
 # pw_cache_period_min = <minutes to cache database password>
+
+## Set 'gui_editor' for: emacs, gvim, leafpad
+## Set 'editor' for terminal editors: vim, emacs -nw, nano
+## Set 'terminal' if using a terminal editor
+# editor = <path/to/terminal editor> 'vim' by default
+# terminal = <xterm, urxvt> <options if necessary>. 'xterm' by default
+# gui_editor = <path/to/editor> <options>  e.g. gui_editor = gvim -f

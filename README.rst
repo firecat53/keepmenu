@@ -23,6 +23,7 @@ Features
   window. Notes fields can be viewed line-by-line from within dmenu and the
   selected line will be typed.
 - Edit entry title, username, url and password (manually typed or auto-generate)
+- Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)
 - Keepmenu runs in the background after initial startup and will retain the
   entered passphrase for `pw_cache_period_min` minutes.
 - Optional Pinentry support for secure passphrase entry.
