@@ -65,6 +65,30 @@ def random_str():
     return ''.join(random.choice(letters) for i in range(15))
 
 
+def gen_passwd(length=20, use_digits=True, use_spec_chars=True):
+    """Generate password (min 4 chars, 1 lower, 1 upper, 1 digit, 1 special char)
+
+    Args: length - int (default 20)
+          use_digits - bool (default True)
+          use_spec_chars - bool (default True)
+
+    Returns: password - string
+
+    """
+    length = length if length >= 4 else 4
+    dig = string.digits if use_digits is True else ''
+    spec = string.punctuation if use_spec_chars is True else ''
+    alphabet = string.ascii_letters + dig + spec
+    while True:
+        password = ''.join(random.SystemRandom().choice(alphabet) for i in range(length))
+        if (any(c.islower() for c in password)
+                and any(c.isupper() for c in password)
+                and (any(c.isdigit() for c in password) if dig else True)
+                and (any(c in string.punctuation for c in password) if spec else True)):
+            break
+    return password
+
+
 def process_config():
     """Set global variables. Read the config file. Create default config file if
     one doesn't exist.
@@ -383,11 +407,14 @@ def view_entry(kp_entry):
     return sel
 
 
-def edit_entry(kpo, kp_entry):
+def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements
     """Edit title, username, password and url for an entry.
 
     Args: kpo - Keepass object
           kp_entry - selected Entry object
+
+    Returns: True to continue editing
+             False if done
 
     """
     fields = ["Title: {}".format(kp_entry.title),
@@ -399,15 +426,62 @@ def edit_entry(kpo, kp_entry):
                 stdin=PIPE,
                 stdout=PIPE,
                 env=ENV).communicate(input=kp_entries_b)[0].decode(ENC).rstrip('\n')
-    field, sel = sel.split(": ", 1)
+    try:
+        field, sel = sel.split(": ", 1)
+    except ValueError:
+        return False
     field = field.lower()
     edit_b = sel.encode(ENC) + b"\n"
-    sel = Popen(dmenu_cmd(1, "{}".format(field.capitalize())),
-                stdin=PIPE,
-                stdout=PIPE,
-                env=ENV).communicate(input=edit_b)[0].decode(ENC).rstrip('\n')
+    pw_choice = ""
+    if field == 'password':
+        pw_choice_b = b"Generate password\nManually enter password\n"
+        pw_choice = Popen(dmenu_cmd(2, "Password"),
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          env=ENV).communicate(input=pw_choice_b)[0].decode(ENC).rstrip('\n')
+        if pw_choice == "Manually enter password":
+            pass
+        elif not pw_choice:
+            return True
+        else:
+            pw_choice = ''
+            len_b = b"20\n"
+            length = Popen(dmenu_cmd(1, "Password Length?"),
+                           stdin=PIPE,
+                           stdout=PIPE,
+                           env=ENV).communicate(input=len_b)[0].decode(ENC).rstrip('\n')
+            if not length:
+                return True
+            try:
+                length = int(length)
+            except ValueError:
+                length = 20
+            tf_b = b"True\nFalse\n"
+            digits = Popen(dmenu_cmd(2, "Use digits? True/False"),
+                           stdin=PIPE,
+                           stdout=PIPE,
+                           env=ENV).communicate(input=tf_b)[0].decode(ENC).rstrip('\n')
+            if not digits:
+                return True
+            digits = False if digits == 'False' else True
+            spec = Popen(dmenu_cmd(2, "Use special characters? True/False"),
+                         stdin=PIPE,
+                         stdout=PIPE,
+                         env=ENV).communicate(input=tf_b)[0].decode(ENC).rstrip('\n')
+            if not spec:
+                return True
+            spec = False if spec == 'False' else True
+            sel = gen_passwd(length, digits, spec)
+    if field != 'password' or pw_choice:
+        sel = Popen(dmenu_cmd(1, "{}".format(field.capitalize())),
+                    stdin=PIPE,
+                    stdout=PIPE,
+                    env=ENV).communicate(input=edit_b)[0].decode(ENC).rstrip('\n')
+        if not sel:
+            return True
     setattr(kp_entry, field, sel)
     kpo.save()
+    return True
 
 
 def view_notes(notes):
@@ -513,7 +587,9 @@ class DmenuRunner(Process):
                 entry = self.kpo.entries[int(sel.split('-', 1)[0])]
             except ValueError:
                 return
-            edit_entry(self.kpo, entry)
+            edit = True
+            while edit is True:
+                edit = edit_entry(self.kpo, entry)
         elif sel == options[2]:  # Reload database
             self.cache_timer_reset()
             self.dmenu_run()
