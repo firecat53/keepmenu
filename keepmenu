@@ -443,13 +443,13 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
               "Username: {}".format(kp_entry.username),
               "Password: {}".format(kp_entry.password),
               "Url: {}".format(kp_entry.url),
-    kp_entries_b = "\n".join(fields).encode(ENC)
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               "Delete Entry: "]
+    input_b = "\n".join(fields).encode(ENC)
     sel = Popen(dmenu_cmd(len(fields)),
                 stdin=PIPE,
                 stdout=PIPE,
-                env=ENV).communicate(input=kp_entries_b)[0].decode(ENC).rstrip('\n')
+                env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
     try:
         field, sel = sel.split(": ", 1)
     except ValueError:
@@ -460,40 +460,40 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         return delete_entry(kpo, kp_entry)
     pw_choice = ""
     if field == 'password':
-        pw_choice_b = b"Generate password\nManually enter password\n"
+        input_b = b"Generate password\nManually enter password\n"
         pw_choice = Popen(dmenu_cmd(2, "Password"),
                           stdin=PIPE,
                           stdout=PIPE,
-                          env=ENV).communicate(input=pw_choice_b)[0].decode(ENC).rstrip('\n')
+                          env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
         if pw_choice == "Manually enter password":
             pass
         elif not pw_choice:
             return True
         else:
             pw_choice = ''
-            len_b = b"20\n"
+            input_b = b"20\n"
             length = Popen(dmenu_cmd(1, "Password Length?"),
                            stdin=PIPE,
                            stdout=PIPE,
-                           env=ENV).communicate(input=len_b)[0].decode(ENC).rstrip('\n')
+                           env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
             if not length:
                 return True
             try:
                 length = int(length)
             except ValueError:
                 length = 20
-            tf_b = b"True\nFalse\n"
+            input_b = b"True\nFalse\n"
             digits = Popen(dmenu_cmd(2, "Use digits? True/False"),
                            stdin=PIPE,
                            stdout=PIPE,
-                           env=ENV).communicate(input=tf_b)[0].decode(ENC).rstrip('\n')
+                           env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
             if not digits:
                 return True
             digits = False if digits == 'False' else True
             spec = Popen(dmenu_cmd(2, "Use special characters? True/False"),
                          stdin=PIPE,
                          stdout=PIPE,
-                         env=ENV).communicate(input=tf_b)[0].decode(ENC).rstrip('\n')
+                         env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
             if not spec:
                 return True
             spec = False if spec == 'False' else True
