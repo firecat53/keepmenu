@@ -385,10 +385,12 @@ def view_all_entries(options, kp_entries):
                  env=ENV).communicate(input=entries_b)[0].decode(ENC).rstrip('\n')
 
 
-def select_group(kpo):
+def select_group(kpo, options="", prompt="Groups"):
     """Select which group for an entry
 
     Args: kpo - Keepass object
+          options - list of menu options for groups
+
     Returns: False for no entry
              group - string
 
@@ -398,16 +400,134 @@ def select_group(kpo):
     pattern = "{:>{na}} - {}"
     input_b = "\n".join([pattern.format(j, i.path, na=num_align)
                          for j, i in enumerate(groups)]).encode(ENC)
-    sel = Popen(dmenu_cmd(len(groups), "Groups"),
+    if options:
+        input_b = ("\n".join(options) + "\n").encode(ENC) + input_b
+    sel = Popen(dmenu_cmd(min(DMENU_LEN, len(options) + len(groups)), prompt),
                 stdin=PIPE,
                 stdout=PIPE,
                 env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
     if not sel:
         return False
+    elif sel == 'Create':
+        group = create_group(kpo)
+        if not group:
+            return False
+        return group
+    elif sel == 'Move':
+        group = move_group(kpo)
+        if not group:
+            return False
+    elif sel == 'Rename':
+        group = rename_group(kpo)
+        if not group:
+            return False
+    elif sel == 'Delete':
+        group = delete_group(kpo)
+        if not group:
+            return False
+        return group
     try:
         return groups[int(sel.split('-', 1)[0])]
     except ValueError:
         return False
+
+
+def manage_groups(kpo):
+    """Rename, create, move or delete groups
+
+    Args: kpo - Keepass object
+
+    """
+    options = ['Create',
+               'Move',
+               'Rename',
+               'Delete']
+    group = select_group(kpo, options)
+    if not group:
+        return False
+    return group
+
+
+def create_group(kpo):
+    """Create new group
+
+    Args: kpo - Keepass object
+    Returns: Group object or False
+
+    """
+    parentgroup = select_group(kpo, prompt="Select parent group")
+    if not parentgroup:
+        return False
+    name = Popen(dmenu_cmd(1, "Group name"),
+                 stdin=PIPE,
+                 stdout=PIPE,
+                 env=ENV).communicate()[0].decode(ENC).rstrip('\n')
+    if not name:
+        return False
+    group = kpo.add_group(parentgroup, name)
+    kpo.save()
+    return group
+
+
+def delete_group(kpo):
+    """Delete a group
+
+    Args: kpo - Keepass object
+    Returns: Group object or False
+
+    """
+    group = select_group(kpo, prompt="Delete Group:")
+    if not group:
+        return False
+    input_b = b"NO\nYes - confirm delete\n"
+    delete = Popen(dmenu_cmd(2, "Confirm delete"),
+                   stdin=PIPE,
+                   stdout=PIPE,
+                   env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
+    if delete != "Yes - confirm delete":
+        return True
+    kpo.delete_group(group)
+    kpo.save()
+    return group
+
+
+def move_group(kpo):
+    """Move group
+
+    Args: kpo - Keepass object
+    Returns: Group object or False
+
+    """
+    group = select_group(kpo, prompt="Select group to move")
+    if not group:
+        return False
+    destgroup = select_group(kpo, prompt="Select destination group")
+    if not destgroup:
+        return False
+    group = kpo.move_group(group, destgroup)
+    kpo.save()
+    return group
+
+
+def rename_group(kpo):
+    """Rename group
+
+    Args: kpo - Keepass object
+    Returns: Group object or False
+
+    """
+    group = select_group(kpo, prompt="Select group to rename")
+    if not group:
+        return False
+    name = Popen(dmenu_cmd(1, "New group name"),
+                 stdin=PIPE,
+                 stdout=PIPE,
+                 env=ENV).communicate()[0].decode(ENC).rstrip('\n')
+    if not name:
+        return False
+    group.name = name
+    kpo.save()
+    return group
 
 
 def add_entry(kpo):
@@ -675,6 +795,7 @@ class DmenuRunner(Process):
         options = ['View/Type Individual entries',
                    'Edit entries',
                    'Add entry',
+                   'Manage groups',
                    'Reload database',
                    'Kill Keepmenu daemon']
         sel = view_all_entries(options, self.kpo.entries)
@@ -703,10 +824,14 @@ class DmenuRunner(Process):
             entry = add_entry(self.kpo)
             if entry is False:
                 return
-        elif sel == options[3]:  # Reload database
+        elif sel == options[3]:  # Manage groups
+            group = manage_groups(self.kpo)
+            if group is False:
+                return
+        elif sel == options[4]:  # Reload database
             self.cache_timer_reset()
             self.dmenu_run()
-        elif sel == options[4]:  # Kill keepmenu daemon
+        elif sel == options[5]:  # Kill keepmenu daemon
             try:
                 self.server.kill_flag.set()
             except (EOFError, IOError):
