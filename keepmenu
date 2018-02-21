@@ -385,6 +385,48 @@ def view_all_entries(options, kp_entries):
                  env=ENV).communicate(input=entries_b)[0].decode(ENC).rstrip('\n')
 
 
+def select_group(kpo):
+    """Select which group for an entry
+
+    Args: kpo - Keepass object
+    Returns: False for no entry
+             group - string
+
+    """
+    groups = kpo.groups
+    num_align = len(str(len(groups)))
+    pattern = "{:>{na}} - {}"
+    input_b = "\n".join([pattern.format(j, i.path, na=num_align)
+                         for j, i in enumerate(groups)]).encode(ENC)
+    sel = Popen(dmenu_cmd(len(groups), "Groups"),
+                stdin=PIPE,
+                stdout=PIPE,
+                env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
+    if not sel:
+        return False
+    try:
+        return groups[int(sel.split('-', 1)[0])]
+    except ValueError:
+        return False
+
+
+def add_entry(kpo):
+    """Add Keepass entry
+
+    Args: kpo - Keepass object
+    Returns: False if not added
+             Keepass Entry object on success
+
+    """
+    group = select_group(kpo)
+    if group is False:
+        return False
+    entry = kpo.add_entry(destination_group=group, title="", username="", password="")
+    edit = True
+    while edit is True:
+        edit = edit_entry(kpo, entry)
+
+
 def delete_entry(kpo, kp_entry):
     """Delete an entry
 
@@ -624,7 +666,7 @@ class DmenuRunner(Process):
         self.cache_timer.start()
         self.server.cache_time_expired.clear()
 
-    def dmenu_run(self):
+    def dmenu_run(self):  # pylint: disable=too-many-branches
         """Run dmenu with the given list of Keepass Entry objects
 
         Args: self.kpo - Keepass object
@@ -632,6 +674,7 @@ class DmenuRunner(Process):
         """
         options = ['View/Type Individual entries',
                    'Edit entries',
+                   'Add entry',
                    'Reload database',
                    'Kill Keepmenu daemon']
         sel = view_all_entries(options, self.kpo.entries)
@@ -656,10 +699,14 @@ class DmenuRunner(Process):
             edit = True
             while edit is True:
                 edit = edit_entry(self.kpo, entry)
-        elif sel == options[2]:  # Reload database
+        elif sel == options[2]:  # Add entry
+            entry = add_entry(self.kpo)
+            if entry is False:
+                return
+        elif sel == options[3]:  # Reload database
             self.cache_timer_reset()
             self.dmenu_run()
-        elif sel == options[3]:  # Kill keepmenu daemon
+        elif sel == options[4]:  # Kill keepmenu daemon
             try:
                 self.server.kill_flag.set()
             except (EOFError, IOError):

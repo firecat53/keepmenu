@@ -24,12 +24,10 @@ Features
   selected line will be typed.
 - Edit entry title, username, url and password (manually typed or auto-generate)
 - Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)
-- Delete entries
+- Add and Delete entries
 - Keepmenu runs in the background after initial startup and will retain the
   entered passphrase for `pw_cache_period_min` minutes.
 - Optional Pinentry support for secure passphrase entry.
-- Possible future features:
-  + Add entries
 
 License
 -------
