@@ -1,8 +1,7 @@
 Keepmenu
 ========
 
-Select entries from Keepass databases using dmenu or Rofi_ and type username
-and/or password into the active window.
+Fully featured Dmenu frontend for managing Keepass databases.
 
 Inspired in part by Passhole_, but I wanted something more dmenu and less
 command line focused.
@@ -14,18 +13,18 @@ oriented. Thus...synchronized passwords and everyone is happy!
 Features
 --------
 
-- Prompts for and saves initial database and keyfile locations if config file
-  isn't setup before first run.
-- Set multiple databases and keyfiles in the config file.
 - Auto-type username and/or password on selection. No clipboard copy/paste
   involved.
-- Alternatively, select any single field and have it type into the active
-  window. Notes fields can be viewed line-by-line from within dmenu and the
-  selected line will be typed.
-- Edit entry title, username, url and password (manually typed or auto-generate)
+- Select any single field and have it typed into the active window. Notes fields
+  can be viewed line-by-line from within dmenu and the selected line will be
+  typed when selected.
+- Edit entry title, username, URL and password (manually typed or auto-generate)
 - Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)
 - Add and Delete entries
 - Rename, move, delete and add groups
+- Prompts for and saves initial database and keyfile locations if config file
+  isn't setup before first run.
+- Set multiple databases and keyfiles in the config file.
 - Keepmenu runs in the background after initial startup and will retain the
   entered passphrase for `pw_cache_period_min` minutes.
 - Optional Pinentry support for secure passphrase entry.
@@ -51,6 +50,7 @@ Installation
 
 - Installation
 
+  + `pip install --user keepmenu`. Add ~/.local/bin to $PATH
   + In a virtualenv with pip. Link to the executable in
     <path/to/virtualenv/bin/keepmenu> ::
 
