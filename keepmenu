@@ -602,6 +602,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
 
     """
     fields = ["Title: {}".format(kp_entry.title),
+              "Path: {}".format(kp_entry.path.rstrip(kp_entry.title)),
               "Username: {}".format(kp_entry.username),
               "Password: {}".format(kp_entry.password),
               "Url: {}".format(kp_entry.url),
@@ -620,6 +621,13 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     edit_b = sel.encode(ENC) + b"\n"
     if field == 'delete entry':
         return delete_entry(kpo, kp_entry)
+    if field == 'path':
+        group = select_group(kpo)
+        if not group:
+            return False
+        kpo.move_entry(kp_entry, group)
+        kpo.save()
+        return True
     pw_choice = ""
     if field == 'password':
         input_b = b"Generate password\nManually enter password\n"
@@ -660,7 +668,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 return True
             spec = False if spec == 'False' else True
             sel = gen_passwd(length, digits, spec)
-    if (field != 'password' and field != 'notes') or pw_choice:
+    if (field != 'password' and field != 'notes' and field != 'path') or pw_choice:
         sel = Popen(dmenu_cmd(1, "{}".format(field.capitalize())),
                     stdin=PIPE,
                     stdout=PIPE,
