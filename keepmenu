@@ -291,7 +291,7 @@ def get_initial_db():
 
 
 def get_entries(dbo):
-    """Open keepass database and return the PyKeePass entries
+    """Open keepass database and return the PyKeePass object
 
         Args: dbo: tuple (db path, keyfile path, password)
         Returns: PyKeePass object
@@ -385,7 +385,7 @@ def view_all_entries(options, kp_entries):
                  env=ENV).communicate(input=entries_b)[0].decode(ENC).rstrip('\n')
 
 
-def select_group(kpo, options="", prompt="Groups"):
+def select_group(kpo, options="", prompt="Groups"):  # pylint: disable=too-many-return-statements
     """Select which group for an entry
 
     Args: kpo - Keepass object
@@ -753,11 +753,14 @@ class DmenuRunner(Process):
     Args: server - Server object
           kpo - Keepass object
     """
-    def __init__(self, server, kpo):
+    def __init__(self, server):
         Process.__init__(self)
         self.server = server
-        self.database = (None, None, None)
-        self.kpo = kpo
+        self.database = get_database()
+        self.kpo = get_entries(self.database)
+        if not self.kpo:
+            self.server.kill_flag.set()
+            sys.exit()
         self.cache_timer = Timer(CACHE_PERIOD_MIN * 60, self.cache_time)
         self.cache_timer.daemon = True
         self.cache_timer.start()
@@ -794,10 +797,17 @@ class DmenuRunner(Process):
         self.cache_timer.start()
         self.server.cache_time_expired.clear()
 
-    def dmenu_run(self):  # pylint: disable=too-many-branches
+    def dmenu_run(self):  # pylint: disable=too-many-branches,too-many-return-statements
         """Run dmenu with the given list of Keepass Entry objects
 
         Args: self.kpo - Keepass object
+
+        Note: I had to reload the kpo object after every save to prevent being
+        affected by the gibberish password bug in pykeepass:
+        https://github.com/pschmitt/pykeepass/issues/43
+
+        Once this is fixed, the extra calls to self.kpo = get_entries... can be
+        deleted
 
         """
         options = ['View/Type Individual entries',
@@ -821,23 +831,34 @@ class DmenuRunner(Process):
         elif sel == options[1]:  # Edit entries
             options = []
             sel = view_all_entries(options, self.kpo.entries)
-            try:
-                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
-            except ValueError:
-                return
             edit = True
             while edit is True:
+                try:
+                    entry = self.kpo.entries[int(sel.split('-', 1)[0])]
+                except ValueError:
+                    return
                 edit = edit_entry(self.kpo, entry)
+                self.kpo = get_entries(self.database)
+                if not self.kpo:
+                    edit = False
         elif sel == options[2]:  # Add entry
             entry = add_entry(self.kpo)
+            self.kpo = get_entries(self.database)
+            if not self.kpo:
+                entry = False
             if entry is False:
                 return
         elif sel == options[3]:  # Manage groups
             group = manage_groups(self.kpo)
+            self.kpo = get_entries(self.database)
+            if not self.kpo:
+                group = False
             if group is False:
                 return
         elif sel == options[4]:  # Reload database
-            self.cache_timer_reset()
+            self.kpo = get_entries(self.database)
+            if not self.kpo:
+                return
             self.dmenu_run()
         elif sel == options[5]:  # Kill keepmenu daemon
             try:
@@ -885,12 +906,8 @@ def run():
     """Main entrypoint. Start the background Manager and Dmenu runner processes.
 
     """
-    database = get_database()
-    kpo = get_entries(database)
-    if not kpo:
-        sys.exit()
     server = Server()
-    dmenu = DmenuRunner(server, kpo)
+    dmenu = DmenuRunner(server)
     dmenu.daemon = True
     server.start()
     dmenu.start()
