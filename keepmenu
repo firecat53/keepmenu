@@ -741,8 +741,6 @@ def client():
     port, auth = get_auth()
     mgr = BaseManager(address=('', port), authkey=auth)
     mgr.register('set_event')
-    mgr.register('expire_cache')
-    mgr.register('kill')
     mgr.connect()
     return mgr
 
@@ -891,8 +889,6 @@ class Server(Process):
         mgr = BaseManager(address=('127.0.0.1', self.port),
                           authkey=self.authkey)
         mgr.register('set_event', callable=self.start_flag.set)
-        mgr.register('expire_cache', callable=self.cache_time_expired.set)
-        mgr.register('kill', callable=self.kill_flag.set)
         mgr.start()
         return mgr
 
