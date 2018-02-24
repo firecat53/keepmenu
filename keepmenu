@@ -264,6 +264,10 @@ def get_database():
         dbs = [i for i in dbs if i[0] == sel]
         if not sel:
             return (None, None, None)
+    if not dbs[0][-1]:
+        db_l = list(dbs[0])
+        db_l[-1] = get_passphrase()
+        dbs[0] = db_l
     return dbs[0]
 
 
@@ -300,8 +304,6 @@ def get_entries(dbo):
     dbf, keyfile, password = dbo
     if dbf is None:
         return None
-    if not password:
-        password = get_passphrase()
     try:
         kpo = PyKeePass(dbf, password, keyfile=keyfile)
     except (IOError, OSError, IndexError) as e:  ## pylint: disable=invalid-name
@@ -385,7 +387,7 @@ def view_all_entries(options, kp_entries):
                  env=ENV).communicate(input=entries_b)[0].decode(ENC).rstrip('\n')
 
 
-def select_group(kpo, options="", prompt="Groups"):  # pylint: disable=too-many-return-statements
+def select_group(kpo, prompt="Groups"):
     """Select which group for an entry
 
     Args: kpo - Keepass object
@@ -400,32 +402,12 @@ def select_group(kpo, options="", prompt="Groups"):  # pylint: disable=too-many-
     pattern = "{:>{na}} - {}"
     input_b = "\n".join([pattern.format(j, i.path, na=num_align)
                          for j, i in enumerate(groups)]).encode(ENC)
-    if options:
-        input_b = ("\n".join(options) + "\n").encode(ENC) + input_b
-    sel = Popen(dmenu_cmd(min(DMENU_LEN, len(options) + len(groups)), prompt),
+    sel = Popen(dmenu_cmd(min(DMENU_LEN, len(groups)), prompt),
                 stdin=PIPE,
                 stdout=PIPE,
                 env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
     if not sel:
         return False
-    elif sel == 'Create':
-        group = create_group(kpo)
-        if not group:
-            return False
-        return group
-    elif sel == 'Move':
-        group = move_group(kpo)
-        if not group:
-            return False
-    elif sel == 'Rename':
-        group = rename_group(kpo)
-        if not group:
-            return False
-    elif sel == 'Delete':
-        group = delete_group(kpo)
-        if not group:
-            return False
-        return group
     try:
         return groups[int(sel.split('-', 1)[0])]
     except ValueError:
@@ -436,15 +418,34 @@ def manage_groups(kpo):
     """Rename, create, move or delete groups
 
     Args: kpo - Keepass object
+    Returns: Group object or False
 
     """
+    edit = True
     options = ['Create',
                'Move',
                'Rename',
                'Delete']
-    group = select_group(kpo, options)
-    if not group:
-        return False
+    group = False
+    while edit is True:
+        input_b = b"\n".join(i.encode(ENC) for i in options) + b"\n\n" + \
+                b"\n".join(i.path.encode(ENC) for i in kpo.groups)
+        sel = Popen(dmenu_cmd(len(options) + len(kpo.groups) + 1, "Groups"),
+                    stdin=PIPE,
+                    stdout=PIPE,
+                    env=ENV).communicate(input=input_b)[0].decode(ENC).rstrip('\n')
+        if not sel:
+            edit = False
+        elif sel == 'Create':
+            group = create_group(kpo)
+        elif sel == 'Move':
+            group = move_group(kpo)
+        elif sel == 'Rename':
+            group = rename_group(kpo)
+        elif sel == 'Delete':
+            group = delete_group(kpo)
+        else:
+            edit = False
     return group
 
 
@@ -545,6 +546,7 @@ def add_entry(kpo):
     edit = True
     while edit is True:
         edit = edit_entry(kpo, entry)
+    return entry
 
 
 def delete_entry(kpo, kp_entry):
@@ -624,9 +626,8 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     if field == 'path':
         group = select_group(kpo)
         if not group:
-            return False
+            return True
         kpo.move_entry(kp_entry, group)
-        kpo.save()
         return True
     pw_choice = ""
     if field == 'password':
@@ -678,7 +679,6 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     elif field == 'notes':
         sel = edit_notes(kp_entry.notes)
     setattr(kp_entry, field, sel)
-    kpo.save()
     return True
 
 
@@ -831,30 +831,25 @@ class DmenuRunner(Process):
         elif sel == options[1]:  # Edit entries
             options = []
             sel = view_all_entries(options, self.kpo.entries)
+            try:
+                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
+            except ValueError:
+                return
             edit = True
             while edit is True:
-                try:
-                    entry = self.kpo.entries[int(sel.split('-', 1)[0])]
-                except ValueError:
-                    return
                 edit = edit_entry(self.kpo, entry)
-                self.kpo = get_entries(self.database)
-                if not self.kpo:
-                    edit = False
+            self.kpo.save()
+            self.kpo = get_entries(self.database)
         elif sel == options[2]:  # Add entry
             entry = add_entry(self.kpo)
-            self.kpo = get_entries(self.database)
-            if not self.kpo:
-                entry = False
-            if entry is False:
-                return
+            if entry:
+                self.kpo.save()
+                self.kpo = get_entries(self.database)
         elif sel == options[3]:  # Manage groups
             group = manage_groups(self.kpo)
-            self.kpo = get_entries(self.database)
-            if not self.kpo:
-                group = False
-            if group is False:
-                return
+            if group:
+                self.kpo.save()
+                self.kpo = get_entries(self.database)
         elif sel == options[4]:  # Reload database
             self.kpo = get_entries(self.database)
             if not self.kpo:
