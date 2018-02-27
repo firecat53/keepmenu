@@ -399,7 +399,7 @@ def select_group(kpo, prompt="Groups"):
         return False
     try:
         return groups[int(sel.split('-', 1)[0])]
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 
@@ -776,7 +776,7 @@ class DmenuRunner(Process):
             sel = view_all_entries(options, self.kpo.entries)
             try:
                 entry = self.kpo.entries[int(sel.split('-', 1)[0])]
-            except ValueError:
+            except (ValueError, TypeError):
                 return
             text = view_entry(entry)
             type_text(text)
@@ -785,7 +785,7 @@ class DmenuRunner(Process):
             sel = view_all_entries(options, self.kpo.entries)
             try:
                 entry = self.kpo.entries[int(sel.split('-', 1)[0])]
-            except ValueError:
+            except (ValueError, TypeError):
                 return
             edit = True
             while edit is True:
@@ -815,7 +815,7 @@ class DmenuRunner(Process):
         else:
             try:
                 entry = self.kpo.entries[int(sel.split('-', 1)[0])]
-            except ValueError:
+            except (ValueError, TypeError):
                 return
             type_entry(entry)
 
