@@ -137,6 +137,14 @@ def process_config():
         DMENU_LEN = int(CONF.get("dmenu", "l"))
     else:
         DMENU_LEN = 24
+    if CONF.has_option("database", "type_library"):
+        if CONF.get("database", "type_library") == "xdotool":
+            try:
+                call(['xdotool', 'version'])
+            except OSError:
+                dmenu_err("Xdotool not installed.\n"
+                          "Please install or remove that option from config.ini")
+                sys.exit()
 
 
 def get_auth():
@@ -338,6 +346,21 @@ def get_passphrase():
 
 
 def type_entry(entry):
+    """Pick which library to use to type strings
+
+    Defaults to pyuserinput
+
+    """
+    library = 'pyuserinput'
+    if CONF.has_option('database', 'type_library'):
+        library = CONF.get('database', 'type_library')
+    if library == 'xdotool':
+        type_entry_xdotool(entry)
+    else:
+        type_entry_pyuserinput(entry)
+
+
+def type_entry_pyuserinput(entry):
     """Use PyUserInput to type the selected entry username and/or password and
     then 'Enter'.
 
@@ -347,7 +370,8 @@ def type_entry(entry):
         try:
             kbd.type_string(entry.username)
         except X11Error:
-            dmenu_err("Unable to type string...bad character")
+            dmenu_err("Unable to type string...bad character.\n"
+                      "Try setting `type_library = xdotool` in config.ini")
             return
         if entry.password:
             kbd.tap_key(kbd.tab_key)
@@ -355,21 +379,42 @@ def type_entry(entry):
         try:
             kbd.type_string(entry.password)
         except X11Error:
-            dmenu_err("Unable to type string...bad character")
+            dmenu_err("Unable to type string...bad character.\n"
+                      "Try setting `type_library = xdotool` in config.ini")
             return
     # Not sure why we need n=2, but only seems to work that way
     kbd.tap_key(kbd.enter_key, n=2)
 
 
-def type_text(data):
-    """Use PyUserInput to type the given text data
+def type_entry_xdotool(entry):
+    """Type entry username/password using xdotool
 
     """
-    kbd = PyKeyboard()
-    try:
-        kbd.type_string(data)
-    except X11Error:
-        dmenu_err("Unable to type string...bad character")
+    if entry.username:
+        call(['xdotool', 'type', entry.username])
+        if entry.password:
+            call(['xdotool', 'key', 'Tab'])
+    if entry.password:
+        call(['xdotool', 'type', entry.password])
+    call(['xdotool', 'key', 'Return'])
+
+
+def type_text(data):
+    """Type the given text data
+
+    """
+    library = 'pyuserinput'
+    if CONF.has_option('database', 'type_library'):
+        library = CONF.get('database', 'type_library')
+    if library == 'xdotool':
+        call(['xdotool', 'type', data])
+    else:
+        kbd = PyKeyboard()
+        try:
+            kbd.type_string(data)
+        except X11Error:
+            dmenu_err("Unable to type string...bad character.\n"
+                      "Try setting `type_library = xdotool` in config.ini")
 
 
 def view_all_entries(options, kp_entries):

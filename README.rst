@@ -18,6 +18,7 @@ Features
 - Select any single field and have it typed into the active window. Notes fields
   can be viewed line-by-line from within dmenu and the selected line will be
   typed when selected.
+- Alternate keyboard languages and layouts supported via xdotool.
 - Edit entry title, username, URL and password (manually typed or auto-generate)
 - Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)
 - Add and Delete entries
@@ -45,6 +46,9 @@ Requirements
    configuration/theming should be done via Xresources.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
    in the config file.
+5. (optional) xdotool. If you have a lot of Unicode characters or use a non-U.S.
+   English keyboard layout, xdotool is necessary to handle typing those
+   characters.
 
 Installation
 ------------
@@ -70,6 +74,12 @@ Installation
   + Add your database(s) and keyfile(s)
   + Adjust `pw_cache_period_hrs` if desired. Default is 6 hours.
   + Set the dmenu_command to `rofi` if you are using that instead
+  + Set `type_library = xdotool` if you need support for non-U.S. English
+    keyboard layouts and/or characters.
+
+    * When using xdotool, call `setxkbmap` to set your keyboard type somewhere
+      in your window manager or desktop environment initialization. For example:
+      `exec setxkbmap de` in ~/.config/i3/config. 
 
 - If using Rofi, you can try some of the command line options in config.ini or
   set them using the `dmenu_command` setting, but I haven't tested most of them
