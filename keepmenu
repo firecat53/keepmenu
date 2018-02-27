@@ -21,6 +21,7 @@ from threading import Timer
 import time
 from pykeepass import PyKeePass
 from pykeyboard import PyKeyboard
+from pymouse.x11 import X11Error
 if sys.version_info.major < 3:
     # hack to reduce client connect timeout for python 2.7 (defaults to 20 seconds)
     # https://stackoverflow.com/questions/6512884/properly-disconnect-multiprocessing-remote-manager#9936835
@@ -343,11 +344,19 @@ def type_entry(entry):
     """
     kbd = PyKeyboard()
     if entry.username:
-        kbd.type_string(entry.username)
+        try:
+            kbd.type_string(entry.username)
+        except X11Error:
+            dmenu_err("Unable to type string...bad character")
+            return
         if entry.password:
             kbd.tap_key(kbd.tab_key)
     if entry.password:
-        kbd.type_string(entry.password)
+        try:
+            kbd.type_string(entry.password)
+        except X11Error:
+            dmenu_err("Unable to type string...bad character")
+            return
     # Not sure why we need n=2, but only seems to work that way
     kbd.tap_key(kbd.enter_key, n=2)
 
@@ -357,7 +366,10 @@ def type_text(data):
 
     """
     kbd = PyKeyboard()
-    kbd.type_string(data)
+    try:
+        kbd.type_string(data)
+    except X11Error:
+        dmenu_err("Unable to type string...bad character")
 
 
 def view_all_entries(options, kp_entries):
