@@ -1,7 +1,7 @@
 Keepmenu
 ========
 
-Fully featured Dmenu frontend for managing Keepass databases.
+Fully featured Dmenu/Rofi frontend for managing Keepass databases.
 
 Inspired in part by Passhole_, but I wanted something more dmenu and less
 command line focused.
