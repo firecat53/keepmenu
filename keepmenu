@@ -764,6 +764,9 @@ class DmenuRunner(Process):
     def dmenu_run(self):  # pylint: disable=too-many-branches,too-many-return-statements
         """Run dmenu with the given list of Keepass Entry objects
 
+        If 'hide_groups' is defined in config.ini, hide those from main and
+        view/type all views.
+
         Args: self.kpo - Keepass object
 
         Note: I had to reload the kpo object after every save to prevent being
@@ -780,12 +783,23 @@ class DmenuRunner(Process):
                    'Manage groups',
                    'Reload database',
                    'Kill Keepmenu daemon']
-        sel = view_all_entries(options, self.kpo.entries)
+        if CONF.has_option("database", "hide_groups"):
+            hid_groups = CONF.get("database", "hide_groups").split("\n")
+            # Validate ignored group names in config.ini
+            hid_groups = [i for i in hid_groups if i in
+                          [j.name for j in self.kpo.groups]]
+        else:
+            hid_groups = []
+        sel = view_all_entries(options, [i for i in self.kpo.entries if not
+                                         any(j in i.path.rstrip(i.title) for
+                                             j in hid_groups)])
         if not sel:
             return
         if sel == options[0]:  # ViewType Individual entries
             options = []
-            sel = view_all_entries(options, self.kpo.entries)
+            sel = view_all_entries(options, [i for i in self.kpo.entries if not
+                                             any(j in i.path.rstrip(i.title) for
+                                                 j in hid_groups)])
             try:
                 entry = self.kpo.entries[int(sel.split('-', 1)[0])]
             except (ValueError, TypeError):

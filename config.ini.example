@@ -34,3 +34,6 @@
 # editor = <path/to/terminal editor> 'vim' by default
 # terminal = <xterm, urxvt> <options if necessary>. 'xterm' by default
 # gui_editor = <path/to/editor> <options>  e.g. gui_editor = gvim -f
+# hide_groups = Recycle Bin  <Note formatting for adding multiple groups>
+#               Group 2
+#               Group 3

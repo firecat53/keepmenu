@@ -25,6 +25,7 @@ Features
 - Prompts for and saves initial database and keyfile locations if config file
   isn't setup before first run.
 - Set multiple databases and keyfiles in the config file.
+- Hide selected groups from the default and 'View/Type Individual entries' views.
 - Keepmenu runs in the background after initial startup and will retain the
   entered passphrase for `pw_cache_period_min` minutes.
 - Optional Pinentry support for secure passphrase entry.
