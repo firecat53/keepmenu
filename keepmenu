@@ -166,47 +166,31 @@ def get_auth():
     return port, authkey
 
 
-def dmenu_cmd(num_lines, prompt="Entries", inp=""):  # pylint: disable=too-many-branches
+def dmenu_cmd(num_lines, prompt):
     """Parse config.ini for dmenu options
 
     Args: args - num_lines: number of lines to display
                  prompt: prompt to show
-                 inp: input to dmenu - bytes string
     Returns: command invocation (as a list of strings) for
                 dmenu -l <num_lines> -p <prompt> -i ...
 
     """
-    dmenu_command = "dmenu"
-    if not CONF.has_section('dmenu'):
-        dmenu = [dmenu_command, "-i", "-l",
-                 str(min(DMENU_LEN, num_lines)), "-p", str(prompt)]
-    else:
+    args_dict = {"dmenu_command": "dmenu"}
+    if CONF.has_section('dmenu'):
         args = CONF.items('dmenu')
-        args_dict = dict(args)
-        dmenu_args = []
-        if "dmenu_command" in args_dict:
-            command = shlex.split(args_dict["dmenu_command"])
-            dmenu_command = command[0]
-            dmenu_args = command[1:]
-            del args_dict["dmenu_command"]
-        if "rofi" in dmenu_command:
-            lines = "-i -dmenu -lines"
-            # rofi doesn't support 0 length line, it requires at least -lines=1
-            # see https://github.com/DaveDavenport/rofi/issues/252
-            num_lines = num_lines or 1
-        else:
-            lines = "-i -l"
-        if "l" in args_dict:
-            # rofi doesn't support 0 length line, it requires at least -lines=1
-            # see https://github.com/DaveDavenport/rofi/issues/252
-            if "rofi" in dmenu_command:
-                args_dict['l'] = min(num_lines, int(args_dict['l'])) or 1
-            lines = "{} {}".format(lines, args_dict['l'])
-            del args_dict['l']
-        else:
-            lines = "{} {}".format(lines, num_lines)
-        if "pinentry" in args_dict:
-            del args_dict["pinentry"]
+        args_dict.update(dict(args))
+    command = shlex.split(args_dict["dmenu_command"])
+    dmenu_command = command[0]
+    dmenu_args = command[1:]
+    del args_dict["dmenu_command"]
+    lines = "-i -dmenu -lines" if "rofi" in dmenu_command else "-i -l"
+    if "l" in args_dict:
+        lines = "{} {}".format(lines, args_dict['l'])
+        del args_dict['l']
+    else:
+        lines = "{} {}".format(lines, num_lines)
+    if "pinentry" in args_dict:
+        del args_dict["pinentry"]
     if prompt == "Passphrase":
         if CONF.has_section('dmenu_passphrase'):
             args = CONF.items('dmenu_passphrase')
@@ -223,7 +207,20 @@ def dmenu_cmd(num_lines, prompt="Entries", inp=""):  # pylint: disable=too-many-
     dmenu += list(itertools.chain.from_iterable(extras))
     dmenu[1:1] = lines.split()
     dmenu = list(filter(None, dmenu))  # Remove empty list elements
-    sel = Popen(dmenu,
+    return dmenu
+
+
+def dmenu_select(num_lines, prompt="Entries", inp=""):
+    """Call dmenu and return the selected entry
+
+    Args: num_lines - number of lines to display
+          prompt - prompt to show
+          inp - bytes string to pass to dmenu via STDIN
+
+    Returns: sel - string
+
+    """
+    sel = Popen(dmenu_cmd(num_lines, prompt),
                 stdin=PIPE,
                 stdout=PIPE,
                 env=ENV).communicate(input=inp)[0]
@@ -236,7 +233,7 @@ def dmenu_err(prompt):
     """Pops up a dmenu prompt with an error message
 
     """
-    return dmenu_cmd(1, prompt)
+    return dmenu_select(1, prompt)
 
 
 def get_database():
@@ -271,7 +268,7 @@ def get_database():
             return (None, None, None)
     if len(dbs) > 1:
         inp_bytes = "\n".join(i[0] for i in dbs).encode(ENC)
-        sel = dmenu_cmd(len(dbs), "Select Database", inp=inp_bytes)
+        sel = dmenu_select(len(dbs), "Select Database", inp=inp_bytes)
         dbs = [i for i in dbs if i[0] == sel]
         if not sel:
             return (None, None, None)
@@ -286,12 +283,12 @@ def get_initial_db():
     """Ask for initial database name and keyfile if not entered in config file
 
     """
-    db_name = dmenu_cmd(0, "Enter path to existing "
-                           "Keepass database. ~/ for $HOME is ok")
+    db_name = dmenu_select(0, "Enter path to existing "
+                              "Keepass database. ~/ for $HOME is ok")
     if not db_name:
         dmenu_err("No database entered. Try again.")
         return False
-    keyfile_name = dmenu_cmd(0, "Enter path to keyfile. ~/ for $HOME is ok")
+    keyfile_name = dmenu_select(0, "Enter path to keyfile. ~/ for $HOME is ok")
     with open(CONF_FILE, 'w') as conf_file:
         CONF.set('database', 'database_1', db_name)
         if keyfile_name:
@@ -341,7 +338,7 @@ def get_passphrase():
             if res.startswith("D "):
                 password = res.split("D ")[1]
     else:
-        password = dmenu_cmd(0, "Passphrase")
+        password = dmenu_select(0, "Passphrase")
     return password
 
 
@@ -433,7 +430,7 @@ def view_all_entries(options, kp_entries):
         entries_b = options_b + kp_entries_b
     else:
         entries_b = kp_entries_b
-    return dmenu_cmd(min(DMENU_LEN, len(options) + len(kp_entries)), inp=entries_b)
+    return dmenu_select(min(DMENU_LEN, len(options) + len(kp_entries)), inp=entries_b)
 
 
 def select_group(kpo, prompt="Groups"):
@@ -451,7 +448,7 @@ def select_group(kpo, prompt="Groups"):
     pattern = "{:>{na}} - {}"
     input_b = "\n".join([pattern.format(j, i.path, na=num_align)
                          for j, i in enumerate(groups)]).encode(ENC)
-    sel = dmenu_cmd(min(DMENU_LEN, len(groups)), prompt, inp=input_b)
+    sel = dmenu_select(min(DMENU_LEN, len(groups)), prompt, inp=input_b)
     if not sel:
         return False
     try:
@@ -476,7 +473,7 @@ def manage_groups(kpo):
     while edit is True:
         input_b = b"\n".join(i.encode(ENC) for i in options) + b"\n\n" + \
                 b"\n".join(i.path.encode(ENC) for i in kpo.groups)
-        sel = dmenu_cmd(len(options) + len(kpo.groups) + 1, "Groups", inp=input_b)
+        sel = dmenu_select(len(options) + len(kpo.groups) + 1, "Groups", inp=input_b)
         if not sel:
             edit = False
         elif sel == 'Create':
@@ -502,7 +499,7 @@ def create_group(kpo):
     parentgroup = select_group(kpo, prompt="Select parent group")
     if not parentgroup:
         return False
-    name = dmenu_cmd(1, "Group name")
+    name = dmenu_select(1, "Group name")
     if not name:
         return False
     group = kpo.add_group(parentgroup, name)
@@ -521,7 +518,7 @@ def delete_group(kpo):
     if not group:
         return False
     input_b = b"NO\nYes - confirm delete\n"
-    delete = dmenu_cmd(2, "Confirm delete", inp=input_b)
+    delete = dmenu_select(2, "Confirm delete", inp=input_b)
     if delete != "Yes - confirm delete":
         return True
     kpo.delete_group(group)
@@ -557,7 +554,7 @@ def rename_group(kpo):
     group = select_group(kpo, prompt="Select group to rename")
     if not group:
         return False
-    name = dmenu_cmd(1, "New group name")
+    name = dmenu_select(1, "New group name")
     if not name:
         return False
     group.name = name
@@ -593,7 +590,7 @@ def delete_entry(kpo, kp_entry):
 
     """
     input_b = b"NO\nYes - confirm delete\n"
-    delete = dmenu_cmd(2, "Confirm delete", inp=input_b)
+    delete = dmenu_select(2, "Confirm delete", inp=input_b)
     if delete != "Yes - confirm delete":
         return True
     kpo.delete_entry(kp_entry)
@@ -613,7 +610,7 @@ def view_entry(kp_entry):
               kp_entry.url or "URL: None",
               "Notes: <Enter to view>" if kp_entry.notes else "Notes: None"]
     kp_entries_b = "\n".join(fields).encode(ENC)
-    sel = dmenu_cmd(len(fields), inp=kp_entries_b)
+    sel = dmenu_select(len(fields), inp=kp_entries_b)
     if sel == "Notes: <Enter to view>":
         sel = view_notes(kp_entry.notes)
     elif sel == "Notes: None":
@@ -641,7 +638,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               "Delete Entry: "]
     input_b = "\n".join(fields).encode(ENC)
-    sel = dmenu_cmd(len(fields), inp=input_b)
+    sel = dmenu_select(len(fields), inp=input_b)
     try:
         field, sel = sel.split(": ", 1)
     except (ValueError, TypeError):
@@ -659,7 +656,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     pw_choice = ""
     if field == 'password':
         input_b = b"Generate password\nManually enter password\n"
-        pw_choice = dmenu_cmd(2, "Password", inp=input_b)
+        pw_choice = dmenu_select(2, "Password", inp=input_b)
         if pw_choice == "Manually enter password":
             pass
         elif not pw_choice:
@@ -667,7 +664,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         else:
             pw_choice = ''
             input_b = b"20\n"
-            length = dmenu_cmd(1, "Password Length?", inp=input_b)
+            length = dmenu_select(1, "Password Length?", inp=input_b)
             if not length:
                 return True
             try:
@@ -675,17 +672,17 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             except ValueError:
                 length = 20
             input_b = b"True\nFalse\n"
-            digits = dmenu_cmd(2, "Use digits? True/False", inp=input_b)
+            digits = dmenu_select(2, "Use digits? True/False", inp=input_b)
             if not digits:
                 return True
             digits = False if digits == 'False' else True
-            spec = dmenu_cmd(2, "Use special characters? True/False", inp=input_b)
+            spec = dmenu_select(2, "Use special characters? True/False", inp=input_b)
             if not spec:
                 return True
             spec = False if spec == 'False' else True
             sel = gen_passwd(length, digits, spec)
     if (field != 'password' and field != 'notes' and field != 'path') or pw_choice:
-        sel = dmenu_cmd(1, "{}".format(field.capitalize()), inp=edit_b)
+        sel = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
         if not sel:
             return True
     elif field == 'notes':
@@ -740,7 +737,7 @@ def view_notes(notes):
     """
     notes_l = notes.split('\n')
     notes_b = "\n".join(notes_l).encode(ENC)
-    sel = dmenu_cmd(min(DMENU_LEN, len(notes_l)), inp=notes_b)
+    sel = dmenu_select(min(DMENU_LEN, len(notes_l)), inp=notes_b)
     return sel
 
 
