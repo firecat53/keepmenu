@@ -366,7 +366,7 @@ def type_entry_pyuserinput(entry):
     if entry.username:
         try:
             kbd.type_string(entry.username)
-        except X11Error:
+        except (X11Error, KeyError):
             dmenu_err("Unable to type string...bad character.\n"
                       "Try setting `type_library = xdotool` in config.ini")
             return
@@ -375,7 +375,7 @@ def type_entry_pyuserinput(entry):
     if entry.password:
         try:
             kbd.type_string(entry.password)
-        except X11Error:
+        except (X11Error, KeyError):
             dmenu_err("Unable to type string...bad character.\n"
                       "Try setting `type_library = xdotool` in config.ini")
             return
@@ -409,7 +409,7 @@ def type_text(data):
         kbd = PyKeyboard()
         try:
             kbd.type_string(data)
-        except X11Error:
+        except (X11Error, KeyError):
             dmenu_err("Unable to type string...bad character.\n"
                       "Try setting `type_library = xdotool` in config.ini")
 
