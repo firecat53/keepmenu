@@ -102,6 +102,11 @@ Usage
 - Hit Enter immediately after dmenu opens ("`View/Type individual entries`") to
   switch modes to view and/or type the individual fields for the entry.
 
+Tests
+-----
+
+- To run tests: `python tests/tests.py`
+
 .. _Rofi: https://davedavenport.github.io/rofi/
 .. _Passhole: https://github.com/purduelug/passhole
 .. _Pykeepass: https://github.com/pschmitt/pykeepass

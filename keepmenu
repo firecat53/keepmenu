@@ -46,6 +46,10 @@ if sys.version_info.major < 3:
     str = unicode  # pylint: disable=undefined-variable, invalid-name, redefined-builtin
 
 
+AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
+CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
+
+
 def find_free_port():
     """Find random free port to use for BaseManager server
 
@@ -100,7 +104,6 @@ def process_config():
     global CACHE_PERIOD_MIN, \
            CACHE_PERIOD_DEFAULT_MIN, \
            CONF, \
-           CONF_FILE, \
            DMENU_LEN, \
            ENV, \
            ENC
@@ -109,7 +112,6 @@ def process_config():
     ENV['LC_ALL'] = 'C'
     ENC = locale.getpreferredencoding()
     CACHE_PERIOD_DEFAULT_MIN = 360
-    CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
     CONF = configparser.ConfigParser()
     if not exists(CONF_FILE):
         try:
@@ -153,14 +155,13 @@ def get_auth():
     Returns: int port, bytestring authkey
 
     """
-    auth_file = expanduser("~/.cache/.keepmenu-auth")
     auth = configparser.ConfigParser()
-    if not exists(auth_file):
-        with open(auth_file, 'w') as a_file:
+    if not exists(AUTH_FILE):
+        with open(AUTH_FILE, 'w') as a_file:
             auth.set('DEFAULT', 'port', str(find_free_port()))
             auth.set('DEFAULT', 'authkey', random_str())
             auth.write(a_file)
-    auth.read(auth_file)
+    auth.read(AUTH_FILE)
     port = int(auth.get('DEFAULT', 'port'))
     authkey = auth.get('DEFAULT', 'authkey').encode()
     return port, authkey
@@ -930,8 +931,8 @@ def run():
     server.start()
     dmenu.start()
     server.join()
-    if exists(expanduser("~/.cache/.keepmenu-auth")):
-        os.remove(expanduser("~/.cache/.keepmenu-auth"))
+    if exists(expanduser(AUTH_FILE)):
+        os.remove(expanduser(AUTH_FILE))
 
 
 if __name__ == '__main__':
