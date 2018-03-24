@@ -560,7 +560,7 @@ def rename_group(kpo):
     group = select_group(kpo, prompt="Select group to rename")
     if not group:
         return False
-    name = dmenu_select(1, "New group name")
+    name = dmenu_select(1, "New group name", inp=group.name.encode(ENC))
     if not name:
         return False
     group.name = name
