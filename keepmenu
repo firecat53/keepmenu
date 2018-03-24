@@ -780,34 +780,26 @@ class DmenuRunner(Process):
     def run(self):
         while True:
             self.server.start_flag.wait()
-            if self.server.cache_time_expired.is_set():
-                self.cache_timer_reset()
+            if self.server.kill_flag.is_set():
+                break
             if not self.kpo:
                 pass
             else:
                 self.dmenu_run()
+            if self.server.cache_time_expired.is_set():
+                self.server.kill_flag.set()
             if self.server.kill_flag.is_set():
                 break
             self.server.start_flag.clear()
 
     def cache_time(self):
-        """Reset keepass Entries list when cache timer expires
+        """Kill keepmenu daemon when cache timer expires
 
         """
         self.server.cache_time_expired.set()
-
-    def cache_timer_reset(self):
-        """Reset cache timer and reload entries
-
-        """
-        self.database = get_database()
-        self.kpo = get_entries(self.database)
-        if not self.kpo:
-            return
-        self.cache_timer = Timer(CACHE_PERIOD_MIN  * 60, self.cache_time)
-        self.cache_timer.daemon = True
-        self.cache_timer.start()
-        self.server.cache_time_expired.clear()
+        if not self.server.start_flag.is_set():
+            self.server.kill_flag.set()
+            self.server.start_flag.set()
 
     def dmenu_run(self):  # pylint: disable=too-many-branches,too-many-return-statements
         """Run dmenu with the given list of Keepass Entry objects
