@@ -13,6 +13,7 @@ oriented. Thus...synchronized passwords and everyone is happy!
 Features
 --------
 
+- *NOTE* Only support .kdbx databases, not .kdb
 - Auto-type username and/or password on selection. No clipboard copy/paste
   involved.
 - Select any single field and have it typed into the active window. Notes fields
