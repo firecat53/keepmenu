@@ -73,7 +73,7 @@ Installation
   reference for additional options.
 
   + Add your database(s) and keyfile(s)
-  + Adjust `pw_cache_period_hrs` if desired. Default is 6 hours.
+  + Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
   + Set the dmenu_command to `rofi` if you are using that instead
   + Set `type_library = xdotool` if you need support for non-U.S. English
     keyboard layouts and/or characters.
