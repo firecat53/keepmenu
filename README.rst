@@ -19,6 +19,7 @@ Features
 - Select any single field and have it typed into the active window. Notes fields
   can be viewed line-by-line from within dmenu and the selected line will be
   typed when selected.
+- Open the URL in the default web browser from the View/Type menu.
 - Alternate keyboard languages and layouts supported via xdotool.
 - Edit entry title, username, URL and password (manually typed or auto-generate)
 - Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)
@@ -101,7 +102,8 @@ Usage
 - Enter database and keyfile if not entered into config.ini already.
 - Start typing to match entries.
 - Hit Enter immediately after dmenu opens ("`View/Type individual entries`") to
-  switch modes to view and/or type the individual fields for the entry.
+  switch modes to view and/or type the individual fields for the entry. If
+  selected, the URL will open in the default browser instead of being typed.
 
 Tests
 -----

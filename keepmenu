@@ -19,6 +19,7 @@ from subprocess import call, Popen, PIPE
 import tempfile
 from threading import Timer
 import time
+import webbrowser
 from pykeepass import PyKeePass
 from pykeyboard import PyKeyboard
 from pymouse.x11 import X11Error
@@ -623,6 +624,10 @@ def view_entry(kp_entry):
         sel = ""
     elif sel == '**********':
         sel = kp_entry.password
+    elif sel == fields[3]:
+        if sel != "URL: None":
+            webbrowser.open(sel)
+        sel = ""
     return sel
 
 
