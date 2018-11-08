@@ -162,7 +162,46 @@ class TestFunctions(unittest.TestCase):
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, KM.PyKeePass)
 
+    def test_tokenize_autotype(self):
+        """Test tokenizing autotype strings
+        """
+        tokens = [t for t in KM.tokenize_autotype("blah{SOMETHING}")]
+        self.assertEqual(len(tokens), 2)
+        self.assertEqual(tokens[0], ("blah", False))
+        self.assertEqual(tokens[1], ("{SOMETHING}", True))
 
+        tokens = [t for t in KM.tokenize_autotype("/abc{USERNAME}{ENTER}{TAB}{TAB} {SOMETHING}")]
+        self.assertEqual(len(tokens), 7)
+        self.assertEqual(tokens[0], ("/abc", False))
+        self.assertEqual(tokens[1], ("{USERNAME}", True))
+        self.assertEqual(tokens[4], ("{TAB}", True))
+        self.assertEqual(tokens[5], (" ", False))
+        self.assertEqual(tokens[6], ("{SOMETHING}", True))
+
+        tokens = [t for t in KM.tokenize_autotype("?{}}blah{{}{}}")]
+        self.assertEqual(len(tokens), 5)
+        self.assertEqual(tokens[0], ("?", False))
+        self.assertEqual(tokens[1], ("{}}", True))
+        self.assertEqual(tokens[2], ("blah", False))
+        self.assertEqual(tokens[3], ("{{}", True))
+        self.assertEqual(tokens[4], ("{}}", True))
+
+        tokens = [t for t in KM.tokenize_autotype("{DELAY 5}b{DELAY=50}")]
+        self.assertEqual(len(tokens), 3)
+        self.assertEqual(tokens[0], ("{DELAY 5}", True))
+        self.assertEqual(tokens[1], ("b", False))
+        self.assertEqual(tokens[2], ("{DELAY=50}", True))
+
+        tokens = [t for t in KM.tokenize_autotype("+{DELAY 5}plus^carat~@{}}")]
+        self.assertEqual(len(tokens), 8)
+        self.assertEqual(tokens[0], ("+", True))
+        self.assertEqual(tokens[1], ("{DELAY 5}", True))
+        self.assertEqual(tokens[2], ("plus", False))
+        self.assertEqual(tokens[3], ("^", True))
+        self.assertEqual(tokens[4], ("carat", False))
+        self.assertEqual(tokens[5], ("~", True))
+        self.assertEqual(tokens[6], ("@", True))
+        self.assertEqual(tokens[7], ("{}}", True))
 
 if __name__ == "__main__":
     unittest.main()
