@@ -15,7 +15,10 @@ Features
 
 - *NOTE* Only support .kdbx databases, not .kdb
 - Auto-type username and/or password on selection. No clipboard copy/paste
-  involved. Will use a custom auto-type sequence if you have one defined.
+  involved.
+- Use a custom auto-type sequence  if you have one defined (Keepass 2.x style,
+  except for character repetition and the 'special commands'). *This requires
+  a pykeepass version later than 2018/11/06 or > 3.0.2*
 - Select any single field and have it typed into the active window. Notes fields
   can be viewed line-by-line from within dmenu and the selected line will be
   typed when selected.
