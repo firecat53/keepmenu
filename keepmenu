@@ -20,9 +20,9 @@ import tempfile
 from threading import Timer
 import time
 import webbrowser
-from pykeepass import PyKeePass
 from pykeyboard import PyKeyboard
 from pymouse.x11 import X11Error
+from pykeepass import PyKeePass
 if sys.version_info.major < 3:
     # hack to reduce client connect timeout for python 2.7 (defaults to 20 seconds)
     # https://stackoverflow.com/questions/6512884/properly-disconnect-multiprocessing-remote-manager#9936835
@@ -38,7 +38,7 @@ from multiprocessing import Event, Process
 # pragma pylint: enable=ungrouped-imports,wrong-import-order,wrong-import-position
 
 try:
-    import configparser as configparser
+    import configparser
 except ImportError:
     import ConfigParser as configparser
 
@@ -344,10 +344,16 @@ def get_passphrase():
     return password
 
 def tokenize_autotype(autotype):
-    while len(autotype) > 0:
+    """Process the autotype sequence
+
+    Args: autotype - string
+    Returns: tokens - generator ((token, if_special_char T/F), ...)
+
+    """
+    while autotype:
         opening_idx = -1
-        for c in "{+^%~@":
-            idx = autotype.find(c)
+        for char in "{+^%~@":
+            idx = autotype.find(char)
             if idx != -1 and (opening_idx == -1 or idx < opening_idx):
                 opening_idx = idx
 
@@ -370,7 +376,7 @@ def tokenize_autotype(autotype):
             dmenu_err("Unable to find matching right brace (}) while" +
                       "tokenizing auto-type string: %s\n" % (autotype))
             return
-        elif closing_idx == opening_idx + 1 and closing_idx + 1 < len(autotype) \
+        if closing_idx == opening_idx + 1 and closing_idx + 1 < len(autotype) \
                 and autotype[closing_idx + 1] == '}':
             yield "{}}", True
             autotype = autotype[closing_idx+2:]
@@ -399,7 +405,7 @@ def type_entry(entry):
     else:
         type_entry_pyuserinput(entry, tokens)
 
-placeholder_autotype_tokens = {
+PLACEHOLDER_AUTOTYPE_TOKENS = {
     "{TITLE}"   : lambda e: e.title,
     "{USERNAME}": lambda e: e.username,
     "{URL}"     : lambda e: e.url,
@@ -407,7 +413,7 @@ placeholder_autotype_tokens = {
     "{NOTES}"   : lambda e: e.notes,
 }
 
-string_autotype_tokens = {
+STRING_AUTOTYPE_TOKENS = {
     "{PLUS}"      : '+',
     "{PERCENT}"   : '%',
     "{CARET}"     : '^',
@@ -429,7 +435,7 @@ string_autotype_tokens = {
     "{}}"         : '}',
 }
 
-pyuserinput_autotype_tokens = {
+PYUSERINPUT_AUTOTYPE_TOKENS = {
     "{TAB}"       : lambda kbd: kbd.tab_key,
     "{ENTER}"     : lambda kbd: kbd.return_key,
     "~"           : lambda kbd: kbd.return_key,
@@ -503,8 +509,8 @@ def type_entry_pyuserinput(entry, tokens):
     kbd = PyKeyboard()
     for token, special in tokens:
         if special:
-            if token in placeholder_autotype_tokens:
-                to_type = placeholder_autotype_tokens[token](entry)
+            if token in PLACEHOLDER_AUTOTYPE_TOKENS:
+                to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
                     try:
                         kbd.type_string(to_type)
@@ -512,16 +518,16 @@ def type_entry_pyuserinput(entry, tokens):
                         dmenu_err("Unable to type string...bad character.\n"
                                   "Try setting `type_library = xdotool` in config.ini")
                         return
-            elif token in string_autotype_tokens:
-                to_type = string_autotype_tokens[token]
+            elif token in STRING_AUTOTYPE_TOKENS:
+                to_type = STRING_AUTOTYPE_TOKENS[token]
                 try:
                     kbd.type_string(to_type)
                 except (X11Error, KeyError):
                     dmenu_err("Unable to type string...bad character.\n"
                               "Try setting `type_library = xdotool` in config.ini")
                     return
-            elif token in pyuserinput_autotype_tokens:
-                to_tap = pyuserinput_autotype_tokens[token](kbd)
+            elif token in PYUSERINPUT_AUTOTYPE_TOKENS:
+                to_tap = PYUSERINPUT_AUTOTYPE_TOKENS[token](kbd)
                 kbd.tap_key(to_tap)
             else:
                 dmenu_err("Unsupported auto-type token (pyuserinput): \"%s\"" % (token))
@@ -534,7 +540,7 @@ def type_entry_pyuserinput(entry, tokens):
                           "Try setting `type_library = xdotool` in config.ini")
                 return
 
-xdotool_autotype_tokens = {
+XDOTOOL_AUTOTYPE_TOKENS = {
     "{TAB}"       : ['key', 'Tab'],
     "{ENTER}"     : ['key', 'Return'],
     "~"           : ['key', 'Return'],
@@ -560,10 +566,10 @@ xdotool_autotype_tokens = {
     "{WIN}"       : ['key', 'Super'],
     "{LWIN}"      : ['key', 'Super_L'],
     "{RWIN}"      : ['key', 'Super_R'],
-#    "{APPS}"      : ['key', ''],
-#    "{HELP}"      : ['key', ''],
+    # "{APPS}"      : ['key', ''],
+    # "{HELP}"      : ['key', ''],
     "{NUMLOCK}"   : ['key', 'Num_Lock'],
-#    "{PRTSC}"     : ['key', ''],
+    # "{PRTSC}"     : ['key', ''],
     "{SCROLLLOCK}": ['key', 'Scroll_Lock'],
     "{F1}"        : ['key', 'F1'],
     "{F2}"        : ['key', 'F2'],
@@ -607,15 +613,15 @@ def type_entry_xdotool(entry, tokens):
     """
     for token, special in tokens:
         if special:
-            if token in placeholder_autotype_tokens:
-                to_type = placeholder_autotype_tokens[token](entry)
+            if token in PLACEHOLDER_AUTOTYPE_TOKENS:
+                to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
                     call(['xdotool', 'type', to_type])
-            elif token in string_autotype_tokens:
-                to_type = string_autotype_tokens[token]
+            elif token in STRING_AUTOTYPE_TOKENS:
+                to_type = STRING_AUTOTYPE_TOKENS[token]
                 call(['xdotool', 'type', to_type])
-            elif token in xdotool_autotype_tokens:
-                cmd = ['xdotool'] + xdotool_autotype_tokens[token]
+            elif token in XDOTOOL_AUTOTYPE_TOKENS:
+                cmd = ['xdotool'] + XDOTOOL_AUTOTYPE_TOKENS[token]
                 call(cmd)
             else:
                 dmenu_err("Unsupported auto-type token (xdotool): \"%s\"" % (token))
@@ -917,7 +923,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 return True
             spec = False if spec == 'False' else True
             sel = gen_passwd(length, digits, spec)
-    if (field != 'password' and field != 'notes' and field != 'path') or pw_choice:
+    if (field not in ('password', 'notes', 'path')) or pw_choice:
         sel = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
         if not sel:
             return True
@@ -954,13 +960,13 @@ def edit_notes(note):
         editor = shlex.split(editor)
         editor = terminal + ["-e"] + editor
     note = b'' if note is None else note.encode(ENC)
-    with tempfile.NamedTemporaryFile(suffix=".tmp") as fn:
-        fn.write(note)
-        fn.flush()
-        editor.append(fn.name)
+    with tempfile.NamedTemporaryFile(suffix=".tmp") as fname:
+        fname.write(note)
+        fname.flush()
+        editor.append(fname.name)
         call(editor)
-        fn.seek(0)
-        note = fn.read()
+        fname.seek(0)
+        note = fname.read()
     note = None if not note else note.decode(ENC)
     return note
 
