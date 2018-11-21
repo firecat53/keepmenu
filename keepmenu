@@ -50,7 +50,6 @@ if sys.version_info.major < 3:
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
 
-
 def find_free_port():
     """Find random free port to use for BaseManager server
 
@@ -107,12 +106,14 @@ def process_config():
            CONF, \
            DMENU_LEN, \
            ENV, \
-           ENC
+           ENC, \
+           SEQUENCE
     # pragma pylint: enable=global-variable-undefined
     ENV = os.environ.copy()
     ENV['LC_ALL'] = 'C'
     ENC = locale.getpreferredencoding()
     CACHE_PERIOD_DEFAULT_MIN = 360
+    SEQUENCE = "{USERNAME}{TAB}{PASSWORD}{ENTER}"
     CONF = configparser.ConfigParser()
     if not exists(CONF_FILE):
         try:
@@ -130,6 +131,7 @@ def process_config():
             CONF.set('database', 'database_1', '')
             CONF.set('database', 'keyfile_1', '')
             CONF.set('database', 'pw_cache_period_min', str(CACHE_PERIOD_DEFAULT_MIN))
+            CONF.set('database', 'autotype_default', SEQUENCE)
             CONF.write(conf_file)
     CONF.read(CONF_FILE)
     if CONF.has_option("database", "pw_cache_period_min"):
@@ -140,6 +142,8 @@ def process_config():
         DMENU_LEN = int(CONF.get("dmenu", "l"))
     else:
         DMENU_LEN = 24
+    if CONF.has_option('database', 'autotype_default'):
+        SEQUENCE = CONF.get("database", "autotype_default")
     if CONF.has_option("database", "type_library"):
         if CONF.get("database", "type_library") == "xdotool":
             try:
@@ -343,6 +347,7 @@ def get_passphrase():
         password = dmenu_select(0, "Passphrase")
     return password
 
+
 def tokenize_autotype(autotype):
     """Process the autotype sequence
 
@@ -386,14 +391,20 @@ def tokenize_autotype(autotype):
 
         autotype = autotype[closing_idx+1:]
 
+
 def type_entry(entry):
     """Pick which library to use to type strings
 
     Defaults to pyuserinput
 
     """
-    sequence = "{USERNAME}{TAB}{PASSWORD}{ENTER}"
-    if hasattr(entry, 'autotype_sequence') and entry.autotype_sequence:
+    sequence = SEQUENCE
+    if hasattr(entry, 'autotype_enabled') and entry.autotype_enabled is False:
+        dmenu_err("Autotype disabled for this entry")
+        return
+    if hasattr(entry, 'autotype_sequence') and \
+            entry.autotype_sequence is not None and \
+            entry.autotype_sequence != 'None':
         sequence = entry.autotype_sequence
     tokens = tokenize_autotype(sequence)
 
@@ -404,6 +415,7 @@ def type_entry(entry):
         type_entry_xdotool(entry, tokens)
     else:
         type_entry_pyuserinput(entry, tokens)
+
 
 PLACEHOLDER_AUTOTYPE_TOKENS = {
     "{TITLE}"   : lambda e: e.title,
@@ -539,6 +551,7 @@ def type_entry_pyuserinput(entry, tokens):
                 dmenu_err("Unable to type string...bad character.\n"
                           "Try setting `type_library = xdotool` in config.ini")
                 return
+
 
 XDOTOOL_AUTOTYPE_TOKENS = {
     "{TAB}"       : ['key', 'Tab'],
@@ -863,7 +876,7 @@ def view_entry(kp_entry):
 
 
 def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, too-many-branches
-    """Edit title, username, password and url for an entry.
+    """Edit title, username, password, url and autotype sequence for an entry.
 
     Args: kpo - Keepass object
           kp_entry - selected Entry object
@@ -879,6 +892,9 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
               str("Url: {}").format(kp_entry.url),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               "Delete Entry: "]
+    if hasattr(kp_entry, 'autotype_sequence') and hasattr(kp_entry, 'autotype_enabled'):
+        fields[5:5] = [str("autotype_sequence: {}").format(kp_entry.autotype_sequence),
+                       str("autotype_enabled: {}").format(kp_entry.autotype_enabled)]
     input_b = "\n".join(fields).encode(ENC)
     sel = dmenu_select(len(fields), inp=input_b)
     try:
@@ -923,7 +939,13 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 return True
             spec = False if spec == 'False' else True
             sel = gen_passwd(length, digits, spec)
-    if (field not in ('password', 'notes', 'path')) or pw_choice:
+    if field == 'autotype_enabled':
+        input_b = b"True\nFalse\n"
+        at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=input_b)
+        if not at_enab:
+            return True
+        sel = False if at_enab == 'False' else True
+    if (field not in ('password', 'notes', 'path', 'autotype_enabled')) or pw_choice:
         sel = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
         if not sel:
             return True

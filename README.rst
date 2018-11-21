@@ -16,9 +16,10 @@ Features
 - *NOTE* Only support .kdbx databases, not .kdb
 - Auto-type username and/or password on selection. No clipboard copy/paste
   involved.
-- Use a custom auto-type sequence  if you have one defined (Keepass 2.x style,
-  except for character repetition and the 'special commands'). *This requires
-  a pykeepass version later than 2018/11/06 or > 3.0.2*
+- Use a custom Keepass 2.x style auto-type sequence if you have one defined
+  (except for character repetition and the 'special commands'). Set it per entry
+  or set a default in the config file for all entries. Disable autotype for an
+  entry, if desired. *These require a pykeepass version later than 2018/11/06 or > 3.0.2*
 - Select any single field and have it typed into the active window. Notes fields
   can be viewed line-by-line from within dmenu and the selected line will be
   typed when selected.
@@ -79,6 +80,9 @@ Installation
   + Add your database(s) and keyfile(s)
   + Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
   + Set the dmenu_command to `rofi` if you are using that instead
+  + Adjust the autotype_default, if desired. Allowed codes are the
+    `Keepass 2.x codes`_ except for repetitions and command codes (DELAY, etc.).
+    Individual autotype sequences can be edited or disabled inside Keepmenu.
   + Set `type_library = xdotool` if you need support for non-U.S. English
     keyboard layouts and/or characters.
 
@@ -118,3 +122,4 @@ Tests
 .. _Pykeepass: https://github.com/pschmitt/pykeepass
 .. _PyUserInput: https://github.com/PyUserInput/PyUserInput
 .. _Archlinux AUR: https://aur.archlinux.org/packages/python-keepmenu-git
+.. _Keepass 2.x codes: https://keepass.info/help/base/autotype.html#autoseq
