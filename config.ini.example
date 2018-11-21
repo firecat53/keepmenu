@@ -38,3 +38,6 @@
 # hide_groups = Recycle Bin  <Note formatting for adding multiple groups>
 #               Group 2
 #               Group 3
+
+## Set the default autotype sequence (https://keepass.info/help/base/autotype.html#autoseq)
+# autotype_default = {USERNAME}{TAB}{PASSWORD}{ENTER}
