@@ -514,11 +514,13 @@ PYUSERINPUT_AUTOTYPE_TOKENS = {
     "@"           : lambda kbd: kbd.windows_l_key,
 }
 
+
 def type_entry_pyuserinput(entry, tokens):
     """Use PyUserInput to auto-type the selected entry
 
     """
     kbd = PyKeyboard()
+    enter_idx = True
     for token, special in tokens:
         if special:
             if token in PLACEHOLDER_AUTOTYPE_TOKENS:
@@ -541,6 +543,11 @@ def type_entry_pyuserinput(entry, tokens):
             elif token in PYUSERINPUT_AUTOTYPE_TOKENS:
                 to_tap = PYUSERINPUT_AUTOTYPE_TOKENS[token](kbd)
                 kbd.tap_key(to_tap)
+                # Add extra {ENTER} key tap for first instance of {ENTER}. It
+                # doesn't get recognized for some reason.
+                if enter_idx is True and token in ("{ENTER}", "~"):
+                    kbd.tap_key(to_tap)
+                    enter_idx = False
             else:
                 dmenu_err("Unsupported auto-type token (pyuserinput): \"%s\"" % (token))
                 return
@@ -620,10 +627,12 @@ XDOTOOL_AUTOTYPE_TOKENS = {
     "@"           : ['key', 'Super'],
 }
 
+
 def type_entry_xdotool(entry, tokens):
     """Auto-type entry entry using xdotool
 
     """
+    enter_idx = True
     for token, special in tokens:
         if special:
             if token in PLACEHOLDER_AUTOTYPE_TOKENS:
@@ -636,11 +645,18 @@ def type_entry_xdotool(entry, tokens):
             elif token in XDOTOOL_AUTOTYPE_TOKENS:
                 cmd = ['xdotool'] + XDOTOOL_AUTOTYPE_TOKENS[token]
                 call(cmd)
+                # Add extra {ENTER} key tap for first instance of {ENTER}. It
+                # doesn't get recognized for some reason.
+                if enter_idx is True and token in ("{ENTER}", "~"):
+                    cmd = ['xdotool'] + XDOTOOL_AUTOTYPE_TOKENS[token]
+                    call(cmd)
+                    enter_idx = False
             else:
                 dmenu_err("Unsupported auto-type token (xdotool): \"%s\"" % (token))
                 return
         else:
             call(['xdotool', 'type', token])
+
 
 def type_text(data):
     """Type the given text data
