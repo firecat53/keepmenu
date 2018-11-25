@@ -909,17 +909,17 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               "Delete Entry: "]
     if hasattr(kp_entry, 'autotype_sequence') and hasattr(kp_entry, 'autotype_enabled'):
-        fields[5:5] = [str("autotype_sequence: {}").format(kp_entry.autotype_sequence),
-                       str("autotype_enabled: {}").format(kp_entry.autotype_enabled)]
+        fields[5:5] = [str("Autotype Sequence: {}").format(kp_entry.autotype_sequence),
+                       str("Autotype Enabled: {}").format(kp_entry.autotype_enabled)]
     input_b = "\n".join(fields).encode(ENC)
     sel = dmenu_select(len(fields), inp=input_b)
     try:
         field, sel = sel.split(": ", 1)
     except (ValueError, TypeError):
         return False
-    field = field.lower()
+    field = field.lower().replace(" ", "_")
     edit_b = sel.encode(ENC) + b"\n"
-    if field == 'delete entry':
+    if field == 'delete_entry':
         return delete_entry(kpo, kp_entry)
     if field == 'path':
         group = select_group(kpo)
