@@ -24,6 +24,7 @@
 # database_1 = <path/to/database> ~ for $HOME is ok
 # keyfile_1 = <path/to/keyfile>
 # password_1 = database password  **INSECURE**
+# password_cmd_2 = <command to generate db password>
 # database_2 = <path/to/second database>
 # etc....
 # pw_cache_period_min = <minutes to cache database password>

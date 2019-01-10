@@ -264,6 +264,16 @@ def get_database():
             passw = args_dict['password_{}'.format(idx)]
         except KeyError:
             passw = ''
+        try:
+            cmd = args_dict['password_cmd_{}'.format(idx)]
+            res = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE).communicate()
+            if res[1]:
+                dmenu_err("Password command error: {}".format(res[1]))
+                sys.exit()
+            else:
+                passw = res[0].decode().rstrip('\n') if res[0] else passw
+        except KeyError:
+            pass
         if dbn:
             dbs.append((dbn, keyfile, passw))
     if not dbs:

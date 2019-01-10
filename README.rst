@@ -78,6 +78,8 @@ Installation
   reference for additional options.
 
   + Add your database(s) and keyfile(s)
+  + To use a command (e.g. gpg) to lookup db password, set `password_cmd_<n>`
+    in config.ini.
   + Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
   + Set the dmenu_command to `rofi` if you are using that instead
   + Adjust the autotype_default, if desired. Allowed codes are the
