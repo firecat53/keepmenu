@@ -1213,6 +1213,9 @@ def run():
 
 
 if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        print("See `man keepmenu` for help")
+        sys.exit()
     try:
         MANAGER = client()
         MANAGER.set_event()  # pylint: disable=no-member
