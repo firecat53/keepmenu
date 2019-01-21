@@ -95,6 +95,9 @@ Installation
 - If using Rofi, you can try some of the command line options in config.ini or
   set them using the `dmenu_command` setting, but I haven't tested most of them
   so I'd suggest configuring via .Xresources where possible. 
+- Number of lines needs to be configured in the config.ini and not in
+  .Xresources or the Rofi config file. Keepmenu will override any number of
+  lines settings set elsewhere.
 - If using dmenu for passphrase entry (pinentry not set), dmenu options in the
   [dmenu_passphrase] section of config.ini will override those in [dmenu] so you
   can, for example, set the normal foreground and background colors to be the
