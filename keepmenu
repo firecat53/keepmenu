@@ -134,7 +134,11 @@ def process_config():
             CONF.set('database', 'pw_cache_period_min', str(CACHE_PERIOD_DEFAULT_MIN))
             CONF.set('database', 'autotype_default', SEQUENCE)
             CONF.write(conf_file)
-    CONF.read(CONF_FILE)
+    try:
+        CONF.read(CONF_FILE)
+    except configparser.ParsingError as err:
+        dmenu_err("Config file error: {}".format(err))
+        sys.exit()
     if CONF.has_option("database", "pw_cache_period_min"):
         CACHE_PERIOD_MIN = int(CONF.get("database", "pw_cache_period_min"))
     else:
@@ -214,7 +218,7 @@ def dmenu_cmd(num_lines, prompt):
     dmenu += list(itertools.chain.from_iterable(extras))
     dmenu[1:1] = lines.split()
     dmenu = list(filter(None, dmenu))  # Remove empty list elements
-    return dmenu
+    return dmenu, dmenu_command
 
 
 def dmenu_select(num_lines, prompt="Entries", inp=""):
@@ -227,10 +231,16 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
     Returns: sel - string
 
     """
-    sel = Popen(dmenu_cmd(num_lines, prompt),
-                stdin=PIPE,
-                stdout=PIPE,
-                env=ENV).communicate(input=inp)[0]
+    cmd, base_cmd = dmenu_cmd(num_lines, prompt)
+    sel, err = Popen(cmd,
+                     stdin=PIPE,
+                     stdout=PIPE,
+                     stderr=PIPE,
+                     env=ENV).communicate(input=inp)
+    if err:
+        cmd = [base_cmd] + ["-dmenu"] if "rofi" in base_cmd else [""]
+        Popen(base_cmd, stdin=PIPE, stdout=PIPE, env=ENV).communicate(input=err)
+        sys.exit()
     if sel:
         sel = sel.decode(ENC).rstrip('\n')
     return sel
@@ -287,7 +297,7 @@ def get_database():
         inp_bytes = "\n".join(i[0] for i in dbs).encode(ENC)
         sel = dmenu_select(len(dbs), "Select Database", inp=inp_bytes)
         dbs = [i for i in dbs if i[0] == sel]
-        if not sel:
+        if not sel or not dbs:
             return (None, None, None)
     if not dbs[0][-1]:
         db_l = list(dbs[0])
@@ -327,10 +337,20 @@ def get_entries(dbo):
     try:
         kpo = PyKeePass(dbf, password, keyfile=keyfile)
     except (FileNotFoundError, construct.core.ChecksumError) as err:
-        if err.args[0].startswith("wrong checksum"):
+        if str(err.args[0]).startswith("wrong checksum"):
             dmenu_err("Invalid Password or keyfile")
-        elif err.errno == errno.ENOENT:
-            dmenu_err("Database does not exist. Edit ~/.config/keepmenu/config.ini")
+            return None
+        try:
+            if err.errno == errno.ENOENT:
+                if not os.path.isfile(dbf):
+                    dmenu_err("Database does not exist. Edit ~/.config/keepmenu/config.ini")
+                elif not os.path.isfile(keyfile):
+                    dmenu_err("Keyfile does not exist. Edit ~/.config/keepmenu/config.ini")
+        except AttributeError:
+            pass
+        return None
+    except Exception as err:
+        dmenu_err("Error: {}".format(err))
         return None
     return kpo
 
