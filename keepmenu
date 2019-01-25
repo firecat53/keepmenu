@@ -1016,6 +1016,7 @@ def edit_notes(note):
     """
     if CONF.has_option("database", "gui_editor"):
         editor = CONF.get("database", "gui_editor")
+        editor = shlex.split(editor)
     else:
         if CONF.has_option("database", "editor"):
             editor = CONF.get("database", "editor")
