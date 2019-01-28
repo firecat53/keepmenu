@@ -218,7 +218,7 @@ def dmenu_cmd(num_lines, prompt):
     dmenu += list(itertools.chain.from_iterable(extras))
     dmenu[1:1] = lines.split()
     dmenu = list(filter(None, dmenu))  # Remove empty list elements
-    return dmenu, dmenu_command
+    return dmenu
 
 
 def dmenu_select(num_lines, prompt="Entries", inp=""):
@@ -231,15 +231,15 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
     Returns: sel - string
 
     """
-    cmd, base_cmd = dmenu_cmd(num_lines, prompt)
+    cmd = dmenu_cmd(num_lines, prompt)
     sel, err = Popen(cmd,
                      stdin=PIPE,
                      stdout=PIPE,
                      stderr=PIPE,
                      env=ENV).communicate(input=inp)
     if err:
-        cmd = [base_cmd] + ["-dmenu"] if "rofi" in base_cmd else [""]
-        Popen(base_cmd, stdin=PIPE, stdout=PIPE, env=ENV).communicate(input=err)
+        cmd = [cmd[0]] + ["-dmenu"] if "rofi" in cmd[0] else [""]
+        Popen(cmd[0], stdin=PIPE, stdout=PIPE, env=ENV).communicate(input=err)
         sys.exit()
     if sel:
         sel = sel.decode(ENC).rstrip('\n')
