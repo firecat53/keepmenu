@@ -161,6 +161,15 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(database == (db_name, '', 'password'))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, KM.PyKeePass)
+        # Switch from `password_1` to `password_cmd_1`
+        with open(KM.CONF_FILE, 'w') as conf_file:
+            KM.CONF.set('database', 'password_1', '')
+            KM.CONF.set('database', 'password_cmd_1', 'echo password')
+            KM.CONF.write(conf_file)
+        database = KM.get_database()
+        self.assertTrue(database == (db_name, '', 'password'))
+        kpo = KM.get_entries(database)
+        self.assertIsInstance(kpo, KM.PyKeePass)
 
     def test_tokenize_autotype(self):
         """Test tokenizing autotype strings
