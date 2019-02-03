@@ -40,7 +40,7 @@ Features
 License
 -------
 
-- MIT
+- GPLv3
 
 Requirements
 ------------
