@@ -54,6 +54,14 @@ if sys.version_info.major < 3:
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
 
+def check_connection():
+    try :
+        requests.get('https://api.pwnedpasswords.com')
+        return True
+    except Exception as err:
+        return False
+
+
 def pwneds(kp_entries):
     """Check which entries has been pwned
 
@@ -77,7 +85,10 @@ def isPwned(password):
     encodepass=password.encode(ENC)
     hashed=hashlib.sha1(encodepass).hexdigest()
     url = 'https://api.pwnedpasswords.com/range/'+hashed[0:5]
-    r = requests.get(url)
+    try:
+        r = requests.get(url)
+    except Exception:
+        return None
     if re.search(hashed[5:],r.text,re.IGNORECASE):
         return True
     else:
@@ -1219,6 +1230,9 @@ class DmenuRunner(Process):
             except (EOFError, IOError):
                 return
         elif sel == options[6]:  # Check leaked passwords
+            if not check_connection():
+                dmenu_err("No connection possible with the api.")
+                return
             options = []
             pwned_entries=pwneds(self.kpo.entries)
             if not pwned_entries:
