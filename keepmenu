@@ -4,6 +4,9 @@
 
 """
 from contextlib import closing
+import hashlib
+import re
+import requests
 import errno
 import itertools
 import locale
@@ -50,6 +53,37 @@ if sys.version_info.major < 3:
 
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
+
+def pwneds(kp_entries):
+    """Check which entries has been pwned
+
+    Returns: list of pwned keepass entries
+
+    """
+    pwneds_entries=[]
+    for entry in kp_entries:
+        if isPwned(entry.password):
+            pwneds_entries.append(entry)
+    return pwneds_entries
+
+
+def isPwned(password):
+    """Check if the password has been pwned by calling
+    the pwnedpasswords api
+
+    Returns: Boolean
+
+    """
+    encodepass=password.encode(ENC)
+    hashed=hashlib.sha1(encodepass).hexdigest()
+    url = 'https://api.pwnedpasswords.com/range/'+hashed[0:5]
+    r = requests.get(url)
+
+    if re.search(hashed[5:],r.text,re.IGNORECASE):
+        return True
+    else:
+        return False
+
 
 def find_free_port():
     """Find random free port to use for BaseManager server
@@ -1128,7 +1162,8 @@ class DmenuRunner(Process):
                    'Add entry',
                    'Manage groups',
                    'Reload database',
-                   'Kill Keepmenu daemon']
+                   'Kill Keepmenu daemon',
+                   'Check pwned passwords (may take a while)']
         if CONF.has_option("database", "hide_groups"):
             hid_groups = CONF.get("database", "hide_groups").split("\n")
             # Validate ignored group names in config.ini
@@ -1184,6 +1219,19 @@ class DmenuRunner(Process):
                 self.server.kill_flag.set()
             except (EOFError, IOError):
                 return
+        elif sel == options[6]:  # Check pwned passwords
+            options = []
+            pwned_entries=pwneds(self.kpo.entries)
+            sel = view_all_entries(options,pwned_entries)
+            try:
+                entry = pwned_entries[int(sel.split('-', 1)[0])]
+            except (ValueError, TypeError):
+                return
+            edit = True
+            while edit is True:
+                edit = edit_entry(self.kpo, entry)
+            self.kpo.save()
+            self.kpo = get_entries(self.database)
         else:
             try:
                 entry = self.kpo.entries[int(sel.split('-', 1)[0])]
