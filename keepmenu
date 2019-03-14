@@ -78,7 +78,6 @@ def isPwned(password):
     hashed=hashlib.sha1(encodepass).hexdigest()
     url = 'https://api.pwnedpasswords.com/range/'+hashed[0:5]
     r = requests.get(url)
-
     if re.search(hashed[5:],r.text,re.IGNORECASE):
         return True
     else:
@@ -1163,7 +1162,7 @@ class DmenuRunner(Process):
                    'Manage groups',
                    'Reload database',
                    'Kill Keepmenu daemon',
-                   'Check pwned passwords (may take a while)']
+                   'Check leaked passwords (may take a while)']
         if CONF.has_option("database", "hide_groups"):
             hid_groups = CONF.get("database", "hide_groups").split("\n")
             # Validate ignored group names in config.ini
@@ -1219,9 +1218,12 @@ class DmenuRunner(Process):
                 self.server.kill_flag.set()
             except (EOFError, IOError):
                 return
-        elif sel == options[6]:  # Check pwned passwords
+        elif sel == options[6]:  # Check leaked passwords
             options = []
             pwned_entries=pwneds(self.kpo.entries)
+            if not pwned_entries:
+                dmenu_err("All Passwords are safe")
+                return
             sel = view_all_entries(options,pwned_entries)
             try:
                 entry = pwned_entries[int(sel.split('-', 1)[0])]
