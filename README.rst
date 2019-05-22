@@ -116,6 +116,9 @@ Usage
 - Hit Enter immediately after dmenu opens ("`View/Type individual entries`") to
   switch modes to view and/or type the individual fields for the entry. If
   selected, the URL will open in the default browser instead of being typed.
+- To view a password without typing it, use the 'Edit Entries' option, then
+  select the entry, select 'Password' then select 'Manually enter password'.
+  Type 'ESC' to exit without making changes.
 
 Tests
 -----

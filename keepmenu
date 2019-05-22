@@ -935,7 +935,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     fields = [str("Title: {}").format(kp_entry.title),
               str("Path: {}").format(kp_entry.path.rstrip(kp_entry.title)),
               str("Username: {}").format(kp_entry.username),
-              str("Password: {}").format(kp_entry.password),
+              str("Password: **********") if kp_entry.password else "Password: None",
               str("Url: {}").format(kp_entry.url),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               "Delete Entry: "]
@@ -949,6 +949,8 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     except (ValueError, TypeError):
         return False
     field = field.lower().replace(" ", "_")
+    if field == 'password':
+        sel = kp_entry.password
     edit_b = sel.encode(ENC) + b"\n"
     if field == 'delete_entry':
         return delete_entry(kpo, kp_entry)
@@ -996,6 +998,11 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         sel = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
         if not sel:
             return True
+        if pw_choice:
+            sel_check = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
+            if not sel_check or sel_check != sel:
+                dmenu_err("Passwords do not match. No changes made.")
+                return True
     elif field == 'notes':
         sel = edit_notes(kp_entry.notes)
     setattr(kp_entry, field, sel)
