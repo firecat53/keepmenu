@@ -1044,7 +1044,7 @@ def edit_notes(note):
         call(editor)
         fname.seek(0)
         note = fname.read()
-    note = None if not note else note.decode(ENC)
+    note = '' if not note else note.decode(ENC)
     return note
 
 
