@@ -951,7 +951,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     field = field.lower().replace(" ", "_")
     if field == 'password':
         sel = kp_entry.password
-    edit_b = sel.encode(ENC) + b"\n"
+    edit_b = sel.encode(ENC) + b"\n" if sel is not None else b"\n"
     if field == 'delete_entry':
         return delete_entry(kpo, kp_entry)
     if field == 'path':
