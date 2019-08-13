@@ -157,6 +157,13 @@ def process_config():
                 dmenu_err("Xdotool not installed.\n"
                           "Please install or remove that option from config.ini")
                 sys.exit()
+        elif CONF.get("database", "type_library") == "ydotool":
+            try:
+                call(['ydotool'])
+            except OSError:
+                dmenu_err("Ydotool not installed.\n"
+                          "Please install or remove that option from config.ini")
+                sys.exit()
 
 
 def get_auth():
@@ -444,6 +451,8 @@ def type_entry(entry):
         library = CONF.get('database', 'type_library')
     if library == 'xdotool':
         type_entry_xdotool(entry, tokens)
+    elif library == 'ydotool':
+        type_entry_ydotool(entry, tokens)
     else:
         type_entry_pyuserinput(entry, tokens)
 
@@ -688,6 +697,101 @@ def type_entry_xdotool(entry, tokens):
         else:
             call(['xdotool', 'type', token])
 
+YDOTOOL_AUTOTYPE_TOKENS = {
+    "{TAB}"       : ['key', 'TAB'],
+    "{ENTER}"     : ['key', 'ENTER'],
+    "~"           : ['key', 'Return'],
+    "{UP}"        : ['key', 'UP'],
+    "{DOWN}"      : ['key', 'DOWN'],
+    "{LEFT}"      : ['key', 'LEFT'],
+    "{RIGHT}"     : ['key', 'RIGHT'],
+    "{INSERT}"    : ['key', 'INSERT'],
+    "{INS}"       : ['key', 'INSERT'],
+    "{DELETE}"    : ['key', 'DELETE'],
+    "{DEL}"       : ['key', 'DELETE'],
+    "{HOME}"      : ['key', 'HOME'],
+    "{END}"       : ['key', 'END'],
+    "{PGUP}"      : ['key', 'PAGEUP'],
+    "{PGDN}"      : ['key', 'PAGEDOWN'],
+    "{SPACE}"     : ['type', ' '],
+    "{BACKSPACE}" : ['key', 'BACKSPACE'],
+    "{BS}"        : ['key', 'BACKSPACE'],
+    "{BKSP}"      : ['key', 'BACKSPACE'],
+    "{BREAK}"     : ['key', 'BREAK'],
+    "{CAPSLOCK}"  : ['key', 'CAPSLOCK'],
+    "{ESC}"       : ['key', 'ESC'],
+    #"{WIN}"       : ['key', 'Super'],
+    #"{LWIN}"      : ['key', 'Super_L'],
+    #"{RWIN}"      : ['key', 'Super_R'],
+    # "{APPS}"      : ['key', ''],
+    # "{HELP}"      : ['key', ''],
+    "{NUMLOCK}"   : ['key', 'NUMLOCK'],
+    # "{PRTSC}"     : ['key', ''],
+    "{SCROLLLOCK}": ['key', 'SCROLLLOCK'],
+    "{F1}"        : ['key', 'F1'],
+    "{F2}"        : ['key', 'F2'],
+    "{F3}"        : ['key', 'F3'],
+    "{F4}"        : ['key', 'F4'],
+    "{F5}"        : ['key', 'F5'],
+    "{F6}"        : ['key', 'F6'],
+    "{F7}"        : ['key', 'F7'],
+    "{F8}"        : ['key', 'F8'],
+    "{F9}"        : ['key', 'F9'],
+    "{F10}"       : ['key', 'F10'],
+    "{F11}"       : ['key', 'F11'],
+    "{F12}"       : ['key', 'F12'],
+    "{F13}"       : ['key', 'F13'],
+    "{F14}"       : ['key', 'F14'],
+    "{F15}"       : ['key', 'F15'],
+    "{F16}"       : ['key', 'F16'],
+    "{ADD}"       : ['key', 'KPPLUS'],
+    "{SUBTRACT}"  : ['key', 'KPMINUS'],
+    "{MULTIPLY}"  : ['key', 'KPASTERISK'],
+    "{DIVIDE}"    : ['key', 'KPSLASH'],
+    "{NUMPAD0}"   : ['key', 'KP0'],
+    "{NUMPAD1}"   : ['key', 'KP1'],
+    "{NUMPAD2}"   : ['key', 'KP2'],
+    "{NUMPAD3}"   : ['key', 'KP3'],
+    "{NUMPAD4}"   : ['key', 'KP4'],
+    "{NUMPAD5}"   : ['key', 'KP5'],
+    "{NUMPAD6}"   : ['key', 'KP6'],
+    "{NUMPAD7}"   : ['key', 'KP7'],
+    "{NUMPAD8}"   : ['key', 'KP8'],
+    "{NUMPAD9}"   : ['key', 'KP9'],
+    "+"           : ['key', 'LEFTSHIFT'],
+    "^"           : ['Key', 'LEFTCTRL'],
+    "%"           : ['key', 'LEFTALT'],
+    #"@"           : ['key', 'Super']
+}
+
+def type_entry_ydotool(entry, tokens):
+    """Auto-type entry entry using ydotool
+
+    """
+    enter_idx = True
+    for token, special in tokens:
+        if special:
+            if token in PLACEHOLDER_AUTOTYPE_TOKENS:
+                to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
+                if to_type:
+                    call(['ydotool', 'type', to_type])
+            elif token in STRING_AUTOTYPE_TOKENS:
+                to_type = STRING_AUTOTYPE_TOKENS[token]
+                call(['ydotool', 'type', to_type])
+            elif token in YDOTOOL_AUTOTYPE_TOKENS:
+                cmd = ['ydotool'] + YDOTOOL_AUTOTYPE_TOKENS[token]
+                call(cmd)
+                # Add extra {ENTER} key tap for first instance of {ENTER}. It
+                # doesn't get recognized for some reason.
+                if enter_idx is True and token in ("{ENTER}", "~"):
+                    cmd = ['ydotool'] + YDOTOOL_AUTOTYPE_TOKENS[token]
+                    call(cmd)
+                    enter_idx = False
+            else:
+                dmenu_err("Unsupported auto-type token (ydotool): \"%s\"" % (token))
+                return
+        else:
+            call(['ydotool', 'type', token])
 
 def type_text(data):
     """Type the given text data
@@ -698,6 +802,8 @@ def type_text(data):
         library = CONF.get('database', 'type_library')
     if library == 'xdotool':
         call(['xdotool', 'type', data])
+    if library == 'ydotool':
+        call(['ydotool', 'type', data])
     else:
         kbd = PyKeyboard()
         try:
