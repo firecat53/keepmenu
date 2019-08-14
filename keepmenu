@@ -803,6 +803,8 @@ def type_text(data):
         library = CONF.get('database', 'type_library')
     if library == 'xdotool':
         call(['xdotool', 'type', data])
+    if library == 'ydotool':
+        call(['ydotool', 'type', data])
     else:
         kbd = PyKeyboard()
         try:
