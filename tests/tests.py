@@ -212,5 +212,15 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(tokens[6], ("@", True))
         self.assertEqual(tokens[7], ("{}}", True))
 
+    def test_token_command(self):
+        self.assertTrue(callable(KM.token_command('{DELAY 5}')))
+        self.assertFalse(callable(KM.token_command('{DELAY 5 }')))
+        self.assertFalse(callable(KM.token_command('{DELAY 5')))
+        self.assertFalse(callable(KM.token_command('{DELAY a }')))
+        self.assertFalse(callable(KM.token_command('{DELAY }')))
+        self.assertFalse(callable(KM.token_command('{DELAY}')))
+        self.assertFalse(callable(KM.token_command('DELAY 5}')))
+        self.assertFalse(callable(KM.token_command('{DELAY a}')))
+
 if __name__ == "__main__":
     unittest.main()
