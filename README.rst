@@ -83,7 +83,8 @@ Installation
   + Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
   + Set the dmenu_command to `rofi` if you are using that instead
   + Adjust the autotype_default, if desired. Allowed codes are the
-    `Keepass 2.x codes`_ except for repetitions and command codes (DELAY, etc.).
+    `Keepass 2.x codes`_ except for repetitions and most command codes. `{DELAY
+    x}` (in milliseconds) is supported.
     Individual autotype sequences can be edited or disabled inside Keepmenu.
   + Set `type_library = xdotool` if you need support for non-U.S. English
     keyboard layouts and/or characters.
