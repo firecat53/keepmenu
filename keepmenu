@@ -19,6 +19,7 @@ from subprocess import call, Popen, PIPE
 import tempfile
 from threading import Timer
 import time
+import re
 import webbrowser
 import construct
 from pykeyboard import PyKeyboard
@@ -429,6 +430,25 @@ def tokenize_autotype(autotype):
 
         autotype = autotype[closing_idx+1:]
 
+def token_command(token):
+    """When token denotes a special command, this function provides a callable
+    implementing its behaviour.
+
+    """
+    cmd = None
+
+    def _check_delay():
+        match = re.match('{DELAY (\d+)}', token)
+        if match:
+            delay = match.group(1)
+            nonlocal cmd
+            cmd = lambda t=delay: time.sleep(int(t) / 1000)
+            return True
+        return False
+
+    if _check_delay():  # {DELAY x}
+        return cmd
+    return None
 
 def type_entry(entry):
     """Pick which library to use to type strings
@@ -563,7 +583,10 @@ def type_entry_pyuserinput(entry, tokens):
     enter_idx = True
     for token, special in tokens:
         if special:
-            if token in PLACEHOLDER_AUTOTYPE_TOKENS:
+            cmd = token_command(token)
+            if callable(cmd):
+                cmd()
+            elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
                     try:
@@ -675,7 +698,10 @@ def type_entry_xdotool(entry, tokens):
     enter_idx = True
     for token, special in tokens:
         if special:
-            if token in PLACEHOLDER_AUTOTYPE_TOKENS:
+            cmd = token_command(token)
+            if callable(cmd):
+                cmd()
+            elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
                     call(['xdotool', 'type', to_type])
@@ -771,7 +797,10 @@ def type_entry_ydotool(entry, tokens):
     enter_idx = True
     for token, special in tokens:
         if special:
-            if token in PLACEHOLDER_AUTOTYPE_TOKENS:
+            cmd = token_command(token)
+            if callable(cmd):
+                cmd()
+            elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
                     call(['ydotool', 'type', to_type])
