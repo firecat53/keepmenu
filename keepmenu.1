@@ -23,7 +23,8 @@ be typed when selected.
 
 \fB4.\fR Open the URL in the default web browser from the View/Type menu.
 
-\fB5.\fR Alternate keyboard languages and layouts supported via xdotool.
+\fB5.\fR Alternate keyboard languages and layouts supported via xdotool or
+ydotool (for Wayland).
 
 \fB6.\fR Edit entry title, username, URL and password (manually typed or
 auto\-generate).
@@ -65,8 +66,9 @@ configuration/theming should be done via Xresources.
 \fB4.\fR (optional) Pinentry. Make sure to set which flavor of pinentry command
 to use in the config file.
 
-\fB5.\fR (optional) xdotool. If you have a lot of Unicode characters or use a non\-U.S.
-English keyboard layout, xdotool is necessary to handle typing those characters.
+\fB5.\fR (optional) xdotool or ydotool (for Wayland). If you have a lot of
+Unicode characters or use a non\-U.S.  English keyboard layout, xdotool/ydotool
+is necessary to handle typing those characters.
 
 .SH INSTALLATION
 \fB1.\fR \fIpip install \-\-user keepmenu\fP\&. Add ~/.local/bin to $PATH
@@ -111,8 +113,8 @@ Adjust the \fIautotype_default\fR, if desired. Allowed codes are the
 \fI{DELAY x}\fP (in milliseconds) is supported. Individual autotype sequences
 can be edited or disabled inside Keepmenu.
 
-Set \fItype_library = xdotool\fP if you need support for non\-U.S.
-English keyboard layouts and/or characters.
+Set \fItype_library = xdotool\fP or \fItype_library = ydotool\fP (Wayland) if
+you need support for non\-U.S.  English keyboard layouts and/or characters.
 
 When using xdotool, call \fIsetxkbmap\fP to set your keyboard type somewhere in
 your window manager or desktop environment initialization. For example:
