@@ -46,7 +46,7 @@ License
 Requirements
 ------------
 
-1. Python 2.7+ or 3.2+
+1. Python 3.4+
 2. Pykeepass_ and PyUserInput_. Install via pip or your distribution's package
    manager, if available.
 3. Dmenu. Basic support is included for Rofi_, but most Rofi
