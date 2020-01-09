@@ -1,7 +1,7 @@
 """Unit tests for keepmenu
 
 """
-import imp
+import importlib
 from multiprocessing.managers import BaseManager
 import os
 from shutil import copyfile, rmtree
@@ -11,7 +11,7 @@ import sys
 import tempfile
 import unittest
 
-KM = imp.load_source('*', 'keepmenu')
+KM = importlib.machinery.SourceFileLoader('*', 'keepmenu').load_module()
 
 class TestServer(unittest.TestCase):
     """Test various BaseManager server functions
