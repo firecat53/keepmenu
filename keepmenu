@@ -53,7 +53,7 @@ def random_str():
     return ''.join(random.choice(letters) for i in range(15))
 
 
-def gen_passwd(length=20, use_digits=True, use_spec_chars=True):
+def gen_pass(length=20, alphabet_list=[]):
     """Generate password (min 4 chars, 1 lower, 1 upper, 1 digit, 1 special char)
 
     Args: length - int (default 20)
@@ -64,15 +64,14 @@ def gen_passwd(length=20, use_digits=True, use_spec_chars=True):
 
     """
     length = length if length >= 4 else 4
-    dig = string.digits if use_digits is True else ''
-    spec = string.punctuation if use_spec_chars is True else ''
-    alphabet = string.ascii_letters + dig + spec
+    # TODO Requires a check for empty input
+    alphabet = "".join(CHAR_TYPES[a] for a in alphabet_list)
     while True:
         password = ''.join(random.SystemRandom().choice(alphabet) for i in range(length))
-        if (any(c.islower() for c in password)
-                and any(c.isupper() for c in password)
-                and (any(c.isdigit() for c in password) if dig else True)
-                and (any(c in string.punctuation for c in password) if spec else True)):
+        count = 0
+        for a in alphabet_list:
+            count += 1 if (re.search(REGEX_TYPES[a],password)) else 0
+        if count == len(alphabet_list):
             break
     return password
 
@@ -240,6 +239,56 @@ def dmenu_err(prompt):
     """
     return dmenu_select(1, prompt)
 
+
+
+def get_pass_settings():
+    """
+    Read settings for password generation
+
+    Returns: (dict of presets)
+    """
+    presets = {}
+    if CONF.has_section('password'):
+        args = CONF.items('password')
+        args_dict = dict(args)
+
+        for key, value in args_dict.items():
+            groups = value.split('+')
+            pass_set = set()
+            for group in groups:
+                group = group.strip()
+                if group in CHAR_TYPES:
+                    pass_set.add(group)
+                else:
+                    dmenu_err(f"Error in password preset {key}")
+                presets[key] = pass_set
+    if not presets:
+        presets["letters+digits+punctuation"] = ["letters","digits","dashes"]
+        presets["letters+digits"] = ["letters","digits"]
+        presets["letters"] = ["letters"]
+    return presets
+
+CHAR_TYPES = {
+    "letters" : string.ascii_letters,
+    "digits" : string.digits,
+    "braces" : "(){}[]",
+    "punctuation" : ".,:;",
+    "quotes" : "\"'",
+    "dashes" : "\\-|_/",
+    "mathsym" : "<*+!?=",
+    "logograms" : "#$%&@^`~",
+}
+
+REGEX_TYPES = {
+    "letters" : "[a-zA-Z]+",
+    "digits" : "[0-9]+",
+    "braces" : "[(){}\[\]]+",
+    "punctuation" : "[.,:;]+",
+    "quotes" : "[\"']+",
+    "dashes" : "[\\-|_/]+",
+    "mathsym" : "[<*+!?=]+",
+    "logograms" : "[#$%&@^`~]+",
+}
 
 def get_database():
     """Read databases from config or ask for user input.
@@ -1083,6 +1132,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         elif not pw_choice:
             return True
         else:
+            pass_sets = get_pass_settings()
             pw_choice = ''
             input_b = b"20\n"
             length = dmenu_select(1, "Password Length?", inp=input_b)
@@ -1092,16 +1142,10 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 length = int(length)
             except ValueError:
                 length = 20
-            input_b = b"True\nFalse\n"
-            digits = dmenu_select(2, "Use digits? True/False", inp=input_b)
-            if not digits:
-                return True
-            digits = False if digits == 'False' else True
-            spec = dmenu_select(2, "Use special characters? True/False", inp=input_b)
-            if not spec:
-                return True
-            spec = False if spec == 'False' else True
-            sel = gen_passwd(length, digits, spec)
+            input_b = str.encode("\n".join(list(pass_sets.keys())))
+            pass_sel = dmenu_select(len(pass_sets), "Which password set to use?", inp=input_b)
+            sel = gen_pass(length, pass_sets[pass_sel])
+
     if field == 'autotype_enabled':
         input_b = b"True\nFalse\n"
         at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=input_b)
