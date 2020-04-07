@@ -42,3 +42,32 @@
 
 ## Set the default autotype sequence (https://keepass.info/help/base/autotype.html#autoseq)
 # autotype_default = {USERNAME}{TAB}{PASSWORD}{ENTER}
+
+[password_chars]
+# Set custom groups of characters for password generation. Any name is fine and
+# these can be used to create new groups of presets in password_char_presets. If
+# you reuse 'upper', 'lower', 'digits', or 'punctuation', those will
+# replace the default values.
+# Defaults:
+# lower = abcdefghijklmnopqrstuvwxyz
+# upper = ABCDEFGHIJKLMNOPQRSTUVWXYZ
+# digits = 0123456789
+# NOTE: remember that % needs to be escaped with another % sign
+# punctuation = !"#$%%&'()*+,-./:;<=>?@[\]^_`{|}~
+# EXAMPLES:
+# punc min = !?#*@-+$%%
+# upper = ABCDEFZ
+
+[password_char_presets]
+# Set character preset groups for password generation. For multiple sets use a space in between
+# If you set any custom presets here, the default sets will not be displayed unless uncommented below:
+# Valid values are: upper lower digits punctuation
+# Also valid are any custom sets defined in [password_chars]
+# Defaults:
+# Letters+Digits+Punctuation = upper lower digits punctuation
+# Letters+Digits = upper lower digits
+# Letters = upper lower
+# Digits = digits
+# Custom Examples:
+# Minimal Punc = upper lower digits "punc min"
+# Router Site = upper digits

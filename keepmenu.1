@@ -48,14 +48,20 @@ entries\(aq views.
 entered passphrase for \fIpw_cache_period_min\fP minutes after the last
 activity.
 
-\fB14.\fR Optional Pinentry support for secure passphrase entry.
+\fB14. \fR Configure the characters and groups of characters used during
+password generation in the config file (see config.ini.example for
+instructions). Multiple character sets can be selected on the fly when using
+Rofi.
+
+\fB15.\fR Optional Pinentry support for secure passphrase entry.
 
 .SH LICENSE
 Copyright © 2020 Scott Hansen <firecat4153@gmail.com>.  Keepmenu is released under the terms of the GPLv3 license.
 
 
 .SH REQUIREMENTS
-\fB1.\fR Python 3.4+
+\fB1.\fR Python 3.4+. *Note* Python 3.6+ uses the \fIsecrets\fP module for password
+generation to improve security.
 
 \fB2.\fR \fI\%Pykeepass\fP and \fI\%PyUserInput\fP\&. Install via pip or your
 distribution\(aqs package manager, if available.
@@ -122,6 +128,18 @@ your window manager or desktop environment initialization. For example:
 .RS
 \fIexec setxkbmap de\fP in ~/.config/i3/config.
 .RE
+
+New sets of characters can be set in config.ini in the \fI[password_chars]\fP
+section. A new preset for each custom set will be listed in addition to the
+default presets. If you redefine one of the default sets (upper, lower, digits,
+punctuation), it will replace the default values.
+
+New preset groups of character sets can be defined in config.ini in the
+\fI[password_char_presets]\fP section. You can set any combination of default
+and custom character sets. A minimum of one character from each distinct set
+will be used when generating a new password. If any custom presets are defined,
+the default presets will not be displayed unless they are uncommented.
+
 .RE
 
 \fB3.\fR If using Rofi, you can try some of the command line options in

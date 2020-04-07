@@ -36,6 +36,9 @@ Features
 - Hide selected groups from the default and 'View/Type Individual entries' views.
 - Keepmenu runs in the background after initial startup and will retain the
   entered passphrase for `pw_cache_period_min` minutes after the last activity.
+- Configure the characters and groups of characters used during password
+  generation in the config file (see config.ini.example for instructions).
+  Multiple character sets can be selected on the fly when using Rofi.
 - Optional Pinentry support for secure passphrase entry.
 
 License
@@ -46,7 +49,8 @@ License
 Requirements
 ------------
 
-1. Python 3.4+
+1. Python 3.4+. *Note* Python 3.6+ uses the `secrets` module for password
+   generation to improve security.
 2. Pykeepass_ and PyUserInput_. Install via pip or your distribution's package
    manager, if available.
 3. Dmenu. Basic support is included for Rofi_, but most Rofi
@@ -104,6 +108,15 @@ Installation
   [dmenu_passphrase] section of config.ini will override those in [dmenu] so you
   can, for example, set the normal foreground and background colors to be the
   same to obscure the passphrase.
+- New sets of characters can be set in config.ini in the `[password_chars]`
+  section. A new preset for each custom set will be listed in addition to the
+  default presets. If you redefine one of the default sets (upper, lower,
+  digits, punctuation), it will replace the default values.
+- New preset groups of character sets can be defined in config.ini in the
+  `[password_char_presets]` section. You can set any combination of default and
+  custom character sets. A minimum of one character from each distinct set will
+  be used when generating a new password. If any custom presets are defined, the
+  default presets will not be displayed unless they are uncommented.
 
 .. Warning:: If you choose to store your database password into config.ini, make
    sure to `chmod 600 config.ini`. This is not secure and I only added it as a

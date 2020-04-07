@@ -28,9 +28,20 @@ from pykeyboard import PyKeyboard
 from pymouse.x11 import X11Error
 from pykeepass import PyKeePass
 
+try:
+    # secrets only available python 3.6+
+    from secrets import choice
+except ImportError:
+    def choice(seq):
+        """Provide `choice` function call for pw generation
+
+        """
+        return random.SystemRandom().choice(seq)
+
 
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
+
 
 def find_free_port():
     """Find random free port to use for BaseManager server
@@ -53,28 +64,28 @@ def random_str():
     return ''.join(random.choice(letters) for i in range(15))
 
 
-def gen_passwd(length=20, use_digits=True, use_spec_chars=True):
-    """Generate password (min 4 chars, 1 lower, 1 upper, 1 digit, 1 special char)
+def gen_passwd(chars, length=20):
+    """Generate password (min = # of distinct character sets picked)
 
-    Args: length - int (default 20)
-          use_digits - bool (default True)
-          use_spec_chars - bool (default True)
+    Args: chars - Dict {preset_name_1: {char_set_1: string, char_set_2: string},
+                        preset_name_2: ....}
+          length - int (default 20)
 
-    Returns: password - string
+    Returns: password - string OR False
 
     """
-    length = length if length >= 4 else 4
-    dig = string.digits if use_digits is True else ''
-    spec = string.punctuation if use_spec_chars is True else ''
-    alphabet = string.ascii_letters + dig + spec
-    while True:
-        password = ''.join(random.SystemRandom().choice(alphabet) for i in range(length))
-        if (any(c.islower() for c in password)
-                and any(c.isupper() for c in password)
-                and (any(c.isdigit() for c in password) if dig else True)
-                and (any(c in string.punctuation for c in password) if spec else True)):
-            break
-    return password
+    sets = set()
+    if chars:
+        sets = set(j for i in chars.values() for j in i.values())
+    if length < len(sets) or not chars:
+        return False
+    alphabet = "".join(set("".join(j for j in i.values()) for i in chars.values()))
+    # Ensure minimum of one char from each character set
+    password = "".join(choice(k) for k in sets)
+    password += "".join(choice(alphabet) for i in range(length - len(sets)))
+    tpw = list(password)
+    random.shuffle(tpw)
+    return "".join(tpw)
 
 
 def process_config():
@@ -84,12 +95,12 @@ def process_config():
     """
     # pragma pylint: disable=global-variable-undefined
     global CACHE_PERIOD_MIN, \
-           CACHE_PERIOD_DEFAULT_MIN, \
-           CONF, \
-           DMENU_LEN, \
-           ENV, \
-           ENC, \
-           SEQUENCE
+        CACHE_PERIOD_DEFAULT_MIN, \
+        CONF, \
+        DMENU_LEN, \
+        ENV, \
+        ENC, \
+        SEQUENCE
     # pragma pylint: enable=global-variable-undefined
     ENV = os.environ.copy()
     ENV['LC_ALL'] = 'C'
@@ -182,7 +193,7 @@ def dmenu_cmd(num_lines, prompt):
     dmenu_command = command[0]
     dmenu_args = command[1:]
     del args_dict["dmenu_command"]
-    lines = "-i -dmenu -lines" if "rofi" in dmenu_command else "-i -l"
+    lines = "-i -dmenu -multi-select -lines" if "rofi" in dmenu_command else "-i -l"
     if "l" in args_dict:
         lines = "{} {}".format(lines, min(num_lines, int(args_dict['l'])))
         del args_dict['l']
@@ -239,6 +250,43 @@ def dmenu_err(prompt):
 
     """
     return dmenu_select(1, prompt)
+
+
+def get_password_chars():
+    """Get characters to use for password generation from defaults, config file
+    and user input.
+
+    Returns: Dict {preset_name_1: {char_set_1: string, char_set_2: string},
+                   preset_name_2: ....}
+    """
+    chars = {"upper": string.ascii_uppercase,
+             "lower": string.ascii_lowercase,
+             "digits": string.digits,
+             "punctuation": string.punctuation}
+    presets = {}
+    presets["Letters+Digits+Punctuation"] = chars
+    presets["Letters+Digits"] = {k: chars[k] for k in ("upper", "lower", "digits")}
+    presets["Letters"] = {k: chars[k] for k in ("upper", "lower")}
+    presets["Digits"] = {k: chars[k] for k in ("digits",)}
+    if CONF.has_section('password_chars'):
+        pw_chars = dict(CONF.items('password_chars'))
+        chars.update(pw_chars)
+        for key, val in pw_chars.items():
+            presets[key.title()] = {k: chars[k] for k in (key,)}
+    if CONF.has_section('password_char_presets'):
+        if CONF.options('password_char_presets'):
+            presets = {}
+        for name, val in CONF.items('password_char_presets'):
+            try:
+                presets[name.title()] = {k: chars[k] for k in shlex.split(val)}
+            except KeyError:
+                print("Error: Unknown value in preset {}. Ignoring.".format(name))
+                continue
+    input_b = "\n".join(presets).encode(ENC)
+    char_sel = dmenu_select(len(presets),
+                            "Pick character set(s) to use", inp=input_b)
+    # This dictionary return also handles Rofi multiple select
+    return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 
 def get_database():
@@ -356,8 +404,8 @@ def get_passphrase():
         password = ""
         out = Popen(pinentry,
                     stdout=PIPE,
-                    stdin=PIPE).communicate( \
-                            input=b'setdesc Enter database password\ngetpin\n')[0]
+                    stdin=PIPE).communicate(
+                        input=b'setdesc Enter database password\ngetpin\n')[0]
         if out:
             res = out.decode(ENC).split("\n")[2]
             if res.startswith("D "):
@@ -392,7 +440,7 @@ def tokenize_autotype(autotype):
 
         if autotype[opening_idx] in "+^%~@":
             yield autotype[opening_idx], True
-            autotype = autotype[opening_idx+1:]
+            autotype = autotype[opening_idx + 1:]
             continue
 
         closing_idx = autotype.find('}')
@@ -403,12 +451,11 @@ def tokenize_autotype(autotype):
         if closing_idx == opening_idx + 1 and closing_idx + 1 < len(autotype) \
                 and autotype[closing_idx + 1] == '}':
             yield "{}}", True
-            autotype = autotype[closing_idx+2:]
+            autotype = autotype[closing_idx + 2:]
             continue
-        else:
-            yield autotype[opening_idx:closing_idx+1], True
+        yield autotype[opening_idx:closing_idx + 1], True
+        autotype = autotype[closing_idx + 1:]
 
-        autotype = autotype[closing_idx+1:]
 
 def token_command(token):
     """When token denotes a special command, this function provides a callable
@@ -418,7 +465,7 @@ def token_command(token):
     cmd = None
 
     def _check_delay():
-        match = re.match('{DELAY (\d+)}', token)
+        match = re.match(r'{DELAY (\d+)}', token)
         if match:
             delay = match.group(1)
             nonlocal cmd
@@ -429,6 +476,7 @@ def token_command(token):
     if _check_delay():  # {DELAY x}
         return cmd
     return None
+
 
 def type_entry(entry):
     """Pick which library to use to type strings
@@ -703,6 +751,7 @@ def type_entry_xdotool(entry, tokens):
         else:
             call(['xdotool', 'type', token])
 
+
 YDOTOOL_AUTOTYPE_TOKENS = {
     "{TAB}"       : ['key', 'TAB'],
     "{ENTER}"     : ['key', 'ENTER'],
@@ -726,9 +775,9 @@ YDOTOOL_AUTOTYPE_TOKENS = {
     "{BREAK}"     : ['key', 'BREAK'],
     "{CAPSLOCK}"  : ['key', 'CAPSLOCK'],
     "{ESC}"       : ['key', 'ESC'],
-    #"{WIN}"       : ['key', 'Super'],
-    #"{LWIN}"      : ['key', 'Super_L'],
-    #"{RWIN}"      : ['key', 'Super_R'],
+    # "{WIN}"       : ['key', 'Super'],
+    # "{LWIN}"      : ['key', 'Super_L'],
+    # "{RWIN}"      : ['key', 'Super_R'],
     # "{APPS}"      : ['key', ''],
     # "{HELP}"      : ['key', ''],
     "{NUMLOCK}"   : ['key', 'NUMLOCK'],
@@ -767,8 +816,9 @@ YDOTOOL_AUTOTYPE_TOKENS = {
     "+"           : ['key', 'LEFTSHIFT'],
     "^"           : ['Key', 'LEFTCTRL'],
     "%"           : ['key', 'LEFTALT'],
-    #"@"           : ['key', 'Super']
+    # "@"           : ['key', 'Super']
 }
+
 
 def type_entry_ydotool(entry, tokens):
     """Auto-type entry entry using ydotool
@@ -801,6 +851,7 @@ def type_entry_ydotool(entry, tokens):
                 return
         else:
             call(['ydotool', 'type', token])
+
 
 def type_text(data):
     """Type the given text data
@@ -884,7 +935,7 @@ def manage_groups(kpo):
     group = False
     while edit is True:
         input_b = b"\n".join(i.encode(ENC) for i in options) + b"\n\n" + \
-                b"\n".join(i.path.encode(ENC) for i in kpo.groups)
+            b"\n".join(i.path.encode(ENC) for i in kpo.groups)
         sel = dmenu_select(len(options) + len(kpo.groups) + 1, "Groups", inp=input_b)
         if not sel:
             edit = False
@@ -1092,22 +1143,20 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 length = int(length)
             except ValueError:
                 length = 20
-            input_b = b"True\nFalse\n"
-            digits = dmenu_select(2, "Use digits? True/False", inp=input_b)
-            if not digits:
+            chars = get_password_chars()
+            if chars is False:
                 return True
-            digits = False if digits == 'False' else True
-            spec = dmenu_select(2, "Use special characters? True/False", inp=input_b)
-            if not spec:
+            sel = gen_passwd(chars, length)
+            if sel is False:
+                dmenu_err("Number of char groups desired is more than requested pw length")
                 return True
-            spec = False if spec == 'False' else True
-            sel = gen_passwd(length, digits, spec)
+
     if field == 'autotype_enabled':
         input_b = b"True\nFalse\n"
         at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=input_b)
         if not at_enab:
             return True
-        sel = False if at_enab == 'False' else True
+        sel = not at_enab == 'False'
     if (field not in ('password', 'notes', 'path', 'autotype_enabled')) or pw_choice:
         sel = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
         if not sel:
