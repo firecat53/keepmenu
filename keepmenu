@@ -263,7 +263,7 @@ def get_pass_settings():
                     dmenu_err(f"Error in password preset {key}")
                 presets[key] = pass_set
     if not presets:
-        presets["letters+digits+punctuation"] = ["letters","digits","dashes"]
+        presets["letters+digits+punctuation"] = ["letters","digits","braces","punctuation","quotes","dashes","mathsym","logograms"]
         presets["letters+digits"] = ["letters","digits"]
         presets["letters"] = ["letters"]
     return presets
