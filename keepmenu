@@ -273,23 +273,23 @@ def get_pass_settings():
 CHAR_TYPES = {
     "letters" : string.ascii_letters,
     "digits" : string.digits,
-    "braces" : "(){}[]",
-    "punctuation" : ".,:;",
-    "quotes" : "\"'",
-    "dashes" : "\\-|_/",
-    "mathsym" : "<*+!?=",
-    "logograms" : "#$%&@^`~",
+    "braces" : '(){}[]',
+    "punctuation" : '.,:;',
+    "quotes" : '"\'',
+    "dashes" : '\\-|_/',
+    "mathsym" : '<*+!?=',
+    "logograms" : '#$%&@^`~',
 }
 
 REGEX_TYPES = {
-    "letters" : "[a-zA-Z]+",
-    "digits" : "[0-9]+",
-    "braces" : "[(){}\[\]]+",
-    "punctuation" : "[.,:;]+",
-    "quotes" : "[\"']+",
-    "dashes" : "[\\-|_/]+",
-    "mathsym" : "[<*+!?=]+",
-    "logograms" : "[#$%&@^`~]+",
+    "letters" : r'[a-zA-Z]+',
+    "digits" : r'[0-9]+',
+    "braces" : r'[(){}\[\]]+',
+    "punctuation" : r'[.,:;]+',
+    "quotes" : r'["\']+',
+    "dashes" : r'[\\-|_/]+',
+    "mathsym" : r'[<*+!?=]+',
+    "logograms" : r'[#$%&@^`~]+',
 }
 
 def get_database():
