@@ -64,8 +64,9 @@ def gen_pass(length=20, alphabet_list=[]):
 
     """
     length = length if length >= 4 else 4
-    # TODO Requires a check for empty input
     alphabet = "".join(CHAR_TYPES[a] for a in alphabet_list)
+    if not alphabet:
+        alphabet = ''.join(list(CHAR_TYPES.values()))
     while True:
         password = ''.join(random.SystemRandom().choice(alphabet) for i in range(length))
         count = 0
