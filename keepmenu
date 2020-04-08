@@ -54,7 +54,7 @@ def random_str():
 
 
 def gen_pass(length=20, alphabet_list=[]):
-    """Generate password (min 4 chars, 1 lower, 1 upper, 1 digit, 1 special char)
+    """Generate password (min 4 chars or list length, at least one used of each group)
 
     Args: length - int (default 20)
           use_digits - bool (default True)
@@ -63,8 +63,9 @@ def gen_pass(length=20, alphabet_list=[]):
     Returns: password - string
 
     """
-    length = length if length >= 4 else 4
-    alphabet = "".join(CHAR_TYPES[a] for a in alphabet_list)
+    default_length = len(alphabet_list) if len(alphabet_list) > 4 else 4
+    length = length if length >= default_length else default_length
+    alphabet = ''.join(CHAR_TYPES[a] for a in alphabet_list)
     if not alphabet:
         alphabet = ''.join(list(CHAR_TYPES.values()))
     while True:
