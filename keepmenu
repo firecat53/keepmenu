@@ -65,6 +65,8 @@ def gen_passwd(length=20, alphabet_list=[]):
     """
     default_length = len(alphabet_list) if len(alphabet_list) > 4 else 4
     length = length if length >= default_length else default_length
+    if set(alphabet_list).difference(set(CHAR_TYPES.keys())):
+        return None
     alphabet = ''.join(CHAR_TYPES[a] for a in alphabet_list)
     if not alphabet:
         alphabet = ''.join(list(CHAR_TYPES.values()))
