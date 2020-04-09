@@ -53,7 +53,7 @@ def random_str():
     return ''.join(random.choice(letters) for i in range(15))
 
 
-def gen_pass(length=20, alphabet_list=[]):
+def gen_passwd(length=20, alphabet_list=[]):
     """Generate password (min 4 chars or list length, at least one used of each group)
 
     Args: length - int (default 20)
@@ -243,7 +243,7 @@ def dmenu_err(prompt):
 
 
 
-def get_pass_settings():
+def get_passwd_settings():
     """
     Read settings for password generation
 
@@ -256,14 +256,14 @@ def get_pass_settings():
 
         for key, value in args_dict.items():
             groups = value.split('+')
-            pass_set = set()
+            passwd_set = set()
             for group in groups:
                 group = group.strip()
                 if group in CHAR_TYPES:
-                    pass_set.add(group)
+                    passwd_set.add(group)
                 else:
                     dmenu_err(f"Error in password preset {key}")
-                presets[key] = pass_set
+                presets[key] = passwd_set
     if not presets:
         presets["letters+digits+punctuation"] = ["letters","digits","braces","punctuation","quotes","dashes","mathsym","logograms"]
         presets["letters+digits"] = ["letters","digits"]
@@ -1134,7 +1134,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         elif not pw_choice:
             return True
         else:
-            pass_sets = get_pass_settings()
+            passwd_sets = get_passwd_settings()
             pw_choice = ''
             input_b = b"20\n"
             length = dmenu_select(1, "Password Length?", inp=input_b)
@@ -1144,9 +1144,12 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 length = int(length)
             except ValueError:
                 length = 20
-            input_b = str.encode("\n".join(list(pass_sets.keys())))
-            pass_sel = dmenu_select(len(pass_sets), "Which password set to use?", inp=input_b)
-            sel = gen_pass(length, pass_sets[pass_sel])
+            input_b = str.encode("\n".join(list(passwd_sets.keys())))
+            passwd_sel = dmenu_select(len(passwd_sets), "Which password set to use?", inp=input_b)
+            sel = gen_passwd(length, passwd_sets[passwd_sel])
+            if not sel:
+                dmenu_err("Error during password generation. Check your config.ini")
+                sys.exit()
 
     if field == 'autotype_enabled':
         input_b = b"True\nFalse\n"
