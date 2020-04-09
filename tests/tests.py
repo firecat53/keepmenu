@@ -10,6 +10,7 @@ import string
 import sys
 import tempfile
 import unittest
+import re
 
 KM = importlib.machinery.SourceFileLoader('*', 'keepmenu').load_module()
 
@@ -82,27 +83,25 @@ class TestFunctions(unittest.TestCase):
         """Test generate_password function
 
         """
-        # args = (length, use_digits T/F, use special chars T/F)
-        values = [(0, True, True),
-                  (2, False, False),
-                  (10, True, True),
-                  (20, False, True),
-                  (1000, True, False),
-                  (50, False, False),
+        # args = (length, [list of identifiers])
+        values = [(0, ["letters"]),
+                  (2, ["letters","digits","braces","punctuation","dashes"]),
+                  (10, ["letters","digits","braces","punctuation"]),
+                  (20, ["mathsym","digits","brace","punctuation"]),
+                  (1000, ["logograms","digits","braces","punctuation"]),
+                  (50, ["letters","digits","braces","dots"]),
                   ()]
         for args in values:
             pword = KM.gen_passwd(*args)
             if not args:
-                args = (20, True, True)  ## Defaults for gen_passwd
-            self.assertTrue(len(pword) == args[0] or len(pword) == 4)
-            if args[1] is True:
-                self.assertTrue(any(c.isdigit() for c in pword))
+                args = (20, [])  ## Defaults for gen_passwd
+            if set(args[1]).difference(set(KM.REGEX_TYPES.keys())):
+                self.assertTrue(pword is None)
             else:
-                self.assertFalse(any(c.isdigit() for c in pword))
-            if args[2] is True:
-                self.assertTrue(any(c in string.punctuation for c in pword))
-            else:
-                self.assertFalse(any(c in string.punctuation for c in pword))
+                self.assertTrue(len(pword) == args[0] or len(pword) == 4 or len(pword) == len(args[1]))
+                for a in args[1]:
+                    if a in KM.REGEX_TYPES:
+                        self.assertTrue(re.search(KM.REGEX_TYPES[a],pword))
 
     def test_conf(self):
         """Test generating config file when none exists
