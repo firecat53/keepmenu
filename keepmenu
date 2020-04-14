@@ -54,7 +54,7 @@ def random_str():
 
 
 def gen_passwd(length=20, alphabet_list=["letters", "digits", "braces"]):
-    """Generate password (min 4 chars or list length, at least one used of each group)
+    """Generate password (min 4 chars, returns Error if less than given groups)
 
     Args: length - int (default 20)
           alphabet_list - list of strings (default ["letters", "digits", "braces"])
@@ -62,11 +62,14 @@ def gen_passwd(length=20, alphabet_list=["letters", "digits", "braces"]):
     Returns: password - string
 
     """
-    length = max(4, len(alphabet_list))
+    length = max(4, length)
     if set(alphabet_list).difference(set(CHAR_TYPES.keys())):
         for s in set(alphabet_list).difference(set(CHAR_TYPES.keys())):
             alphabet_list.remove(s)
     alphabet = ''.join(CHAR_TYPES[a] for a in alphabet_list)
+    if len(alphabet_list) > length:
+        return "Error: not all character sets used. Please edit config.ini"
+
     if not alphabet:
         alphabet = ''.join(list(CHAR_TYPES.values()))
     while True:
@@ -1162,8 +1165,8 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 else:
                     pass
             sel = gen_passwd(length, alphabet_list)
-            if not sel:
-                dmenu_err("Error during password generation. Check your config.ini")
+            if sel.startswith("Error:"):
+                dmenu_err(sel)
                 sys.exit()
 
     if field == 'autotype_enabled':
