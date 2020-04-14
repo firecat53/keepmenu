@@ -122,7 +122,18 @@ your window manager or desktop environment initialization. For example:
 .RS
 \fIexec setxkbmap de\fP in ~/.config/i3/config.
 .RE
+
+For customizing password generation uncomment the password section und add
+entries to your liking. The key in front will be shown in dmenu/rofi while the
+values will compose the used character set for the password.
+Valid values in no particular order, combined with the +, are the following:
+.RS
+    letters digits braces punctuation quotes dashes mathsym logograms
 .RE
+For example, setting \ffoo=letters+braces\f creates a preset which would
+generate a password from letters a-z and A-Z as well as {}[]().
+.RE
+
 
 \fB3.\fR If using Rofi, you can try some of the command line options in
 config.ini or set them using the \fIdmenu_command\fP setting, but I haven\(aqt

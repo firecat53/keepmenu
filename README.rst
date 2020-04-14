@@ -36,6 +36,8 @@ Features
 - Hide selected groups from the default and 'View/Type Individual entries' views.
 - Keepmenu runs in the background after initial startup and will retain the
   entered passphrase for `pw_cache_period_min` minutes after the last activity.
+- Configure the characters used during password generation in the config or on
+  the fly (rofi only)
 - Optional Pinentry support for secure passphrase entry.
 
 License

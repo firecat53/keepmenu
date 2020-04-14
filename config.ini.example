@@ -42,3 +42,7 @@
 
 ## Set the default autotype sequence (https://keepass.info/help/base/autotype.html#autoseq)
 # autotype_default = {USERNAME}{TAB}{PASSWORD}{ENTER}
+
+# [password]
+# some_name = letters+digits+braces+punctuation+quotes+dashes+mathsym+logograms
+# some_other_name = letters+digits
