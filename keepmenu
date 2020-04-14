@@ -91,6 +91,7 @@ def process_config():
            DMENU_LEN, \
            ENV, \
            ENC, \
+           ROFI, \
            SEQUENCE
     # pragma pylint: enable=global-variable-undefined
     ENV = os.environ.copy()
@@ -184,7 +185,8 @@ def dmenu_cmd(num_lines, prompt):
     dmenu_command = command[0]
     dmenu_args = command[1:]
     del args_dict["dmenu_command"]
-    lines = "-i -dmenu -lines" if "rofi" in dmenu_command else "-i -l"
+    ROFI = True if "rofi" in dmenu_command else False
+    lines = "-i -dmenu -multi-select -lines" if ROFI else "-i -l"
     if "l" in args_dict:
         lines = "{} {}".format(lines, min(num_lines, int(args_dict['l'])))
         del args_dict['l']
@@ -200,7 +202,7 @@ def dmenu_cmd(num_lines, prompt):
         if CONF.has_option('dmenu_passphrase', 'rofi_obscure'):
             rofi_obscure = CONF.getboolean('dmenu_passphrase', 'rofi_obscure')
             del args_dict["rofi_obscure"]
-        if rofi_obscure is True and "rofi" in dmenu_command:
+        if rofi_obscure is True and ROFI:
             dmenu_args.extend(["-password"])
     extras = (["-" + str(k), str(v)] for (k, v) in args_dict.items())
     dmenu = [dmenu_command, "-p", str(prompt)]
@@ -1136,6 +1138,9 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             return True
         else:
             passwd_sets = get_passwd_settings()
+            if ROFI:
+                for key in CHAR_TYPES.keys():
+                    passwd_sets[key] = key
             pw_choice = ''
             input_b = b"20\n"
             length = dmenu_select(1, "Password Length?", inp=input_b)
@@ -1147,7 +1152,16 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 length = 20
             input_b = str.encode("\n".join(list(passwd_sets.keys())))
             passwd_sel = dmenu_select(len(passwd_sets), "Which password set to use?", inp=input_b)
-            sel = gen_passwd(length, passwd_sets[passwd_sel])
+            selection = [p for p in passwd_sel.split("\n")]
+            alphabet_list = []
+            for p_set in selection:
+                if p_set in CHAR_TYPES.keys():
+                    alphabet_list.append(p_set)
+                elif p_set in passwd_sets:
+                    alphabet_list.extend(passwd_sets[p_set])
+                else:
+                    pass
+            sel = gen_passwd(length, alphabet_list)
             if not sel:
                 dmenu_err("Error during password generation. Check your config.ini")
                 sys.exit()
