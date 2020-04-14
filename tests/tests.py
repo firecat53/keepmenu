@@ -136,12 +136,12 @@ class TestFunctions(unittest.TestCase):
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
         KM.process_config()
         if sys.version_info.major < 3:
-            res = ['/usr/bin/rofi', '-i', '-dmenu', '-lines', '10', '-p',
+            res = ['/usr/bin/rofi', '-i', '-dmenu', '-multi-select', '-lines', '10', '-p',
                    u'Passphrase', '-password', u'-b', u'-nb', u'#222222',
                    u'-nf', u'#222222', u'-sb', u'#123456', u'-fn',
                    u'Inconsolata-12']
         else:
-            res = ["/usr/bin/rofi", "-i", "-dmenu", "-lines", "10", "-p", "Passphrase",
+            res = ["/usr/bin/rofi", "-i", "-dmenu", "-multi-select", "-lines", "10", "-p", "Passphrase",
                    "-password", "-fn", "Inconsolata-12", "-nb", "#222222", "-nf", "#222222",
                    "-sb", "#123456", "-b"]
         self.assertTrue(KM.dmenu_cmd(20, "Passphrase") == res)
