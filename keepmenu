@@ -279,11 +279,9 @@ def get_passwd_settings():
     if CONF.has_section('password'):
         args = CONF.items('password')
         args_dict = dict(args)
-
         for key, value in args_dict.items():
-            groups = value.split('+')
             passwd_set = set()
-            for group in groups:
+            for group in value.split():
                 group = group.strip()
                 if group in CHARGROUPS.keylist():
                     passwd_set.add(group)

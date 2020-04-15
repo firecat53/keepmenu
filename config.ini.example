@@ -44,5 +44,7 @@
 # autotype_default = {USERNAME}{TAB}{PASSWORD}{ENTER}
 
 # [password]
-# some_name = letters+digits+braces+punctuation+quotes+dashes+mathsym+logograms
-# some_other_name = letters+digits
+# Set character presets for password generation, for multiple use a whitespace in between
+# Valid values are: letters digits braces punctuation quotes dashes mathsym logograms
+# some_name = letters digits braces punctuation quotes dashes mathsym logograms
+# some_other_name = letters digits
