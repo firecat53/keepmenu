@@ -64,17 +64,14 @@ def gen_passwd(length=20, alphabet_list=None):
 
     """
     if alphabet_list is None:
-        alphabet_list = ["letters", "digits", "braces"]
+        alphabet_list = CHARGROUPS_.keylist()
     length = max(4, length)
-    if set(alphabet_list).difference(set(CHARGROUPS_.keys())):
-        for alpha_set in set(alphabet_list).difference(set(CHARGROUPS_.keys())):
-            alphabet_list.remove(alpha_set)
+    alphabet_list = set(alphabet_list).intersection(CHARGROUPS_.keylist())
     alphabet = ''.join(CHARGROUPS_.get_chars(al) for al in alphabet_list)
     if len(alphabet_list) > length:
         return "Error: not all character sets used. Please edit config.ini"
-
     if not alphabet:
-        alphabet = ''.join(list(CHARGROUPS_.chars()))
+        alphabet = ''.join(list(CHARGROUPS_.chars))
     while True:
         password = ''.join(random.SystemRandom().choice(alphabet) for i in range(length))
         count = 0
@@ -85,7 +82,7 @@ def gen_passwd(length=20, alphabet_list=None):
     return password
 
 
-CONFIG_ = {'ROFI': False}
+CONFIG_ = {'ROFI': False, 'SETS': {}}
 
 
 def process_config():
@@ -156,6 +153,10 @@ def process_config():
                 dmenu_err("Ydotool not installed.\n"
                           "Please install or remove that option from config.ini")
                 sys.exit()
+    if CONF.has_section("password"):
+        CONFIG_["SETS"] = get_passwd_settings()
+    else:
+        CONFIG_["SETS"] = default_passwd_sets()
 
 
 def get_auth():
@@ -253,6 +254,21 @@ def dmenu_err(prompt):
     return dmenu_select(1, prompt)
 
 
+def default_passwd_sets():
+    """
+    Returns a default dict of password sets"""
+    presets = {}
+    presets["letters+digits+punctuation"] = ["letters",
+                                             "digits",
+                                             "braces",
+                                             "punctuation",
+                                             "quotes",
+                                             "dashes",
+                                             "mathsym",
+                                             "logograms"]
+    presets["letters+digits"] = ["letters", "digits"]
+    presets["letters"] = ["letters"]
+    return presets
 
 def get_passwd_settings():
     """
@@ -270,23 +286,14 @@ def get_passwd_settings():
             passwd_set = set()
             for group in groups:
                 group = group.strip()
-                if group in CHARGROUPS_.keys():
+                if group in CHARGROUPS_.keylist():
                     passwd_set.add(group)
                 else:
-                    # TODO This should end keepmenu
-                    dmenu_err(f"Error in password preset {key}")
+                    dmenu_err(f"Error: Unknown value in preset {key}")
+                    sys.exit()
                 presets[key] = list(passwd_set)
     if not presets:
-        presets["letters+digits+punctuation"] = ["letters",
-                                                 "digits",
-                                                 "braces",
-                                                 "punctuation",
-                                                 "quotes",
-                                                 "dashes",
-                                                 "mathsym",
-                                                 "logograms"]
-        presets["letters+digits"] = ["letters", "digits"]
-        presets["letters"] = ["letters"]
+        presets = default_passwd_sets()
     return presets
 
 
@@ -294,52 +301,53 @@ class CharGroups:
     """
     Class for using character groups throughout this module"""
     def __init__(self):
-        self._chars = {"letters": string.ascii_letters,
-                       "digits": string.digits,
-                       "braces": '(){}[]',
-                       "punctuation": '.,:;',
-                       "quotes": '"\'',
-                       "dashes": '\\-|_/',
-                       "mathsym": '<*+!?=',
-                       "logograms": '#$%&@^`~'}
-
-        self._regex = {"letters": r'[a-zA-Z]+',
-                       "digits": r'[0-9]+',
-                       "braces": r'[(){}\[\]]+',
-                       "punctuation": r'[.,:;]+',
-                       "quotes": r'["\']+',
-                       "dashes": r'[\\-|_/]+',
-                       "mathsym": r'[<*+!?=]+',
-                       "logograms": r'[#$%&@^`~]+'}
+        self.keys = {"letters": 0,
+                     "digits": 1,
+                     "braces": 2,
+                     "punctuation": 3,
+                     "quotes": 4,
+                     "dashes": 5,
+                     "mathsym": 6,
+                     "logograms": 7}
+        self.chars = [string.ascii_letters,
+                      string.digits,
+                      '(){}[]',
+                      '.,:;',
+                      '"\'',
+                      '\\-|_/',
+                      '<*+!?=',
+                      '#$%&@^`~']
+        self.regex = [r'[a-zA-Z]+',
+                      r'[0-9]+',
+                      r'[(){}\[\]]+',
+                      r'[.,:;]+',
+                      r'["\']+',
+                      r'[\\-|_/]+',
+                      r'[<*+!?=]+',
+                      r'[#$%&@^`~]+']
 
     def get_chars(self, ident):
         """
         Returns string of characters, if they exist, else None."""
-        if ident in self._chars:
-            return self._chars[ident]
+        if ident in self.keys:
+            return self.chars[self.keys[ident]]
         return None
 
     def get_regex(self, ident):
         """
         Returns string of regex, if they exist, else None."""
-        if ident in self._regex:
-            return self._regex[ident]
+        if ident in self.keys:
+            return self.regex[self.keys[ident]]
         return None
 
-    def regex(self):
+    def keylist(self):
         """
-        Returns list of regex values."""
-        return list(self._regex.values())
+        Returns a list of keys."""
+        return list(self.keys.keys())
 
-    def chars(self):
-        """
-        Returns list of chars values."""
-        return list(self._chars.values())
 
-    def keys(self):
-        """
-        Returns list of keys."""
-        return list(self._chars.keys())
+
+
 
 
 CHARGROUPS_ = CharGroups()
@@ -1192,7 +1200,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         else:
             passwd_sets = get_passwd_settings()
             if CONFIG_["ROFI"]:
-                for key in CHARGROUPS_.keys():
+                for key in CHARGROUPS_.keylist():
                     passwd_sets[key] = key
             pw_choice = ''
             input_b = b"20\n"
@@ -1207,7 +1215,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             passwd_sel = dmenu_select(len(passwd_sets), "Which password set to use?", inp=input_b)
             alphabet_list = []
             for p_set in passwd_sel.split("\n"):
-                if p_set in CHARGROUPS_.keys():
+                if p_set in CHARGROUPS_.keylist():
                     alphabet_list.append(p_set)
                 elif p_set in passwd_sets:
                     alphabet_list.extend(passwd_sets[p_set])

@@ -95,13 +95,12 @@ class TestFunctions(unittest.TestCase):
             pword = KM.gen_passwd(*args)
             if not args:
                 args = (20, [])  ## Defaults for gen_passwd
-            if set(args[1]).difference(set(KM.CHARGROUPS_.keys())) or len(args[1]) > max(4, args[0]):
+            if len(args[1]) > max(4, args[0]):
                 self.assertTrue(pword.startswith("Error:"))
             else:
-                print(f"length: {args[0]} list: {args[1]} pword: {pword}")
                 self.assertTrue(len(pword) == args[0] or len(pword) == 4)
                 for arg in args[1]:
-                    if arg in KM.CHARGROUPS_.regex():
+                    if arg in KM.CHARGROUPS_.regex:
                         self.assertTrue(re.search(KM.CHARGROUPS.get_regex(arg), pword))
 
     def test_conf(self):
