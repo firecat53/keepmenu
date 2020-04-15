@@ -100,7 +100,7 @@ class TestFunctions(unittest.TestCase):
             else:
                 self.assertTrue(len(pword) == args[0] or len(pword) == 4)
                 for arg in args[1]:
-                    if arg in KM.CHARGROUPS_.regex:
+                    if arg in KM.CHARGROUPS.regex:
                         self.assertTrue(re.search(KM.CHARGROUPS.get_regex(arg), pword))
 
     def test_conf(self):

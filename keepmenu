@@ -31,6 +31,7 @@ from pykeepass import PyKeePass
 
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
+CONFIG = {'ROFI': False, 'SETS': {}}
 
 
 def find_free_port():
@@ -64,25 +65,22 @@ def gen_passwd(length=20, alphabet_list=None):
 
     """
     if alphabet_list is None:
-        alphabet_list = CHARGROUPS_.keylist()
+        alphabet_list = CHARGROUPS.keylist()
     length = max(4, length)
-    alphabet_list = set(alphabet_list).intersection(CHARGROUPS_.keylist())
-    alphabet = ''.join(CHARGROUPS_.get_chars(al) for al in alphabet_list)
+    alphabet_list = set(alphabet_list).intersection(CHARGROUPS.keylist())
+    alphabet = ''.join(CHARGROUPS.get_chars(al) for al in alphabet_list)
     if len(alphabet_list) > length:
         return "Error: not all character sets used. Please edit config.ini"
     if not alphabet:
-        alphabet = ''.join(list(CHARGROUPS_.chars))
+        alphabet = ''.join(list(CHARGROUPS.chars))
     while True:
         password = ''.join(random.SystemRandom().choice(alphabet) for i in range(length))
         count = 0
         for alpha in alphabet_list:
-            count += 1 if (re.search(CHARGROUPS_.get_regex(alpha), password)) else 0
+            count += 1 if (re.search(CHARGROUPS.get_regex(alpha), password)) else 0
         if count == len(alphabet_list):
             break
     return password
-
-
-CONFIG_ = {'ROFI': False, 'SETS': {}}
 
 
 def process_config():
@@ -154,9 +152,9 @@ def process_config():
                           "Please install or remove that option from config.ini")
                 sys.exit()
     if CONF.has_section("password"):
-        CONFIG_["SETS"] = get_passwd_settings()
+        CONFIG["SETS"] = get_passwd_settings()
     else:
-        CONFIG_["SETS"] = default_passwd_sets()
+        CONFIG["SETS"] = default_passwd_sets()
 
 
 def get_auth():
@@ -194,8 +192,8 @@ def dmenu_cmd(num_lines, prompt):
     dmenu_command = command[0]
     dmenu_args = command[1:]
     del args_dict["dmenu_command"]
-    CONFIG_["ROFI"] = bool("rofi" in dmenu_command)
-    lines = "-i -dmenu -multi-select -lines" if CONFIG_["ROFI"] else "-i -l"
+    CONFIG["ROFI"] = bool("rofi" in dmenu_command)
+    lines = "-i -dmenu -multi-select -lines" if CONFIG["ROFI"] else "-i -l"
     if "l" in args_dict:
         lines = "{} {}".format(lines, min(num_lines, int(args_dict['l'])))
         del args_dict['l']
@@ -211,7 +209,7 @@ def dmenu_cmd(num_lines, prompt):
         if CONF.has_option('dmenu_passphrase', 'rofi_obscure'):
             rofi_obscure = CONF.getboolean('dmenu_passphrase', 'rofi_obscure')
             del args_dict["rofi_obscure"]
-        if rofi_obscure is True and CONFIG_["ROFI"]:
+        if rofi_obscure is True and CONFIG["ROFI"]:
             dmenu_args.extend(["-password"])
     extras = (["-" + str(k), str(v)] for (k, v) in args_dict.items())
     dmenu = [dmenu_command, "-p", str(prompt)]
@@ -270,6 +268,7 @@ def default_passwd_sets():
     presets["letters"] = ["letters"]
     return presets
 
+
 def get_passwd_settings():
     """
     Read settings for password generation
@@ -286,7 +285,7 @@ def get_passwd_settings():
             passwd_set = set()
             for group in groups:
                 group = group.strip()
-                if group in CHARGROUPS_.keylist():
+                if group in CHARGROUPS.keylist():
                     passwd_set.add(group)
                 else:
                     dmenu_err(f"Error: Unknown value in preset {key}")
@@ -346,11 +345,7 @@ class CharGroups:
         return list(self.keys.keys())
 
 
-
-
-
-
-CHARGROUPS_ = CharGroups()
+CHARGROUPS = CharGroups()
 
 
 def get_database():
@@ -1199,8 +1194,8 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             return True
         else:
             passwd_sets = get_passwd_settings()
-            if CONFIG_["ROFI"]:
-                for key in CHARGROUPS_.keylist():
+            if CONFIG["ROFI"]:
+                for key in CHARGROUPS.keylist():
                     passwd_sets[key] = key
             pw_choice = ''
             input_b = b"20\n"
@@ -1215,7 +1210,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             passwd_sel = dmenu_select(len(passwd_sets), "Which password set to use?", inp=input_b)
             alphabet_list = []
             for p_set in passwd_sel.split("\n"):
-                if p_set in CHARGROUPS_.keylist():
+                if p_set in CHARGROUPS.keylist():
                     alphabet_list.append(p_set)
                 elif p_set in passwd_sets:
                     alphabet_list.extend(passwd_sets[p_set])
