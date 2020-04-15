@@ -85,23 +85,24 @@ class TestFunctions(unittest.TestCase):
         """
         # args = (length, [list of identifiers])
         values = [(0, ["letters"]),
-                  (2, ["letters","digits","braces","punctuation","dashes"]),
-                  (10, ["letters","digits","braces","punctuation"]),
-                  (20, ["mathsym","digits","brace","punctuation"]),
-                  (1000, ["logograms","digits","braces","punctuation"]),
-                  (50, ["letters","digits","braces","dots"]),
+                  (2, ["letters", "digits", "braces", "punctuation", "dashes"]),
+                  (10, ["letters", "digits", "braces", "punctuation"]),
+                  (20, ["mathsym", "digits", "brace", "punctuation"]),
+                  (1000, ["logograms", "digits", "braces", "punctuation"]),
+                  (50, ["letters", "digits", "braces", "dots"]),
                   ()]
         for args in values:
             pword = KM.gen_passwd(*args)
             if not args:
                 args = (20, [])  ## Defaults for gen_passwd
-            if set(args[1]).difference(set(KM.REGEX_TYPES.keys())):
-                self.assertTrue(pword is None)
+            if set(args[1]).difference(set(KM.CHARGROUPS_.keys())) or len(args[1]) > max(4, args[0]):
+                self.assertTrue(pword.startswith("Error:"))
             else:
-                self.assertTrue(len(pword) == args[0] or len(pword) == 4 or len(pword) == len(args[1]))
-                for a in args[1]:
-                    if a in KM.REGEX_TYPES:
-                        self.assertTrue(re.search(KM.REGEX_TYPES[a],pword))
+                print(f"length: {args[0]} list: {args[1]} pword: {pword}")
+                self.assertTrue(len(pword) == args[0] or len(pword) == 4)
+                for arg in args[1]:
+                    if arg in KM.CHARGROUPS_.regex():
+                        self.assertTrue(re.search(KM.CHARGROUPS.get_regex(arg), pword))
 
     def test_conf(self):
         """Test generating config file when none exists
