@@ -10,9 +10,9 @@ import string
 import sys
 import tempfile
 import unittest
-import re
 
 KM = importlib.machinery.SourceFileLoader('*', 'keepmenu').load_module()
+
 
 class TestServer(unittest.TestCase):
     """Test various BaseManager server functions
@@ -79,29 +79,54 @@ class TestFunctions(unittest.TestCase):
     def tearDown(self):
         rmtree(self.tmpdir)
 
-    def test_generate_password(self):
-        """Test generate_password function
+    def test_get_password_conf(self):
+        """Test proper reading of password config names with spaces
 
         """
-        # args = (length, [list of identifiers])
-        values = [(0, ["letters"]),
-                  (2, ["letters", "digits", "braces", "punctuation", "dashes"]),
-                  (10, ["letters", "digits", "braces", "punctuation"]),
-                  (20, ["mathsym", "digits", "brace", "punctuation"]),
-                  (1000, ["logograms", "digits", "braces", "punctuation"]),
-                  (50, ["letters", "digits", "braces", "dots"]),
-                  ()]
-        for args in values:
-            pword = KM.gen_passwd(*args)
-            if not args:
-                args = (20, [])  ## Defaults for gen_passwd
-            if len(args[1]) > max(4, args[0]):
-                self.assertTrue(pword.startswith("Error:"))
-            else:
-                self.assertTrue(len(pword) == args[0] or len(pword) == 4)
-                for arg in args[1]:
-                    if arg in KM.CHARGROUPS.regex:
-                        self.assertTrue(re.search(KM.CHARGROUPS.get_regex(arg), pword))
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        KM.process_config()
+        self.assertTrue(KM.CONF.has_section("password_chars"))
+        self.assertTrue(KM.CONF.has_option("password_chars", "punc min") and
+                        KM.CONF.get("password_chars", "punc min") == "!@#$%")
+        self.assertTrue(KM.CONF.has_section("password_char_presets"))
+        self.assertTrue(KM.CONF.has_option("password_char_presets", "Minimal Punc") and
+                        KM.CONF.get("password_char_presets", "Minimal Punc") ==
+                        'upper lower digits "punc min"')
+
+    def test_generate_password(self):
+        """Test gen_passwd function
+
+        """
+        chars = {'Letters': {'upper': string.ascii_uppercase,
+                             'lower': string.ascii_lowercase},
+                 'Min Punc': {'min punc': '!@#$%',
+                              'digits': string.digits,
+                              'upper': 'ABCDE'}}
+        self.assertFalse(KM.gen_passwd({}))
+        pword = KM.gen_passwd(chars, 10)
+        self.assertEqual(len(pword), 10)
+        pword = set(pword)
+        self.assertFalse(pword.isdisjoint(set('ABCDE')))
+        self.assertFalse(pword.isdisjoint(set(string.digits)))
+        self.assertFalse(pword.isdisjoint(set(string.ascii_lowercase)))
+        self.assertFalse(pword.isdisjoint(set(string.ascii_uppercase)))
+        self.assertFalse(pword.isdisjoint(set('!@#$%')))
+        self.assertTrue(pword.isdisjoint(set('   ')))
+        pword = KM.gen_passwd(chars, 3)
+        self.assertFalse(KM.gen_passwd({}))
+        pword = KM.gen_passwd(chars, 5)
+        self.assertEqual(len(pword), 5)
+        chars = {'Min Punc': {'min punc': '!@#$%',
+                              'digits': string.digits,
+                              'upper': 'ABCDE'}}
+        pword = KM.gen_passwd(chars, 50)
+        self.assertEqual(len(pword), 50)
+        pword = set(pword)
+        self.assertFalse(pword.isdisjoint(set('ABCDE')))
+        self.assertFalse(pword.isdisjoint(set(string.digits)))
+        self.assertFalse(pword.isdisjoint(set('!@#$%')))
+        self.assertTrue(pword.isdisjoint(set(string.ascii_lowercase)))
+        self.assertTrue(pword.isdisjoint(set('   ')))
 
     def test_conf(self):
         """Test generating config file when none exists
@@ -121,8 +146,8 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(KM.CONF.has_option("database", "database_1"))
         self.assertTrue(KM.CONF.has_option("database", "keyfile_1"))
         self.assertTrue(KM.CONF.has_option("database", "pw_cache_period_min") and
-                        KM.CONF.get("database", "pw_cache_period_min") == \
-                                str(KM.CACHE_PERIOD_DEFAULT_MIN))
+                        KM.CONF.get("database", "pw_cache_period_min") ==
+                        str(KM.CACHE_PERIOD_DEFAULT_MIN))
 
     def test_dmenu_cmd(self):
         """Test proper reading of dmenu command string from config.ini
@@ -130,20 +155,14 @@ class TestFunctions(unittest.TestCase):
         """
         # First test default config
         KM.process_config()
-        self.assertTrue(KM.dmenu_cmd(10, "Entries") == \
-                ["dmenu", "-i", "-l", "10", "-p", "Entries"])
+        self.assertTrue(KM.dmenu_cmd(10, "Entries") ==
+                        ["dmenu", "-i", "-l", "10", "-p", "Entries"])
         # Test full config
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
         KM.process_config()
-        if sys.version_info.major < 3:
-            res = ['/usr/bin/rofi', '-i', '-dmenu', '-multi-select', '-lines', '10', '-p',
-                   u'Passphrase', '-password', u'-b', u'-nb', u'#222222',
-                   u'-nf', u'#222222', u'-sb', u'#123456', u'-fn',
-                   u'Inconsolata-12']
-        else:
-            res = ["/usr/bin/rofi", "-i", "-dmenu", "-multi-select", "-lines", "10", "-p", "Passphrase",
-                   "-password", "-fn", "Inconsolata-12", "-nb", "#222222", "-nf", "#222222",
-                   "-sb", "#123456", "-b"]
+        res = ["/usr/bin/rofi", "-i", "-dmenu", "-multi-select", "-lines", "10", "-p",
+               "Passphrase", "-password", "-fn", "Inconsolata-12", "-nb", "#222222",
+               "-nf", "#222222", "-sb", "#123456", "-b"]
         self.assertTrue(KM.dmenu_cmd(20, "Passphrase") == res)
 
     def test_open_database(self):
@@ -220,6 +239,7 @@ class TestFunctions(unittest.TestCase):
         self.assertFalse(callable(KM.token_command('{DELAY}')))
         self.assertFalse(callable(KM.token_command('DELAY 5}')))
         self.assertFalse(callable(KM.token_command('{DELAY a}')))
+
 
 if __name__ == "__main__":
     unittest.main()

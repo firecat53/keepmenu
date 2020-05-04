@@ -28,10 +28,19 @@ from pykeyboard import PyKeyboard
 from pymouse.x11 import X11Error
 from pykeepass import PyKeePass
 
+try:
+    # secrets only available python 3.6+
+    from secrets import choice
+except ImportError:
+    def choice(seq):
+        """Provide `choice` function call for pw generation
+
+        """
+        return random.SystemRandom().choice(seq)
+
 
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
-CONFIG = {'ROFI': False, 'SETS': {}}
 
 
 def find_free_port():
@@ -55,32 +64,28 @@ def random_str():
     return ''.join(random.choice(letters) for i in range(15))
 
 
-def gen_passwd(length=20, alphabet_list=None):
-    """Generate password (min 4 chars, returns Error if less than given groups)
+def gen_passwd(chars, length=20):
+    """Generate password (min = # of distinct character sets picked)
 
-    Args: length - int (default 20)
-          alphabet_list - list of strings (default ["letters", "digits", "braces"])
+    Args: chars - Dict {preset_name_1: {char_set_1: string, char_set_2: string},
+                        preset_name_2: ....}
+          length - int (default 20)
 
-    Returns: password - string
+    Returns: password - string OR False
 
     """
-    if alphabet_list is None:
-        alphabet_list = CHARGROUPS.keylist()
-    length = max(4, length)
-    alphabet_list = set(alphabet_list).intersection(CHARGROUPS.keylist())
-    alphabet = ''.join(CHARGROUPS.get_chars(al) for al in alphabet_list)
-    if len(alphabet_list) > length:
-        return "Error: not all character sets used. Please edit config.ini"
-    if not alphabet:
-        alphabet = ''.join(list(CHARGROUPS.chars))
-    while True:
-        password = ''.join(random.SystemRandom().choice(alphabet) for i in range(length))
-        count = 0
-        for alpha in alphabet_list:
-            count += 1 if (re.search(CHARGROUPS.get_regex(alpha), password)) else 0
-        if count == len(alphabet_list):
-            break
-    return password
+    sets = set()
+    if chars:
+        sets = set(j for i in chars.values() for j in i.values())
+    if length < len(sets) or not chars:
+        return False
+    alphabet = "".join(set("".join(j for j in i.values()) for i in chars.values()))
+    # Ensure minimum of one char from each character set
+    password = "".join(choice(k) for k in sets)
+    password += "".join(choice(alphabet) for i in range(length - len(sets)))
+    tpw = list(password)
+    random.shuffle(tpw)
+    return "".join(tpw)
 
 
 def process_config():
@@ -151,10 +156,6 @@ def process_config():
                 dmenu_err("Ydotool not installed.\n"
                           "Please install or remove that option from config.ini")
                 sys.exit()
-    if CONF.has_section("password"):
-        CONFIG["SETS"] = get_passwd_settings()
-    else:
-        CONFIG["SETS"] = default_passwd_sets()
 
 
 def get_auth():
@@ -192,8 +193,7 @@ def dmenu_cmd(num_lines, prompt):
     dmenu_command = command[0]
     dmenu_args = command[1:]
     del args_dict["dmenu_command"]
-    CONFIG["ROFI"] = bool("rofi" in dmenu_command)
-    lines = "-i -dmenu -multi-select -lines" if CONFIG["ROFI"] else "-i -l"
+    lines = "-i -dmenu -multi-select -lines" if "rofi" in dmenu_command else "-i -l"
     if "l" in args_dict:
         lines = "{} {}".format(lines, min(num_lines, int(args_dict['l'])))
         del args_dict['l']
@@ -209,7 +209,7 @@ def dmenu_cmd(num_lines, prompt):
         if CONF.has_option('dmenu_passphrase', 'rofi_obscure'):
             rofi_obscure = CONF.getboolean('dmenu_passphrase', 'rofi_obscure')
             del args_dict["rofi_obscure"]
-        if rofi_obscure is True and CONFIG["ROFI"]:
+        if rofi_obscure is True and "rofi" in dmenu_command:
             dmenu_args.extend(["-password"])
     extras = (["-" + str(k), str(v)] for (k, v) in args_dict.items())
     dmenu = [dmenu_command, "-p", str(prompt)]
@@ -252,98 +252,41 @@ def dmenu_err(prompt):
     return dmenu_select(1, prompt)
 
 
-def default_passwd_sets():
+def get_password_chars():
+    """Get characters to use for password generation from defaults, config file
+    and user input.
+
+    Returns: Dict {preset_name_1: {char_set_1: string, char_set_2: string},
+                   preset_name_2: ....}
     """
-    Returns a default dict of password sets"""
+    chars = {"upper": string.ascii_uppercase,
+             "lower": string.ascii_lowercase,
+             "digits": string.digits,
+             "punctuation": string.punctuation}
     presets = {}
-    presets["letters+digits+punctuation"] = ["letters",
-                                             "digits",
-                                             "braces",
-                                             "punctuation",
-                                             "quotes",
-                                             "dashes",
-                                             "mathsym",
-                                             "logograms"]
-    presets["letters+digits"] = ["letters", "digits"]
-    presets["letters"] = ["letters"]
-    return presets
-
-
-def get_passwd_settings():
-    """
-    Read settings for password generation
-
-    Returns: dict - Name : list of preset strings
-    """
-    presets = {}
-    if CONF.has_section('password'):
-        args = CONF.items('password')
-        args_dict = dict(args)
-        for key, value in args_dict.items():
-            passwd_set = set()
-            for group in value.split():
-                group = group.strip()
-                if group in CHARGROUPS.keylist():
-                    passwd_set.add(group)
-                else:
-                    dmenu_err(f"Error: Unknown value in preset {key}")
-                    sys.exit()
-                presets[key] = list(passwd_set)
-    if not presets:
-        presets = default_passwd_sets()
-    return presets
-
-
-class CharGroups:
-    """
-    Class for using character groups throughout this module"""
-    def __init__(self):
-        self.keys = {"letters": 0,
-                     "digits": 1,
-                     "braces": 2,
-                     "punctuation": 3,
-                     "quotes": 4,
-                     "dashes": 5,
-                     "mathsym": 6,
-                     "logograms": 7}
-        self.chars = [string.ascii_letters,
-                      string.digits,
-                      '(){}[]',
-                      '.,:;',
-                      '"\'',
-                      '\\-|_/',
-                      '<*+!?=',
-                      '#$%&@^`~']
-        self.regex = [r'[a-zA-Z]+',
-                      r'[0-9]+',
-                      r'[(){}\[\]]+',
-                      r'[.,:;]+',
-                      r'["\']+',
-                      r'[\\-|_/]+',
-                      r'[<*+!?=]+',
-                      r'[#$%&@^`~]+']
-
-    def get_chars(self, ident):
-        """
-        Returns string of characters, if they exist, else None."""
-        if ident in self.keys:
-            return self.chars[self.keys[ident]]
-        return None
-
-    def get_regex(self, ident):
-        """
-        Returns string of regex, if they exist, else None."""
-        if ident in self.keys:
-            return self.regex[self.keys[ident]]
-        return None
-
-    def keylist(self):
-        """
-        Returns a list of keys."""
-        return list(self.keys.keys())
-
-
-CHARGROUPS = CharGroups()
+    presets["Letters+Digits+Punctuation"] = chars
+    presets["Letters+Digits"] = {k: chars[k] for k in ("upper", "lower", "digits")}
+    presets["Letters"] = {k: chars[k] for k in ("upper", "lower")}
+    presets["Digits"] = {k: chars[k] for k in ("digits",)}
+    if CONF.has_section('password_chars'):
+        pw_chars = dict(CONF.items('password_chars'))
+        chars.update(pw_chars)
+        for key, val in pw_chars.items():
+            presets[key.title()] = {k: chars[k] for k in (key,)}
+    if CONF.has_section('password_char_presets'):
+        if CONF.options('password_char_presets'):
+            presets = {}
+        for name, val in CONF.items('password_char_presets'):
+            try:
+                presets[name.title()] = {k: chars[k] for k in shlex.split(val)}
+            except KeyError:
+                print("Error: Unknown value in preset {}. Ignoring.".format(name))
+                continue
+    input_b = "\n".join(presets).encode(ENC)
+    char_sel = dmenu_select(len(presets),
+                            "Pick character set(s) to use:", inp=input_b)
+    # This dictionary return also handles Rofi multiple select
+    return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 
 def get_database():
@@ -1191,10 +1134,6 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         elif not pw_choice:
             return True
         else:
-            passwd_sets = get_passwd_settings()
-            if CONFIG["ROFI"]:
-                for key in CHARGROUPS.keylist():
-                    passwd_sets[key] = key
             pw_choice = ''
             input_b = b"20\n"
             length = dmenu_select(1, "Password Length?", inp=input_b)
@@ -1204,20 +1143,13 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
                 length = int(length)
             except ValueError:
                 length = 20
-            input_b = str.encode("\n".join(list(passwd_sets.keys())))
-            passwd_sel = dmenu_select(len(passwd_sets), "Which password set to use?", inp=input_b)
-            alphabet_list = []
-            for p_set in passwd_sel.split("\n"):
-                if p_set in CHARGROUPS.keylist():
-                    alphabet_list.append(p_set)
-                elif p_set in passwd_sets:
-                    alphabet_list.extend(passwd_sets[p_set])
-                else:
-                    pass
-            sel = gen_passwd(length, alphabet_list)
-            if sel.startswith("Error:"):
-                dmenu_err(sel)
-                sys.exit()
+            chars = get_password_chars()
+            if chars is False:
+                return True
+            sel = gen_passwd(chars, length)
+            if sel is False:
+                dmenu_err("Number of char groups desired is more than requested pw length")
+                return True
 
     if field == 'autotype_enabled':
         input_b = b"True\nFalse\n"
