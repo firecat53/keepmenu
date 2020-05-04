@@ -113,7 +113,6 @@ class TestFunctions(unittest.TestCase):
         self.assertFalse(pword.isdisjoint(set('!@#$%')))
         self.assertTrue(pword.isdisjoint(set('   ')))
         pword = KM.gen_passwd(chars, 3)
-        self.assertFalse(KM.gen_passwd({}))
         pword = KM.gen_passwd(chars, 5)
         self.assertEqual(len(pword), 5)
         chars = {'Min Punc': {'min punc': '!@#$%',
