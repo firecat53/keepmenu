@@ -1,4 +1,4 @@
-#!/usr/bin/env python  # pylint: disable=missing-docstring
+#!/usr/bin/env python3  # pylint: disable=missing-docstring
 
 from setuptools import setup
 
@@ -26,6 +26,7 @@ setup(name="keepmenu",
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Topic :: Utilities',
       ],
       keywords=("dmenu keepass keepassxc"),

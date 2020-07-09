@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding:utf8
 """Read and copy Keepass database entries using dmenu or rofi
 
