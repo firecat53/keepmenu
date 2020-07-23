@@ -170,9 +170,14 @@ def get_auth():
             auth.set('DEFAULT', 'port', str(find_free_port()))
             auth.set('DEFAULT', 'authkey', random_str())
             auth.write(a_file)
-    auth.read(AUTH_FILE)
-    port = int(auth.get('DEFAULT', 'port'))
-    authkey = auth.get('DEFAULT', 'authkey').encode()
+    try:
+        auth.read(AUTH_FILE)
+        port = int(auth.get('DEFAULT', 'port'))
+        authkey = auth.get('DEFAULT', 'authkey').encode()
+    except NoOptionError:
+        os.rm(AUTH_FILE)
+        print("Error: Cache file does not contain expected value. Removed " + AUTH_FILE)
+        raise
     return port, authkey
 
 
