@@ -1420,7 +1420,7 @@ if __name__ == '__main__':
     try:
         MANAGER = client()
         MANAGER.set_event()  # pylint: disable=no-member
-    except socket.error:
+    except ConnectionRefusedError:
         process_config()
         run()
 
