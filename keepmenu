@@ -170,10 +170,15 @@ def get_auth():
             auth.set('DEFAULT', 'port', str(find_free_port()))
             auth.set('DEFAULT', 'authkey', random_str())
             auth.write(a_file)
-    auth.read(AUTH_FILE)
-    port = int(auth.get('DEFAULT', 'port'))
-    authkey = auth.get('DEFAULT', 'authkey').encode()
-    return port, authkey
+    try:
+        auth.read(AUTH_FILE)
+        port = auth.get('DEFAULT', 'port')
+        authkey = auth.get('DEFAULT', 'authkey').encode()
+    except (configparser.NoOptionError, configparser.MissingSectionHeaderError):
+        os.remove(AUTH_FILE)
+        print("Cache file was corrupted. Stopping all instances. Please try again")
+        call(["pkill", "keepmenu"])  # Kill all prior instances as well
+    return int(port), authkey
 
 
 def dmenu_cmd(num_lines, prompt):
