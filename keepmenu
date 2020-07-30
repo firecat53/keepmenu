@@ -172,13 +172,13 @@ def get_auth():
             auth.write(a_file)
     try:
         auth.read(AUTH_FILE)
-        port = int(auth.get('DEFAULT', 'port'))
+        port = auth.get('DEFAULT', 'port')
         authkey = auth.get('DEFAULT', 'authkey').encode()
-    except NoOptionError:
-        os.rm(AUTH_FILE)
-        print("Error: Cache file does not contain expected value. Removed " + AUTH_FILE)
-        raise
-    return port, authkey
+    except (configparser.NoOptionError, configparser.MissingSectionHeaderError):
+        os.remove(AUTH_FILE)
+        print("Cache file was corrupted. Stopping all instances. Please try again")
+        call(["pkill", "keepmenu"])  # Kill all prior instances as well
+    return int(port), authkey
 
 
 def dmenu_cmd(num_lines, prompt):
