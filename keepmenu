@@ -245,7 +245,7 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
         cmd = [cmd[0]] + ["-dmenu"] if "rofi" in cmd[0] else [""]
         Popen(cmd[0], stdin=PIPE, stdout=PIPE, env=ENV).communicate(input=err)
         sys.exit()
-    if sel:
+    if sel is not None:
         sel = sel.decode(ENC).rstrip('\n')
     return sel
 
@@ -417,6 +417,8 @@ def get_passphrase():
                 password = res.split("D ")[1]
     else:
         password = dmenu_select(0, "Passphrase")
+        if not password:
+            sys.exit()
     return password
 
 
