@@ -51,7 +51,7 @@ Requirements
 
 1. Python 3.4+. *Note* Python 3.6+ uses the `secrets` module for password
    generation to improve security.
-2. Pykeepass_ and PyUserInput_. Install via pip or your distribution's package
+2. Pykeepass_ and pynput_. Install via pip or your distribution's package
    manager, if available.
 3. Dmenu. Basic support is included for Rofi_, but most Rofi
    configuration/theming should be done via Xresources.
@@ -143,6 +143,6 @@ Tests
 .. _Rofi: https://davedavenport.github.io/rofi/
 .. _Passhole: https://github.com/purduelug/passhole
 .. _Pykeepass: https://github.com/pschmitt/pykeepass
-.. _PyUserInput: https://github.com/PyUserInput/PyUserInput
+.. _pynput: https://github.com/moses-palmer/pynput
 .. _Archlinux AUR: https://aur.archlinux.org/packages/python-keepmenu-git
 .. _Keepass 2.x codes: https://keepass.info/help/base/autotype.html#autoseq

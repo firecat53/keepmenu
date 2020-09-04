@@ -24,8 +24,7 @@ import time
 import re
 import webbrowser
 import construct
-from pykeyboard import PyKeyboard
-from pymouse.x11 import X11Error
+from pynput import keyboard
 from pykeepass import PyKeePass
 
 try:
@@ -488,7 +487,7 @@ def token_command(token):
 def type_entry(entry):
     """Pick which library to use to type strings
 
-    Defaults to pyuserinput
+    Defaults to pynput
 
     """
     sequence = SEQUENCE
@@ -501,7 +500,7 @@ def type_entry(entry):
         sequence = entry.autotype_sequence
     tokens = tokenize_autotype(sequence)
 
-    library = 'pyuserinput'
+    library = 'pynput'
     if CONF.has_option('database', 'type_library'):
         library = CONF.get('database', 'type_library')
     if library == 'xdotool':
@@ -509,7 +508,7 @@ def type_entry(entry):
     elif library == 'ydotool':
         type_entry_ydotool(entry, tokens)
     else:
-        type_entry_pyuserinput(entry, tokens)
+        type_entry_pynput(entry, tokens)
 
 
 PLACEHOLDER_AUTOTYPE_TOKENS = {
@@ -542,79 +541,79 @@ STRING_AUTOTYPE_TOKENS = {
     "{}}"         : '}',
 }
 
-PYUSERINPUT_AUTOTYPE_TOKENS = {
-    "{TAB}"       : lambda kbd: kbd.tab_key,
-    "{ENTER}"     : lambda kbd: kbd.return_key,
-    "~"           : lambda kbd: kbd.return_key,
-    "{UP}"        : lambda kbd: kbd.up_key,
-    "{DOWN}"      : lambda kbd: kbd.down_key,
-    "{LEFT}"      : lambda kbd: kbd.left_key,
-    "{RIGHT}"     : lambda kbd: kbd.right_key,
-    "{INSERT}"    : lambda kbd: kbd.insert_key,
-    "{INS}"       : lambda kbd: kbd.insert_key,
-    "{DELETE}"    : lambda kbd: kbd.delete_key,
-    "{DEL}"       : lambda kbd: kbd.delete_key,
-    "{HOME}"      : lambda kbd: kbd.home_key,
-    "{END}"       : lambda kbd: kbd.end_key,
-    "{PGUP}"      : lambda kbd: kbd.page_up_key,
-    "{PGDN}"      : lambda kbd: kbd.page_down_key,
-    "{SPACE}"     : lambda kbd: kbd.space_key,
-    "{BACKSPACE}" : lambda kbd: kbd.backspace_key,
-    "{BS}"        : lambda kbd: kbd.backspace_key,
-    "{BKSP}"      : lambda kbd: kbd.backspace_key,
-    "{BREAK}"     : lambda kbd: kbd.break_key,
-    "{CAPSLOCK}"  : lambda kbd: kbd.caps_lock_key,
-    "{ESC}"       : lambda kbd: kbd.escape_key,
-    "{WIN}"       : lambda kbd: kbd.windows_l_key,
-    "{LWIN}"      : lambda kbd: kbd.windows_l_key,
-    "{RWIN}"      : lambda kbd: kbd.windows_r_key,
-    "{APPS}"      : lambda kbd: kbd.apps_key,
-    "{HELP}"      : lambda kbd: kbd.help_key,
-    "{NUMLOCK}"   : lambda kbd: kbd.num_lock_key,
-    "{PRTSC}"     : lambda kbd: kbd.print_screen_key,
-    "{SCROLLLOCK}": lambda kbd: kbd.scroll_lock_key,
-    "{F1}"        : lambda kbd: kbd.function_keys[1],
-    "{F2}"        : lambda kbd: kbd.function_keys[2],
-    "{F3}"        : lambda kbd: kbd.function_keys[3],
-    "{F4}"        : lambda kbd: kbd.function_keys[4],
-    "{F5}"        : lambda kbd: kbd.function_keys[5],
-    "{F6}"        : lambda kbd: kbd.function_keys[6],
-    "{F7}"        : lambda kbd: kbd.function_keys[7],
-    "{F8}"        : lambda kbd: kbd.function_keys[8],
-    "{F9}"        : lambda kbd: kbd.function_keys[9],
-    "{F10}"       : lambda kbd: kbd.function_keys[10],
-    "{F11}"       : lambda kbd: kbd.function_keys[11],
-    "{F12}"       : lambda kbd: kbd.function_keys[12],
-    "{F13}"       : lambda kbd: kbd.function_keys[13],
-    "{F14}"       : lambda kbd: kbd.function_keys[14],
-    "{F15}"       : lambda kbd: kbd.function_keys[15],
-    "{F16}"       : lambda kbd: kbd.function_keys[16],
-    "{ADD}"       : lambda kbd: kbd.numpad_keys['Add'],
-    "{SUBTRACT}"  : lambda kbd: kbd.numpad_keys['Subtract'],
-    "{MULTIPLY}"  : lambda kbd: kbd.numpad_keys['Multiply'],
-    "{DIVIDE}"    : lambda kbd: kbd.numpad_keys['Divide'],
-    "{NUMPAD0}"   : lambda kbd: kbd.numpad_keys['0'],
-    "{NUMPAD1}"   : lambda kbd: kbd.numpad_keys['1'],
-    "{NUMPAD2}"   : lambda kbd: kbd.numpad_keys['2'],
-    "{NUMPAD3}"   : lambda kbd: kbd.numpad_keys['3'],
-    "{NUMPAD4}"   : lambda kbd: kbd.numpad_keys['4'],
-    "{NUMPAD5}"   : lambda kbd: kbd.numpad_keys['5'],
-    "{NUMPAD6}"   : lambda kbd: kbd.numpad_keys['6'],
-    "{NUMPAD7}"   : lambda kbd: kbd.numpad_keys['7'],
-    "{NUMPAD8}"   : lambda kbd: kbd.numpad_keys['8'],
-    "{NUMPAD9}"   : lambda kbd: kbd.numpad_keys['9'],
-    "+"           : lambda kbd: kbd.shift_key,
-    "^"           : lambda kbd: kbd.control_key,
-    "%"           : lambda kbd: kbd.alt_key,
-    "@"           : lambda kbd: kbd.windows_l_key,
+PYNPUT_AUTOTYPE_TOKENS = {
+    "{TAB}"       : keyboard.Key.tab,
+    "{ENTER}"     : keyboard.Key.enter,
+    "~"           : keyboard.Key.enter,
+    "{UP}"        : keyboard.Key.up,
+    "{DOWN}"      : keyboard.Key.down,
+    "{LEFT}"      : keyboard.Key.left,
+    "{RIGHT}"     : keyboard.Key.right,
+    "{INSERT}"    : keyboard.Key.insert,
+    "{INS}"       : keyboard.Key.insert,
+    "{DELETE}"    : keyboard.Key.delete,
+    "{DEL}"       : keyboard.Key.delete,
+    "{HOME}"      : keyboard.Key.home,
+    "{END}"       : keyboard.Key.end,
+    "{PGUP}"      : keyboard.Key.page_up,
+    "{PGDN}"      : keyboard.Key.page_down,
+    "{SPACE}"     : keyboard.Key.space,
+    "{BACKSPACE}" : keyboard.Key.backspace,
+    "{BS}"        : keyboard.Key.backspace,
+    "{BKSP}"      : keyboard.Key.backspace,
+    "{BREAK}"     : keyboard.Key.pause,
+    "{CAPSLOCK}"  : keyboard.Key.caps_lock,
+    "{ESC}"       : keyboard.Key.esc,
+    "{WIN}"       : keyboard.Key.cmd,
+    "{LWIN}"      : keyboard.Key.cmd_l,
+    "{RWIN}"      : keyboard.Key.cmd_r,
+    # "{APPS}"    : keyboard.Key.
+    # "{HELP}"    : keyboard.Key.
+    "{NUMLOCK}"   : keyboard.Key.num_lock,
+    "{PRTSC}"     : keyboard.Key.print_screen,
+    "{SCROLLLOCK}": keyboard.Key.scroll_lock,
+    "{F1}"        : keyboard.Key.f1,
+    "{F2}"        : keyboard.Key.f2,
+    "{F3}"        : keyboard.Key.f3,
+    "{F4}"        : keyboard.Key.f4,
+    "{F5}"        : keyboard.Key.f5,
+    "{F6}"        : keyboard.Key.f6,
+    "{F7}"        : keyboard.Key.f7,
+    "{F8}"        : keyboard.Key.f8,
+    "{F9}"        : keyboard.Key.f9,
+    "{F10}"       : keyboard.Key.f10,
+    "{F11}"       : keyboard.Key.f11,
+    "{F12}"       : keyboard.Key.f12,
+    "{F13}"       : keyboard.Key.f13,
+    "{F14}"       : keyboard.Key.f14,
+    "{F15}"       : keyboard.Key.f15,
+    "{F16}"       : keyboard.Key.f16,
+    # "{ADD}"       : keyboard.Key.
+    # "{SUBTRACT}"  : keyboard.Key.
+    # "{MULTIPLY}"  : keyboard.Key.
+    # "{DIVIDE}"    : keyboard.Key.
+    # "{NUMPAD0}"   : keyboard.Key.
+    # "{NUMPAD1}"   : keyboard.Key.
+    # "{NUMPAD2}"   : keyboard.Key.
+    # "{NUMPAD3}"   : keyboard.Key.
+    # "{NUMPAD4}"   : keyboard.Key.
+    # "{NUMPAD5}"   : keyboard.Key.
+    # "{NUMPAD6}"   : keyboard.Key.
+    # "{NUMPAD7}"   : keyboard.Key.
+    # "{NUMPAD8}"   : keyboard.Key.
+    # "{NUMPAD9}"   : keyboard.Key.
+    "+"           : keyboard.Key.shift,
+    "^"           : keyboard.Key.ctrl,
+    "%"           : keyboard.Key.alt,
+    "@"           : keyboard.Key.cmd,
 }
 
 
-def type_entry_pyuserinput(entry, tokens):
-    """Use PyUserInput to auto-type the selected entry
+def type_entry_pynput(entry, tokens):
+    """Use pynput to auto-type the selected entry
 
     """
-    kbd = PyKeyboard()
+    kbd = keyboard.Controller()
     enter_idx = True
     for token, special in tokens:
         if special:
@@ -625,34 +624,34 @@ def type_entry_pyuserinput(entry, tokens):
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
                     try:
-                        kbd.type_string(to_type)
-                    except (X11Error, KeyError):
+                        kbd.type(to_type)
+                    except keyboard.InvalidCharacterException:
                         dmenu_err("Unable to type string...bad character.\n"
                                   "Try setting `type_library = xdotool` in config.ini")
                         return
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
                 try:
-                    kbd.type_string(to_type)
-                except (X11Error, KeyError):
+                    kbd.type(to_type)
+                except keyboard.InvalidCharacterException:
                     dmenu_err("Unable to type string...bad character.\n"
                               "Try setting `type_library = xdotool` in config.ini")
                     return
-            elif token in PYUSERINPUT_AUTOTYPE_TOKENS:
-                to_tap = PYUSERINPUT_AUTOTYPE_TOKENS[token](kbd)
-                kbd.tap_key(to_tap)
+            elif token in PYNPUT_AUTOTYPE_TOKENS:
+                to_tap = PYNPUT_AUTOTYPE_TOKENS[token]
+                kbd.tap(to_tap)
                 # Add extra {ENTER} key tap for first instance of {ENTER}. It
                 # doesn't get recognized for some reason.
                 if enter_idx is True and token in ("{ENTER}", "~"):
-                    kbd.tap_key(to_tap)
+                    kbd.tap(to_tap)
                     enter_idx = False
             else:
-                dmenu_err("Unsupported auto-type token (pyuserinput): \"%s\"" % (token))
+                dmenu_err("Unsupported auto-type token (pynput): \"%s\"" % (token))
                 return
         else:
             try:
-                kbd.type_string(token)
-            except (X11Error, KeyError):
+                kbd.type(token)
+            except keyboard.InvalidCharacterException:
                 dmenu_err("Unable to type string...bad character.\n"
                           "Try setting `type_library = xdotool` in config.ini")
                 return
@@ -864,7 +863,7 @@ def type_text(data):
     """Type the given text data
 
     """
-    library = 'pyuserinput'
+    library = 'pynput'
     if CONF.has_option('database', 'type_library'):
         library = CONF.get('database', 'type_library')
     if library == 'xdotool':
@@ -872,10 +871,10 @@ def type_text(data):
     elif library == 'ydotool':
         call(['ydotool', 'type', data])
     else:
-        kbd = PyKeyboard()
+        kbd = keyboard.Controller()
         try:
-            kbd.type_string(data)
-        except (X11Error, KeyError):
+            kbd.type(data)
+        except keyboard.InvalidCharacterException:
             dmenu_err("Unable to type string...bad character.\n"
                       "Try setting `type_library = xdotool` in config.ini")
 
