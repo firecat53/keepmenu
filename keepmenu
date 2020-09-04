@@ -625,7 +625,7 @@ def type_entry_pynput(entry, tokens):
                 if to_type:
                     try:
                         kbd.type(to_type)
-                    except keyboard.InvalidCharacterException:
+                    except kbd.InvalidCharacterException:
                         dmenu_err("Unable to type string...bad character.\n"
                                   "Try setting `type_library = xdotool` in config.ini")
                         return
@@ -633,7 +633,7 @@ def type_entry_pynput(entry, tokens):
                 to_type = STRING_AUTOTYPE_TOKENS[token]
                 try:
                     kbd.type(to_type)
-                except keyboard.InvalidCharacterException:
+                except kbd.InvalidCharacterException:
                     dmenu_err("Unable to type string...bad character.\n"
                               "Try setting `type_library = xdotool` in config.ini")
                     return
@@ -651,7 +651,7 @@ def type_entry_pynput(entry, tokens):
         else:
             try:
                 kbd.type(token)
-            except keyboard.InvalidCharacterException:
+            except kbd.InvalidCharacterException:
                 dmenu_err("Unable to type string...bad character.\n"
                           "Try setting `type_library = xdotool` in config.ini")
                 return
@@ -874,7 +874,7 @@ def type_text(data):
         kbd = keyboard.Controller()
         try:
             kbd.type(data)
-        except keyboard.InvalidCharacterException:
+        except kbd.InvalidCharacterException:
             dmenu_err("Unable to type string...bad character.\n"
                       "Try setting `type_library = xdotool` in config.ini")
 
