@@ -1288,7 +1288,7 @@ class DmenuRunner(Process):
             self.server.kill_flag.set()
             self.server.start_flag.set()
 
-    def dmenu_run(self):  # pylint: disable=too-many-branches,too-many-return-statements
+    def dmenu_run(self):
         """Run dmenu with the given list of Keepass Entry objects
 
         If 'hide_groups' is defined in config.ini, hide those from main and
@@ -1327,55 +1327,91 @@ class DmenuRunner(Process):
                                              j in hid_groups)])
         if not sel:
             return
-        if sel == options[0]:  # ViewType Individual entries
-            options = []
-            sel = view_all_entries(options, [i for i in self.kpo.entries if not
-                                             any(j in i.path.rstrip(i.title) for
-                                                 j in hid_groups)])
-            try:
-                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
-            except (ValueError, TypeError):
-                return
-            text = view_entry(entry)
-            type_text(text)
-        elif sel == options[1]:  # Edit entries
-            options = []
-            sel = view_all_entries(options, self.kpo.entries)
-            try:
-                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
-            except (ValueError, TypeError):
-                return
-            edit = True
-            while edit is True:
-                edit = edit_entry(self.kpo, entry)
-            self.kpo.save()
-            self.kpo = get_entries(self.database)
-        elif sel == options[2]:  # Add entry
-            entry = add_entry(self.kpo)
-            if entry:
-                self.kpo.save()
-                self.kpo = get_entries(self.database)
-        elif sel == options[3]:  # Manage groups
-            group = manage_groups(self.kpo)
-            if group:
-                self.kpo.save()
-                self.kpo = get_entries(self.database)
-        elif sel == options[4]:  # Reload database
-            self.kpo = get_entries(self.database)
-            if not self.kpo:
-                return
-            self.dmenu_run()
-        elif sel == options[5]:  # Kill keepmenu daemon
-            try:
-                self.server.kill_flag.set()
-            except (EOFError, IOError):
-                return
+        if sel == options[0]:
+            self.menu_view_type_individual_entries(hid_groups)
+        elif sel == options[1]:
+            self.menu_edit_entries()
+        elif sel == options[2]:
+            self.menu_add_entry()
+        elif sel == options[3]:
+            self.menu_manage_groups()
+        elif sel == options[4]:
+            self.menu_reload_database()
+        elif sel == options[5]:
+            self.menu_kill_daemon()
         else:
             try:
                 entry = self.kpo.entries[int(sel.split('-', 1)[0])]
             except (ValueError, TypeError):
                 return
             type_entry(entry)
+
+    def menu_view_type_individual_entries(self, hid_groups):
+        """Process menu entry - View/Type individual entries
+
+        """
+        options = []
+        sel = view_all_entries(options, [i for i in self.kpo.entries if not
+                                         any(j in i.path.rstrip(i.title) for
+                                             j in hid_groups)])
+        try:
+            entry = self.kpo.entries[int(sel.split('-', 1)[0])]
+        except (ValueError, TypeError):
+            return
+        text = view_entry(entry)
+        type_text(text)
+
+    def menu_edit_entries(self):
+        """Process menu entry - Edit individual entries
+
+        """
+        options = []
+        sel = view_all_entries(options, self.kpo.entries)
+        try:
+            entry = self.kpo.entries[int(sel.split('-', 1)[0])]
+        except (ValueError, TypeError):
+            return
+        edit = True
+        while edit is True:
+            edit = edit_entry(self.kpo, entry)
+        self.kpo.save()
+        self.kpo = get_entries(self.database)
+
+    def menu_add_entry(self):
+        """Process menu entry - Add entry
+
+        """
+        entry = add_entry(self.kpo)
+        if entry:
+            self.kpo.save()
+            self.kpo = get_entries(self.database)
+
+    def menu_manage_groups(self):
+        """Process menu entry - manage groups
+
+        """
+        group = manage_groups(self.kpo)
+        if group:
+            self.kpo.save()
+            self.kpo = get_entries(self.database)
+
+    def menu_reload_database(self):
+        """Process menu entry - Reload database
+
+        """
+        self.kpo = get_entries(self.database)
+        if not self.kpo:
+            return
+        self.dmenu_run()
+
+    def menu_kill_daemon(self):
+        """Process menu entry - Kill keepmenu daemon
+
+        """
+        try:
+            self.server.kill_flag.set()
+        except (EOFError, IOError):
+            return
 
 
 class Server(Process):
