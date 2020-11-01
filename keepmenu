@@ -178,6 +178,7 @@ def get_auth():
         os.remove(AUTH_FILE)
         print("Cache file was corrupted. Stopping all instances. Please try again")
         call(["pkill", "keepmenu"])  # Kill all prior instances as well
+        return None, None
     return int(port), authkey
 
 
