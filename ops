@@ -1,0 +1,1 @@
+{"version":1,"ops":[{"type":1,"author":{"id":"7625833fc6c18ad167a5d534521a912dc64d8895"},"timestamp":1547070722,"metadata":{"github-id":"MDU6SXNzdWUzOTc1Nzc0OTk=","github-url":"https://github.com/firecat53/keepmenu/issues/18","origin":"github"},"title":"keepmenu --help should show help","message":"`keepmenu --help ` launches dmenu, it should show the help.","files":null}]}
