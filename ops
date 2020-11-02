@@ -1,0 +1,1 @@
+{"version":1,"ops":[{"type":1,"author":{"id":"19acd9e690bc29bc6899dabc12de469994d7761e"},"timestamp":1572975679,"metadata":{"github-id":"MDU6SXNzdWU1MTc5MjQ5MDU=","github-url":"https://github.com/firecat53/keepmenu/issues/46","origin":"github"},"title":"Support dmenu2 -mask option","message":"`-mask` in dmenu is like `-password` for rofi.","files":null}]}
