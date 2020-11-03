@@ -1330,9 +1330,13 @@ class DmenuRunner(Process):
                           [j.name for j in self.kpo.groups]]
         else:
             hid_groups = []
-        sel = view_all_entries(options, [i for i in self.kpo.entries if not
-                                         any(j in i.path.rstrip(i.title) for
-                                             j in hid_groups)])
+
+        filtered_entries = [
+            i for i in self.kpo.entries if not
+            any(j in i.path.rstrip(i.title) for j in hid_groups)
+        ]
+
+        sel = view_all_entries(options, filtered_entries)
         if not sel:
             return
         if sel == options[0]:
@@ -1349,7 +1353,7 @@ class DmenuRunner(Process):
             self.menu_kill_daemon()
         else:
             try:
-                entry = self.kpo.entries[int(sel.split('-', 1)[0])]
+                entry = filtered_entries[int(sel.split('-', 1)[0])]
             except (ValueError, TypeError):
                 return
             type_entry(entry)
@@ -1359,11 +1363,13 @@ class DmenuRunner(Process):
 
         """
         options = []
-        sel = view_all_entries(options, [i for i in self.kpo.entries if not
-                                         any(j in i.path.rstrip(i.title) for
-                                             j in hid_groups)])
+        filtered_entries = [
+            i for i in self.kpo.entries if not
+            any(j in i.path.rstrip(i.title) for j in hid_groups)
+        ]
+        sel = view_all_entries(options, filtered_entries)
         try:
-            entry = self.kpo.entries[int(sel.split('-', 1)[0])]
+            entry = filtered_entries[int(sel.split('-', 1)[0])]
         except (ValueError, TypeError):
             return
         text = view_entry(entry)
