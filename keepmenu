@@ -165,7 +165,8 @@ def get_auth():
     """
     auth = configparser.ConfigParser()
     if not exists(AUTH_FILE):
-        with open(AUTH_FILE, 'w') as a_file:
+        fd = os.open(AUTH_FILE, os.O_WRONLY | os.O_CREAT, 0o600)
+        with open(fd, 'w') as a_file:
             auth.set('DEFAULT', 'port', str(find_free_port()))
             auth.set('DEFAULT', 'authkey', random_str())
             auth.write(a_file)
