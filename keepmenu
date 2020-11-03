@@ -1133,10 +1133,18 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         return True
     pw_choice = ""
     if field == 'password':
-        input_b = b"Generate password\nManually enter password\n"
-        pw_choice = dmenu_select(2, "Password", inp=input_b)
+        inputs_b = [
+            b"Generate password",
+            b"Manually enter password",
+        ]
+        if kp_entry.password:
+            inputs_b.append(b"Type existing password")
+        pw_choice = dmenu_select(len(inputs_b), "Password", inp=b"\n".join(inputs_b))
         if pw_choice == "Manually enter password":
             pass
+        elif pw_choice == "Type existing password":
+            type_text(kp_entry.password)
+            return False
         elif not pw_choice:
             return True
         else:
