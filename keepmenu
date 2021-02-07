@@ -295,7 +295,7 @@ def get_password_chars():
     return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 
-def get_database():
+def get_database(open_databases = []):
     """Read databases from config or ask for user input.
 
     Returns: (database name, keyfile, passphrase)
@@ -341,6 +341,9 @@ def get_database():
         dbs = [i for i in dbs if i[0] == sel]
         if not sel or not dbs:
             return (None, None, None)
+    for i in open_databases:
+        if dbs[0][0] == i[0]:
+            return i
     if not dbs[0][-1]:
         db_l = list(dbs[0])
         db_l[-1] = get_passphrase()
@@ -1265,7 +1268,8 @@ class DmenuRunner(Process):
     def __init__(self, server):
         Process.__init__(self)
         self.server = server
-        self.database = get_database()
+        self.open_databases = [get_database()]
+        self.database = self.open_databases[0]
         self.kpo = get_entries(self.database)
         if not self.kpo:
             self.server.kill_flag.set()
@@ -1329,6 +1333,7 @@ class DmenuRunner(Process):
                    'Add entry',
                    'Manage groups',
                    'Reload database',
+                   'Open another database',
                    'Kill Keepmenu daemon']
         if CONF.has_option("database", "hide_groups"):
             hid_groups = CONF.get("database", "hide_groups").split("\n")
@@ -1357,6 +1362,8 @@ class DmenuRunner(Process):
         elif sel == options[4]:
             self.menu_reload_database()
         elif sel == options[5]:
+            self.menu_open_another_database()
+        elif sel == options[6]:
             self.menu_kill_daemon()
         else:
             try:
@@ -1423,6 +1430,23 @@ class DmenuRunner(Process):
         self.kpo = get_entries(self.database)
         if not self.kpo:
             return
+        self.dmenu_run()
+
+    def menu_open_another_database(self):
+        """Process menu entry - Reload database
+
+        """
+        new_db = get_database(self.open_databases)
+        db_open = False
+        for db in self.open_databases:
+            if db[0] == new_db[0]:
+                self.database = db
+                db_open = True
+                break
+        if not db_open:
+            self.open_databases.append(new_db)
+            self.database = self.open_databases[-1]
+        self.kpo = get_entries(self.database)
         self.dmenu_run()
 
     def menu_kill_daemon(self):
