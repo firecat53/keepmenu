@@ -3,6 +3,7 @@
 """Read and copy Keepass database entries using dmenu or rofi
 
 """
+import functools
 import configparser
 from contextlib import closing
 import errno
@@ -1325,13 +1326,7 @@ class DmenuRunner(Process):
         except AttributeError:
             pass
         self._set_timer()
-        options = ['View/Type Individual entries',
-                   'View previous entry',
-                   'Edit entries',
-                   'Add entry',
-                   'Manage groups',
-                   'Reload database',
-                   'Kill Keepmenu daemon']
+
         if CONF.has_option("database", "hide_groups"):
             hid_groups = CONF.get("database", "hide_groups").split("\n")
             # Validate ignored group names in config.ini
@@ -1345,23 +1340,26 @@ class DmenuRunner(Process):
             any(j in i.path.rstrip(i.title) for j in hid_groups)
         ]
 
-        sel = view_all_entries(options, filtered_entries)
+        options = {
+            'View/Type Individual entries':
+                functools.partial(self.menu_view_type_individual_entries, hid_groups),
+            'View previous entry': self.menu_view_previous_entry,
+            'Edit entries': self.menu_edit_entries,
+            'Add entry': self.menu_add_entry,
+            'Manage groups': self.menu_manage_groups,
+            'Reload database': self.menu_reload_database,
+            'Kill Keepmenu daemon': self.menu_kill_daemon,
+        }
+        if self.prev_entry is None:
+            del options['View previous entry']
+
+        sel = view_all_entries(list(options), filtered_entries)
         if not sel:
             return
-        if sel == options[0]:
-            self.menu_view_type_individual_entries(hid_groups)
-        elif sel == options[1]:
-            self.menu_view_previous_entry()
-        elif sel == options[2]:
-            self.menu_edit_entries()
-        elif sel == options[3]:
-            self.menu_add_entry()
-        elif sel == options[4]:
-            self.menu_manage_groups()
-        elif sel == options[5]:
-            self.menu_reload_database()
-        elif sel == options[6]:
-            self.menu_kill_daemon()
+
+        if sel in options:
+            func = options[sel]
+            func()
         else:
             try:
                 entry = filtered_entries[int(sel.split('-', 1)[0])]
@@ -1392,10 +1390,7 @@ class DmenuRunner(Process):
         """Process menu entry - View previous entry
 
         """
-        if self.prev_entry is None:
-            dmenu_err("No previous entry")
-            return
-
+        assert self.prev_entry is not None
         text = view_entry(self.prev_entry)
         type_text(text)
 
