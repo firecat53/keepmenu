@@ -378,7 +378,6 @@ def get_entries(dbo):
         return None
     try:
         kpo = PyKeePass(dbf, password, keyfile=keyfile)
-        kpo = resolve_references_to_values(kpo)
     except (FileNotFoundError, construct.core.ChecksumError) as err:
         if str(err.args[0]).startswith("wrong checksum"):
             dmenu_err("Invalid Password or keyfile")
@@ -397,20 +396,6 @@ def get_entries(dbo):
         return None
     return kpo
 
-
-def resolve_references_to_values(kpo):
-    for entry in kpo.entries:
-        if entry.password is not None and "REF:P" in entry.password:
-            entry.password = entry.deref("password")
-        if entry.username is not None and "REF:U" in entry.username:
-            entry.username = entry.deref("username")
-        if entry.title is not None and "REF:T" in entry.title:
-            entry.title = entry.deref("title")
-        if entry.url is not None and "REF:A" in entry.url:
-            entry.url = entry.deref("url")
-        if entry.notes is not None and "REF:N" in entry.notes:
-            entry.notes = entry.deref("notes")
-    return kpo
 
 def get_passphrase():
     """Get a database password from dmenu or pinentry
@@ -511,6 +496,7 @@ def type_entry(entry):
     if hasattr(entry, 'autotype_enabled') and entry.autotype_enabled is False:
         dmenu_err("Autotype disabled for this entry")
         return
+    entry = resolve_references_to_values(entry)
     if hasattr(entry, 'autotype_sequence') and \
             entry.autotype_sequence is not None and \
             entry.autotype_sequence != 'None':
@@ -526,6 +512,20 @@ def type_entry(entry):
         type_entry_ydotool(entry, tokens)
     else:
         type_entry_pynput(entry, tokens)
+
+
+def resolve_references_to_values(entry):
+    if entry.password is not None and "REF:P" in entry.password:
+        entry.password = entry.deref("password")
+    if entry.username is not None and "REF:U" in entry.username:
+        entry.username = entry.deref("username")
+    if entry.title is not None and "REF:T" in entry.title:
+        entry.title = entry.deref("title")
+    if entry.url is not None and "REF:A" in entry.url:
+        entry.url = entry.deref("url")
+    if entry.notes is not None and "REF:N" in entry.notes:
+        entry.notes = entry.deref("notes")
+    return entry
 
 
 PLACEHOLDER_AUTOTYPE_TOKENS = {
