@@ -296,11 +296,12 @@ def get_password_chars():
     return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 
-def get_database(open_databases = []):
+def get_database(open_databases=[]):
     """Read databases from config or ask for user input.
 
+    Args: open_databases - list [(db_name, keyfile, pw), (db_name2, kf, pw),...]
     Returns: (database name, keyfile, passphrase)
-             Returns (None, None, None) on error selecting database
+             Returns (None, None, None) on error selecting database or password
 
     """
     args = CONF.items('database')
@@ -342,14 +343,17 @@ def get_database(open_databases = []):
         dbs = [i for i in dbs if i[0] == sel]
         if not sel or not dbs:
             return (None, None, None)
-    for i in open_databases:
-        if dbs[0][0] == i[0]:
-            return i
+    for dbr in open_databases:
+        # Match db name to open_databases
+        if dbr[0] == dbs[0][0]:
+            return dbr
     if not dbs[0][-1]:
         db_l = list(dbs[0])
         db_l[-1] = get_passphrase()
+        if not db_l[-1]:
+            return (None, None, None)
         dbs[0] = db_l
-    return dbs[0]
+    return tuple(dbs[0])
 
 
 def get_initial_db():
@@ -422,9 +426,7 @@ def get_passphrase():
                 password = res.split("D ")[1]
     else:
         password = dmenu_select(0, "Passphrase")
-        if not password:
-            sys.exit()
-    return password
+    return None or password
 
 
 def tokenize_autotype(autotype):
@@ -1269,13 +1271,13 @@ class DmenuRunner(Process):
     def __init__(self, server):
         Process.__init__(self)
         self.server = server
-        self.open_databases = [get_database()]
-        self.database = self.open_databases[0]
+        self.database = get_database()
         self.kpo = get_entries(self.database)
-        self.prev_entry = None
         if not self.kpo:
             self.server.kill_flag.set()
             sys.exit()
+        self.open_databases = {self.database: self.kpo}
+        self.prev_entry = None
 
     def _set_timer(self):
         """Set inactivity timer
@@ -1443,20 +1445,22 @@ class DmenuRunner(Process):
         self.dmenu_run()
 
     def menu_open_another_database(self):
-        """Process menu entry - Reload database
+        """Process menu entry - Open different database
 
         """
-        new_db = get_database(self.open_databases)
-        db_open = False
-        for db in self.open_databases:
-            if db[0] == new_db[0]:
-                self.database = db
-                db_open = True
-                break
-        if not db_open:
-            self.open_databases.append(new_db)
-            self.database = self.open_databases[-1]
-        self.kpo = get_entries(self.database)
+        new_db = get_database(self.open_databases.keys())
+        if new_db[0] is None or new_db[0] == self.database[0]:
+            self.dmenu_run()
+            return
+        if new_db in self.open_databases:
+            self.kpo = self.open_databases[new_db]
+            self.database = new_db
+        else:
+            new_kpo = get_entries(new_db)
+            if new_kpo:
+                self.kpo = new_kpo
+                self.database = new_db
+                self.open_databases[new_db] = new_kpo
         self.dmenu_run()
 
     def menu_kill_daemon(self):
