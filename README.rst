@@ -41,7 +41,8 @@ Features
   generation in the config file (see config.ini.example for instructions).
   Multiple character sets can be selected on the fly when using Rofi.
 - Optional Pinentry support for secure passphrase entry.
-- Keepass field references are supported on auto-type. Adding and editing references is not (yet) supported.
+- Keepass field references are supported on auto-type. Adding and editing
+  references is not (yet) supported.
 
 License
 -------
