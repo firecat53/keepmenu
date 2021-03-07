@@ -1,2 +1,2 @@
-pykeepass
+pykeepass>=4.0.0
 pynput

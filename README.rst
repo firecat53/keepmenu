@@ -54,7 +54,7 @@ Requirements
 
 1. Python 3.4+. *Note* Python 3.6+ uses the `secrets` module for password
    generation to improve security.
-2. Pykeepass_ and pynput_. Install via pip or your distribution's package
+2. Pykeepass_ >= 4.0.0 and pynput_. Install via pip or your distribution's package
    manager, if available.
 3. Dmenu. Basic support is included for Rofi_, but most Rofi
    configuration/theming should be done via Xresources.

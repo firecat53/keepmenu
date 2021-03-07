@@ -14,7 +14,7 @@ setup(name="keepmenu",
       data_files=[('share/doc/keepmenu', ['README.rst', 'LICENSE',
                                           'config.ini.example']),
                   ('share/man/man1', ['keepmenu.1'])],
-      install_requires=["pynput", "pykeepass"],
+      install_requires=["pynput", "pykeepass>=4.0.0"],
       license="GPL3",
       classifiers=[
           'Development Status :: 4 - Beta',
