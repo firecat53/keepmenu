@@ -188,6 +188,40 @@ class TestFunctions(unittest.TestCase):
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, KM.PyKeePass)
 
+    def test_resolve_references(self):
+        """Test keepass references can be resolved to values
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w') as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.write(conf_file)
+        database = KM.get_database()
+        kpo = KM.get_entries(database)
+        """ Check that reference entry exists in DB        
+        """
+        ref_exists = False
+        for entry in kpo.entries:
+            if entry.password is not None and "REF:P" in entry.password:
+                ref_exists = True
+        self.assertTrue(ref_exists)
+        """ Check that refernce entries have been resolved to their values 
+        """
+        for entry in kpo.entries:
+            entry = KM.resolve_references_to_values(entry)
+            if entry.password is not None:
+                self.assertNotIn("REF", entry.password)
+            if entry.username is not None:
+                self.assertNotIn("REF", entry.username)
+            if entry.title is not None:
+                self.assertNotIn("REF", entry.title)
+            if entry.url is not None:
+                self.assertNotIn("REF", entry.url)
+            if entry.notes is not None:
+                self.assertNotIn("REF", entry.notes)
+
     def test_tokenize_autotype(self):
         """Test tokenizing autotype strings
         """
