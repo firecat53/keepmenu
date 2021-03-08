@@ -1,6 +1,12 @@
 Keepmenu
 ========
 
+.. Warning:: Keepmenu now depends on pykeepass>=4.0.0. It will break if you are
+   using a current distribution-packaged pykeepass. The easiest way to update
+   pykeepass is:
+
+            pip install --user -U pykeepass
+
 Fully featured Dmenu/Rofi frontend for managing Keepass databases.
 
 Inspired in part by Passhole_, but I wanted something more dmenu and less
@@ -19,7 +25,7 @@ Features
 - Use a custom Keepass 2.x style auto-type sequence if you have one defined
   (except for character repetition and the 'special commands'). Set it per entry
   or set a default in the config file for all entries. Disable autotype for an
-  entry, if desired. *These require a pykeepass version later than 2018/11/06 or > 3.0.2*
+  entry, if desired.
 - Select any single field and have it typed into the active window. Notes fields
   can be viewed line-by-line from within dmenu and the selected line will be
   typed when selected.
@@ -77,7 +83,9 @@ Installation
         pip install keepmenu
 
   + From git. Just clone, install requirements and run
-  + Available in `Archlinux AUR`_. 
+  + Available in `Archlinux AUR`_. *NOTE: as of 2021/03/08, the python-pykeepass
+    package is still at 3.2.1. You will need to `pip install --user -U
+    pykeepass` after installing keepmenu.*
 
 - If you start keepmenu for the first time without a config file, it will prompt
   you for database and keyfile locations and save them in a default config file.
