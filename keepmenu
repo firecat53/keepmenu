@@ -502,7 +502,6 @@ def type_entry(entry):
     if hasattr(entry, 'autotype_enabled') and entry.autotype_enabled is False:
         dmenu_err("Autotype disabled for this entry")
         return
-    entry = resolve_references_to_values(entry)
     if hasattr(entry, 'autotype_sequence') and \
             entry.autotype_sequence is not None and \
             entry.autotype_sequence != 'None':
@@ -520,26 +519,12 @@ def type_entry(entry):
         type_entry_pynput(entry, tokens)
 
 
-def resolve_references_to_values(entry):
-    if entry.password is not None and "REF:P" in entry.password:
-        entry.password = entry.deref("password")
-    if entry.username is not None and "REF:U" in entry.username:
-        entry.username = entry.deref("username")
-    if entry.title is not None and "REF:T" in entry.title:
-        entry.title = entry.deref("title")
-    if entry.url is not None and "REF:A" in entry.url:
-        entry.url = entry.deref("url")
-    if entry.notes is not None and "REF:N" in entry.notes:
-        entry.notes = entry.deref("notes")
-    return entry
-
-
 PLACEHOLDER_AUTOTYPE_TOKENS = {
-    "{TITLE}"   : lambda e: e.title,
-    "{USERNAME}": lambda e: e.username,
-    "{URL}"     : lambda e: e.url,
-    "{PASSWORD}": lambda e: e.password,
-    "{NOTES}"   : lambda e: e.notes,
+    "{TITLE}"   : lambda e: e.deref('title'),
+    "{USERNAME}": lambda e: e.deref('username'),
+    "{URL}"     : lambda e: e.deref('url'),
+    "{PASSWORD}": lambda e: e.deref('password'),
+    "{NOTES}"   : lambda e: e.deref('notes'),
 }
 
 STRING_AUTOTYPE_TOKENS = {
@@ -912,10 +897,10 @@ def view_all_entries(options, kp_entries):
     kp_entry_pattern = str("{:>{na}} - {} - {} - {}")  # Path,username,url
     # Have to number each entry to capture duplicates correctly
     kp_entries_b = str("\n").join([kp_entry_pattern.format(j,
-                                                           "/".join(i.path),
-                                                           i.username,
-                                                           i.url,
-                                                           na=num_align)
+                                       os.path.join("/".join(i.path[:-1]), i.deref('title') or ""),
+                                       i.deref('username'),
+                                       i.deref('url'),
+                                       na=num_align)
                                    for j, i in enumerate(kp_entries)]).encode(ENC)
     if options:
         options_b = ("\n".join(options) + "\n").encode(ENC)
@@ -1096,19 +1081,20 @@ def view_entry(kp_entry):
     Returns: dmenu selection
 
     """
-    fields = ["/".join(kp_entry.path) or "Title: None",
-              kp_entry.username or "Username: None",
-              '**********' if kp_entry.password else "Password: None",
-              kp_entry.url or "URL: None",
-              "Notes: <Enter to view>" if kp_entry.notes else "Notes: None"]
+    fields = [os.path.join("/".join(kp_entry.path[:-1]), kp_entry.deref('title') or "")
+                  or "Title: None",
+              kp_entry.deref('username') or "Username: None",
+              '**********' if kp_entry.deref('password') else "Password: None",
+              kp_entry.deref('url') or "URL: None",
+              "Notes: <Enter to view>" if kp_entry.deref('notes') else "Notes: None"]
     kp_entries_b = "\n".join(fields).encode(ENC)
     sel = dmenu_select(len(fields), inp=kp_entries_b)
     if sel == "Notes: <Enter to view>":
-        sel = view_notes(kp_entry.notes)
+        sel = view_notes(kp_entry.deref('notes'))
     elif sel == "Notes: None":
         sel = ""
     elif sel == '**********':
-        sel = kp_entry.password
+        sel = kp_entry.deref('password')
     elif sel == fields[3]:
         if sel != "URL: None":
             webbrowser.open(sel)

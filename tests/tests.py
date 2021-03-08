@@ -200,27 +200,13 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.write(conf_file)
         database = KM.get_database()
         kpo = KM.get_entries(database)
-        """ Check that reference entry exists in DB        
-        """
-        ref_exists = False
-        for entry in kpo.entries:
-            if entry.password is not None and "REF:P" in entry.password:
-                ref_exists = True
-        self.assertTrue(ref_exists)
-        """ Check that refernce entries have been resolved to their values 
-        """
-        for entry in kpo.entries:
-            entry = KM.resolve_references_to_values(entry)
-            if entry.password is not None:
-                self.assertNotIn("REF", entry.password)
-            if entry.username is not None:
-                self.assertNotIn("REF", entry.username)
-            if entry.title is not None:
-                self.assertNotIn("REF", entry.title)
-            if entry.url is not None:
-                self.assertNotIn("REF", entry.url)
-            if entry.notes is not None:
-                self.assertNotIn("REF", entry.notes)
+        ref_entry = kpo.find_entries_by_title(title='.*REF.*', regex=True)[0]
+        base_entry = kpo.find_entries_by_title(title='Test Title 1')[0]
+        self.assertEqual(ref_entry.deref("title"), "Reference Entry Test - " + base_entry.title)
+        self.assertEqual(ref_entry.deref("username"), base_entry.username)
+        self.assertEqual(ref_entry.deref("password"), base_entry.password)
+        self.assertEqual(ref_entry.deref("url"), base_entry.url)
+        self.assertEqual(ref_entry.deref("notes"), base_entry.notes)
 
     def test_tokenize_autotype(self):
         """Test tokenizing autotype strings
