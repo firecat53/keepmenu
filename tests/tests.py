@@ -208,6 +208,22 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(ref_entry.deref("url"), base_entry.url)
         self.assertEqual(ref_entry.deref("notes"), base_entry.notes)
 
+    def test_expiry(self):
+        """Test expiring/expired entries can be found
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w') as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.write(conf_file)
+        database = KM.get_database()
+        kpo = KM.get_entries(database)
+        expiring_entries = KM.get_expiring_entries(kpo.entries)
+        self.assertEqual(len(expiring_entries), 1)
+
+
     def test_tokenize_autotype(self):
         """Test tokenizing autotype strings
         """

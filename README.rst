@@ -48,6 +48,7 @@ Features
   Multiple character sets can be selected on the fly when using Rofi.
 - Optional Pinentry support for secure passphrase entry.
 - `Keepass field references`_ are supported.
+- Supports displaying of expiring/expired passwords and shows the expiry time where set
 
 License
 -------
