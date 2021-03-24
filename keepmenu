@@ -7,6 +7,7 @@ import functools
 import configparser
 from contextlib import closing
 import errno
+from datetime import datetime, timedelta
 import itertools
 import locale
 from multiprocessing import Event, Process
@@ -1082,11 +1083,12 @@ def view_entry(kp_entry):
 
     """
     fields = [os.path.join("/".join(kp_entry.path[:-1]), kp_entry.deref('title') or "")
-                  or "Title: None",
+              or "Title: None",
               kp_entry.deref('username') or "Username: None",
               '**********' if kp_entry.deref('password') else "Password: None",
               kp_entry.deref('url') or "URL: None",
-              "Notes: <Enter to view>" if kp_entry.deref('notes') else "Notes: None"]
+              "Notes: <Enter to view>" if kp_entry.deref('notes') else "Notes: None",
+              str("Expire time: {}").format(kp_entry.expiry_time) if kp_entry.expires is True else "Expiry date: None"]
     kp_entries_b = "\n".join(fields).encode(ENC)
     sel = dmenu_select(len(fields), inp=kp_entries_b)
     if sel == "Notes: <Enter to view>":
@@ -1118,6 +1120,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
               str("Password: **********") if kp_entry.password else "Password: None",
               str("Url: {}").format(kp_entry.url),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
+              str("Expiry time: {}").format(kp_entry.expiry_time) if kp_entry.expires is True else "Expiry date: None",
               "Delete Entry: "]
     if hasattr(kp_entry, 'autotype_sequence') and hasattr(kp_entry, 'autotype_enabled'):
         fields[5:5] = [str("Autotype Sequence: {}").format(kp_entry.autotype_sequence),
@@ -1263,12 +1266,21 @@ def client():
     return mgr
 
 
+def get_expiring_entries(entries):
+    expiring = []
+    for entry in entries:
+        if entry.expires is True and entry.expiry_time.timestamp() < (datetime.now() + timedelta(3)).timestamp():
+            expiring.append(entry)
+    return expiring
+
+
 class DmenuRunner(Process):
     """Listen for dmenu calling event and run keepmenu
 
     Args: server - Server object
           kpo - Keepass object
     """
+
     def __init__(self, server):
         Process.__init__(self)
         self.server = server
@@ -1277,6 +1289,7 @@ class DmenuRunner(Process):
         if not self.kpo:
             self.server.kill_flag.set()
             sys.exit()
+        self.expiring = get_expiring_entries(self.kpo.entries)
         self.open_databases = {self.database: self.kpo}
         self.prev_entry = None
 
@@ -1350,6 +1363,7 @@ class DmenuRunner(Process):
             'View/Type Individual entries':
                 functools.partial(self.menu_view_type_individual_entries, hid_groups),
             'View previous entry': self.menu_view_previous_entry,
+            'View expiring/expired passwords (' + str(len(self.expiring)) + ')': self.menu_view_expiring_entries,
             'Edit entries': self.menu_edit_entries,
             'Add entry': self.menu_add_entry,
             'Manage groups': self.menu_manage_groups,
@@ -1359,6 +1373,8 @@ class DmenuRunner(Process):
         }
         if self.prev_entry is None:
             del options['View previous entry']
+        if len(self.expiring) == 0:
+            del options['View expiring/expired passwords (0)']
 
         sel = view_all_entries(list(options), filtered_entries)
         if not sel:
@@ -1399,6 +1415,23 @@ class DmenuRunner(Process):
         assert self.prev_entry is not None
         text = view_entry(self.prev_entry)
         type_text(text)
+
+    def menu_view_expiring_entries(self):
+        """Process menu entry - View previous entry
+
+        """
+        options = []
+        sel = view_all_entries(options, self.expiring)
+        try:
+            entry = self.expiring[int(sel.split('-', 1)[0])]
+        except (ValueError, TypeError):
+            return
+        edit = True
+        while edit is True:
+            edit = view_entry(entry)
+        self.kpo.save()
+        self.kpo = get_entries(self.database)
+        self.prev_entry = entry
 
     def menu_edit_entries(self):
         """Process menu entry - Edit individual entries
@@ -1443,6 +1476,7 @@ class DmenuRunner(Process):
         self.kpo = get_entries(self.database)
         if not self.kpo:
             return
+        self.expiring = get_expiring_entries(self.kpo.entries)
         self.dmenu_run()
 
     def menu_open_another_database(self):
