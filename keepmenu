@@ -26,7 +26,6 @@ import re
 import webbrowser
 import construct
 from pynput import keyboard
-from pykeepass import PyKeePass
 
 try:
     # secrets only available python 3.6+
@@ -381,6 +380,7 @@ def get_entries(dbo):
         Returns: PyKeePass object
 
     """
+    from pykeepass import PyKeePass
     dbf, keyfile, password = dbo
     if dbf is None:
         return None
