@@ -746,10 +746,10 @@ def type_entry_xdotool(entry, tokens):
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    call(['xdotool', 'type', to_type])
+                    call(['xdotool', 'type', '--', to_type])
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                call(['xdotool', 'type', to_type])
+                call(['xdotool', 'type', '--', to_type])
             elif token in XDOTOOL_AUTOTYPE_TOKENS:
                 cmd = ['xdotool'] + XDOTOOL_AUTOTYPE_TOKENS[token]
                 call(cmd)
@@ -763,7 +763,7 @@ def type_entry_xdotool(entry, tokens):
                 dmenu_err("Unsupported auto-type token (xdotool): \"%s\"" % (token))
                 return
         else:
-            call(['xdotool', 'type', token])
+            call(['xdotool', 'type', '--', token])
 
 
 YDOTOOL_AUTOTYPE_TOKENS = {
@@ -847,10 +847,10 @@ def type_entry_ydotool(entry, tokens):
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    call(['ydotool', 'type', to_type])
+                    call(['ydotool', 'type', '--', to_type])
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                call(['ydotool', 'type', to_type])
+                call(['ydotool', 'type', '--', to_type])
             elif token in YDOTOOL_AUTOTYPE_TOKENS:
                 cmd = ['ydotool'] + YDOTOOL_AUTOTYPE_TOKENS[token]
                 call(cmd)
@@ -864,7 +864,7 @@ def type_entry_ydotool(entry, tokens):
                 dmenu_err("Unsupported auto-type token (ydotool): \"%s\"" % (token))
                 return
         else:
-            call(['ydotool', 'type', token])
+            call(['ydotool', 'type', '--', token])
 
 
 def type_text(data):
@@ -875,9 +875,9 @@ def type_text(data):
     if CONF.has_option('database', 'type_library'):
         library = CONF.get('database', 'type_library')
     if library == 'xdotool':
-        call(['xdotool', 'type', data])
+        call(['xdotool', 'type', '--', data])
     elif library == 'ydotool':
-        call(['ydotool', 'type', data])
+        call(['ydotool', 'type', '--', data])
     else:
         kbd = keyboard.Controller()
         try:
