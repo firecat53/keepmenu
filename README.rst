@@ -83,9 +83,7 @@ Installation
         pip install keepmenu
 
   + From git. Just clone, install requirements and run
-  + Available in `Archlinux AUR`_. *NOTE: as of 2021/03/08, the python-pykeepass
-    package is still at 3.2.1. You will need to `pip install --user -U
-    pykeepass` after installing keepmenu.*
+  + Available in `Archlinux AUR`_.
 
 - If you start keepmenu for the first time without a config file, it will prompt
   you for database and keyfile locations and save them in a default config file.
