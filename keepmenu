@@ -26,6 +26,10 @@ import time
 import re
 import webbrowser
 import construct
+import base64
+import hmac
+import struct
+from urllib import parse
 from pynput import keyboard
 
 try:
@@ -526,6 +530,7 @@ PLACEHOLDER_AUTOTYPE_TOKENS = {
     "{URL}"     : lambda e: e.deref('url'),
     "{PASSWORD}": lambda e: e.deref('password'),
     "{NOTES}"   : lambda e: e.deref('notes'),
+    "{TOTP}"    : lambda e: gen_otp(e.get_custom_property("otp")),
 }
 
 STRING_AUTOTYPE_TOKENS = {
@@ -1040,6 +1045,46 @@ def rename_group(kpo):
     return group
 
 
+# Taken from https://github.com/susam/mintotp
+def hotp(key, counter, digits=6, digest='sha1', steam=False):
+    key = base64.b32decode(key.upper() + '=' * ((8 - len(key)) % 8))
+    counter = struct.pack('>Q', counter)
+    mac = hmac.new(key, counter, digest).digest()
+    offset = mac[-1] & 0x0f
+    binary = struct.unpack('>L', mac[offset:offset + 4])[0] & 0x7fffffff
+    code = ''
+
+    if steam:
+        chars = '23456789BCDFGHJKMNPQRTVWXY'
+        full_code = int(binary)
+        for _ in range(digits):
+            code += chars[full_code % len(chars)]
+            full_code //= len(chars)
+    else:
+        code = str(binary)[-digits:].rjust(digits, '0')
+
+    return code
+
+
+def totp(key, time_step=30, digits=6, digest='sha1', steam=False):
+    return hotp(key, int(time.time() / time_step), digits, digest, steam)
+
+
+def gen_otp(otp_url):
+    parsed_otp_url = parse.urlparse(otp_url)
+    query_string = parse.parse_qs(parsed_otp_url.query)
+
+    try:
+        steam = query_string['encoder'][0] == "steam"
+    except KeyError:
+        steam = False
+
+    return totp(
+        query_string['secret'][0], int(query_string['period'][0]),
+        int(query_string['digits'][0]), 'sha1' if 'algorihm'
+        not in query_string else query_string['algorithm'][0].lower(), steam)
+
+
 def add_entry(kpo):
     """Add Keepass entry
 
@@ -1086,10 +1131,12 @@ def view_entry(kp_entry):
               or "Title: None",
               kp_entry.deref('username') or "Username: None",
               '**********' if kp_entry.deref('password') else "Password: None",
+              "TOTP: ******" if kp_entry.get_custom_property("otp") else "TOTP: None",
               kp_entry.deref('url') or "URL: None",
               "Notes: <Enter to view>" if kp_entry.deref('notes') else "Notes: None",
               str("Expire time: {}").format(kp_entry.expiry_time)
                     if kp_entry.expires is True else "Expiry date: None"]
+
     kp_entries_b = "\n".join(fields).encode(ENC)
     sel = dmenu_select(len(fields), inp=kp_entries_b)
     if sel == "Notes: <Enter to view>":
@@ -1098,6 +1145,8 @@ def view_entry(kp_entry):
         sel = ""
     elif sel == '**********':
         sel = kp_entry.deref('password')
+    elif sel == "TOTP: ******":
+        sel = gen_otp(kp_entry.get_custom_property("otp"))
     elif sel == fields[3]:
         if sel != "URL: None":
             webbrowser.open(sel)
@@ -1119,6 +1168,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
               str("Path: {}").format("/".join(kp_entry.path[:-1])),
               str("Username: {}").format(kp_entry.username),
               str("Password: **********") if kp_entry.password else "Password: None",
+              str("TOTP: ******"),
               str("Url: {}").format(kp_entry.url),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               str("Expiry time: {}").format(kp_entry.expiry_time)
@@ -1178,6 +1228,84 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             if sel is False:
                 dmenu_err("Number of char groups desired is more than requested pw length")
                 return True
+
+    if field == 'totp':
+        otp_url = kp_entry.get_custom_property("otp")
+        if otp_url is not None:
+            inputs_b = [
+                b"Enter secret key",
+                b"Type TOTP",
+            ]
+            otp_choice = dmenu_select(len(inputs_b),
+                                      "TOTP",
+                                      inp=b"\n".join(inputs_b))
+        else:
+            otp_choice = "Enter secret key"
+
+        if otp_choice == "Type TOTP":
+            type_text(gen_otp(otp_url))
+        elif otp_choice == "Enter secret key":
+            input_b = b""
+            secret_key = dmenu_select(1, "Secret Key?", inp=input_b)
+
+            if not secret_key:
+                return True
+
+            inputs_b = [
+                b"Defaut RFC 6238 token settings", b"Steam token settings",
+                b"Use cusom settings"
+            ]
+
+            otp_settings_choice = dmenu_select(len(inputs_b),
+                                               "Settings",
+                                               inp=b"\n".join(inputs_b))
+
+            if otp_settings_choice == "Defaut RFC 6238 token settings":
+                algorithm_choice = "sha1"
+                time_step_choice = 30
+                code_size_choice = 6
+            elif otp_settings_choice == "Steam token settings":
+                algorithm_choice = "sha1"
+                time_step_choice = 30
+                code_size_choice = 5
+            elif otp_settings_choice == "Use cusom settings":
+                inputs_b = [b"SHA-1", b"SHA-256", b"SHA-512"]
+                algorithm_choice = dmenu_select(len(inputs_b),
+                                                "Algorithm",
+                                                inp=b"\n".join(inputs_b))
+                if not algorithm_choice:
+                    return True
+                algorithm_choice = algorithm_choice.replace("-", "").lower()
+
+                inputs_b = b"30\n"
+                time_step_choice = dmenu_select(1,
+                                                "Time Step (sec)",
+                                                inp=input_b)
+                if not time_step_choice:
+                    return True
+                try:
+                    time_step_choice = int(time_step_choice)
+                except ValueError:
+                    time_step_choice = 30
+
+                inputs_b = b"6\n"
+                code_size_choice = dmenu_select(1, "Code Size", inp=input_b)
+                if not code_size_choice:
+                    return True
+                try:
+                    code_size_choice = int(time_step_choice)
+                except ValueError:
+                    code_size_choice = 6
+
+            otp_url = "otpauth://totp/Main:none?secret={}&period={}&digits={}&issuer=Main".format(
+                secret_key, time_step_choice, code_size_choice)
+            if algorithm_choice != "sha1":
+                otp_url += "&algorithm=" + algorithm_choice
+            if otp_settings_choice == "Steam token settings":
+                otp_url += "&encoder=steam"
+
+            kp_entry.set_custom_property("otp", otp_url)
+        return True
 
     if field == 'autotype_enabled':
         input_b = b"True\nFalse\n"
