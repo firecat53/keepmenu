@@ -1228,85 +1228,8 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             if sel is False:
                 dmenu_err("Number of char groups desired is more than requested pw length")
                 return True
-
     if field == 'totp':
-        otp_url = kp_entry.get_custom_property("otp")
-        if otp_url is not None:
-            inputs_b = [
-                b"Enter secret key",
-                b"Type TOTP",
-            ]
-            otp_choice = dmenu_select(len(inputs_b),
-                                      "TOTP",
-                                      inp=b"\n".join(inputs_b))
-        else:
-            otp_choice = "Enter secret key"
-
-        if otp_choice == "Type TOTP":
-            type_text(gen_otp(otp_url))
-        elif otp_choice == "Enter secret key":
-            input_b = b""
-            secret_key = dmenu_select(1, "Secret Key?", inp=input_b)
-
-            if not secret_key:
-                return True
-
-            inputs_b = [
-                b"Defaut RFC 6238 token settings", b"Steam token settings",
-                b"Use cusom settings"
-            ]
-
-            otp_settings_choice = dmenu_select(len(inputs_b),
-                                               "Settings",
-                                               inp=b"\n".join(inputs_b))
-
-            if otp_settings_choice == "Defaut RFC 6238 token settings":
-                algorithm_choice = "sha1"
-                time_step_choice = 30
-                code_size_choice = 6
-            elif otp_settings_choice == "Steam token settings":
-                algorithm_choice = "sha1"
-                time_step_choice = 30
-                code_size_choice = 5
-            elif otp_settings_choice == "Use cusom settings":
-                inputs_b = [b"SHA-1", b"SHA-256", b"SHA-512"]
-                algorithm_choice = dmenu_select(len(inputs_b),
-                                                "Algorithm",
-                                                inp=b"\n".join(inputs_b))
-                if not algorithm_choice:
-                    return True
-                algorithm_choice = algorithm_choice.replace("-", "").lower()
-
-                inputs_b = b"30\n"
-                time_step_choice = dmenu_select(1,
-                                                "Time Step (sec)",
-                                                inp=input_b)
-                if not time_step_choice:
-                    return True
-                try:
-                    time_step_choice = int(time_step_choice)
-                except ValueError:
-                    time_step_choice = 30
-
-                inputs_b = b"6\n"
-                code_size_choice = dmenu_select(1, "Code Size", inp=input_b)
-                if not code_size_choice:
-                    return True
-                try:
-                    code_size_choice = int(time_step_choice)
-                except ValueError:
-                    code_size_choice = 6
-
-            otp_url = "otpauth://totp/Main:none?secret={}&period={}&digits={}&issuer=Main".format(
-                secret_key, time_step_choice, code_size_choice)
-            if algorithm_choice != "sha1":
-                otp_url += "&algorithm=" + algorithm_choice
-            if otp_settings_choice == "Steam token settings":
-                otp_url += "&encoder=steam"
-
-            kp_entry.set_custom_property("otp", otp_url)
-        return True
-
+        return edit_totp(kp_entry)
     if field == 'autotype_enabled':
         input_b = b"True\nFalse\n"
         at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=input_b)
@@ -1383,6 +1306,77 @@ def view_notes(notes):
     sel = dmenu_select(min(DMENU_LEN, len(notes_l)), inp=notes_b)
     return sel
 
+
+def edit_totp(kp_entry):
+    otp_url = kp_entry.get_custom_property("otp")
+
+    if otp_url is not None:
+        inputs_b = [
+            b"Enter secret key",
+            b"Type TOTP",
+        ]
+        otp_choice = dmenu_select(len(inputs_b), "TOTP", inp=b"\n".join(inputs_b))
+    else:
+        otp_choice = "Enter secret key"
+
+    if otp_choice == "Type TOTP":
+        type_text(gen_otp(otp_url))
+    elif otp_choice == "Enter secret key":
+        input_b = b""
+        secret_key = dmenu_select(1, "Secret Key?", inp=input_b)
+
+        if not secret_key:
+            return True
+
+        inputs_b = [
+            b"Defaut RFC 6238 token settings", b"Steam token settings",
+            b"Use cusom settings"
+        ]
+
+        otp_settings_choice = dmenu_select(len(inputs_b), "Settings", inp=b"\n".join(inputs_b))
+
+        if otp_settings_choice == "Defaut RFC 6238 token settings":
+            algorithm_choice = "sha1"
+            time_step_choice = 30
+            code_size_choice = 6
+        elif otp_settings_choice == "Steam token settings":
+            algorithm_choice = "sha1"
+            time_step_choice = 30
+            code_size_choice = 5
+        elif otp_settings_choice == "Use cusom settings":
+            inputs_b = [b"SHA-1", b"SHA-256", b"SHA-512"]
+            algorithm_choice = dmenu_select(len(inputs_b), "Algorithm", inp=b"\n".join(inputs_b))
+            if not algorithm_choice:
+                return True
+            algorithm_choice = algorithm_choice.replace("-", "").lower()
+
+            inputs_b = b"30\n"
+            time_step_choice = dmenu_select(1, "Time Step (sec)", inp=input_b)
+            if not time_step_choice:
+                return True
+            try:
+                time_step_choice = int(time_step_choice)
+            except ValueError:
+                time_step_choice = 30
+
+            inputs_b = b"6\n"
+            code_size_choice = dmenu_select(1, "Code Size", inp=input_b)
+            if not code_size_choice:
+                return True
+            try:
+                code_size_choice = int(time_step_choice)
+            except ValueError:
+                code_size_choice = 6
+
+        otp_url = "otpauth://totp/Main:none?secret={}&period={}&digits={}&issuer=Main".format(
+            secret_key, time_step_choice, code_size_choice)
+        if algorithm_choice != "sha1":
+            otp_url += "&algorithm=" + algorithm_choice
+        if otp_settings_choice == "Steam token settings":
+            otp_url += "&encoder=steam"
+
+        kp_entry.set_custom_property("otp", otp_url)
+    return True
 
 def client():
     """Define client connection to server BaseManager
