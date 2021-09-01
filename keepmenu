@@ -200,7 +200,7 @@ def dmenu_cmd(num_lines, prompt):
     dmenu_command = command[0]
     dmenu_args = command[1:]
     del args_dict["dmenu_command"]
-    lines = "-i -dmenu -multi-select -lines" if "rofi" in dmenu_command else "-i -l"
+    lines = "-i -dmenu -multi-select -l" if "rofi" in dmenu_command else "-i -l"
     if "l" in args_dict:
         lines = "{} {}".format(lines, min(num_lines, int(args_dict['l'])))
         del args_dict['l']
