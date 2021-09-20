@@ -45,7 +45,8 @@ Features
   entered passphrase for `pw_cache_period_min` minutes after the last activity.
 - Configure the characters and groups of characters used during password
   generation in the config file (see config.ini.example for instructions).
-  Multiple character sets can be selected on the fly when using Rofi.
+  Multiple character sets can be selected on the fly when using Rofi if the
+  `-multi-select` option is passed via `dmenu_command`.
 - Optional Pinentry support for secure passphrase entry.
 - `Keepass field references`_ are supported.
 - Supports displaying of expiring/expired passwords and shows the expiry time where set
@@ -61,8 +62,7 @@ Requirements
 1. Python 3.6+.
 2. Pykeepass_ >= 4.0.0 and pynput_. Install via pip or your distribution's package
    manager, if available.
-3. Dmenu. Basic support is included for Rofi_, but most Rofi
-   configuration/theming should be done via Xresources.
+3. Dmenu or Rofi. Rofi configuration/theming should be done via Rofi themes.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
    in the config file.
 5. (optional) xdotool or ydotool (for Wayland). If you have a lot of Unicode
@@ -106,16 +106,8 @@ Installation
       in your window manager or desktop environment initialization. For example:
       `exec setxkbmap de` in ~/.config/i3/config. 
 
-- If using Rofi, you can try some of the command line options in config.ini or
-  set them using the `dmenu_command` setting, but I haven't tested most of them
-  so I'd suggest configuring via .Xresources where possible. 
-- Number of lines needs to be configured in the config.ini and not in
-  .Xresources or the Rofi config file. Keepmenu will override any number of
-  lines settings set elsewhere.
-- If using dmenu for passphrase entry (pinentry not set), dmenu options in the
-  [dmenu_passphrase] section of config.ini will override those in [dmenu] so you
-  can, for example, set the normal foreground and background colors to be the
-  same to obscure the passphrase.
+- If using Rofi, pass desired theme via `dmenu_command = rofi -theme
+  <theme>.rasi`. Dmenu options are also passed via `dmenu_command`
 - New sets of characters can be set in config.ini in the `[password_chars]`
   section. A new preset for each custom set will be listed in addition to the
   default presets. If you redefine one of the default sets (upper, lower,

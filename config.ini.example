@@ -1,24 +1,15 @@
 [dmenu]
 # dmenu_command = /usr/bin/dmenu
-# # Note that dmenu_command can contain arguments as well like `rofi -width 30`
-# # Rofi and dmenu are set to case insensitive by default `-i`
-# l = number of lines to display (default 24 max)
-# fn = Inconsolata-12
-# fn = -*-terminus-medium-*-*-*-16-*-*-*-*-*-*-*
-# nb = normal background (name, #RGB, or #RRGGBB)
-# nf = normal foreground
-# sb = selected background
-# sf = selected foreground
-# b =  (just set to empty value and menu will appear at the bottom
-# m = number of monitor to display on
+# # Note that dmenu_command can contain arguments as well like:
+# # `dmenu_command = rofi -dmenu -theme keepmenu -password`
+# # `dmenu_command = rofi -dmenu -width 30 -password -i`
+# # `dmenu_command = dmenu -i -l 25 -b -nb #222222 -nf #222222`
 # pinentry = Pinentry command
 
-# # override normal foreground and background colors (dmenu) or use the
-# # -password option (rofi) to obscure passphrase entry
-# [dmenu_passphrase]
-# nf = #222222
-# nb = #222222
-# rofi_obscure = True
+[dmenu_passphrase]
+# # Uses the -password flag for Rofi. For dmenu, sets -nb and -nf to the same color.
+# obscure = True
+# obscure_color = #222222
 
 [database]
 # database_1 = <path/to/database> ~ for $HOME is ok

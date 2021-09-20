@@ -135,13 +135,10 @@ class TestFunctions(unittest.TestCase):
         KM.process_config()
         self.assertTrue(KM.CONF.has_section("dmenu"))
         self.assertTrue(KM.CONF.has_section("dmenu_passphrase"))
-        self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "nf") and
-                        KM.CONF.get("dmenu_passphrase", "nf") == "#222222")
-        self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "nb") and
-                        KM.CONF.get("dmenu_passphrase", "nb") == "#222222")
-        self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "rofi_obscure") and
-                        KM.CONF.get("dmenu_passphrase", "rofi_obscure") ==
-                        "True")
+        self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "obscure_color") and
+                        KM.CONF.get("dmenu_passphrase", "obscure_color") == "#222222")
+        self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "obscure") and
+                        KM.CONF.get("dmenu_passphrase", "obscure") == "True")
         self.assertTrue(KM.CONF.has_section("database"))
         self.assertTrue(KM.CONF.has_option("database", "database_1"))
         self.assertTrue(KM.CONF.has_option("database", "keyfile_1"))
@@ -156,14 +153,14 @@ class TestFunctions(unittest.TestCase):
         # First test default config
         KM.process_config()
         self.assertTrue(KM.dmenu_cmd(10, "Entries") ==
-                        ["dmenu", "-i", "-l", "10", "-p", "Entries"])
+                        ["dmenu", "-p", "Entries"])
         # Test full config
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
         KM.process_config()
-        res = ["/usr/bin/rofi", "-i", "-dmenu", "-multi-select", "-lines", "10", "-p",
-               "Passphrase", "-password", "-fn", "Inconsolata-12", "-nb", "#222222",
-               "-nf", "#222222", "-sb", "#123456", "-b"]
-        self.assertTrue(KM.dmenu_cmd(20, "Passphrase") == res)
+        res = ["/usr/bin/dmenu", "-i", "-l", "10", "-fn", "Inconsolata-12",
+               "-nb", "#909090", "-nf", "#999999", "-b",
+               "-p", "Password", "-nb", "#222222", "-nf", "#222222"]
+        self.assertTrue(KM.dmenu_cmd(20, "Password") == res)
 
     def test_open_database(self):
         """Test database opens properly

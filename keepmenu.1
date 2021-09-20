@@ -51,7 +51,7 @@ activity.
 \fB14. \fR Configure the characters and groups of characters used during
 password generation in the config file (see config.ini.example for
 instructions). Multiple character sets can be selected on the fly when using
-Rofi.
+Rofi if the `-multi-select` option is passed via `dmenu_command`.
 
 \fB15.\fR Optional Pinentry support for secure passphrase entry.
 
@@ -69,8 +69,8 @@ Copyright © 2021 Scott Hansen <firecat4153@gmail.com>.  Keepmenu is released un
 \fB2.\fR \fI\%Pykeepass\fP >= 4.0.0 and \fI\%pynput\fP\&. Install via pip or your
 distribution\(aqs package manager, if available.
 
-\fB3.\fR Dmenu. Basic support is included for \fI\%Rofi\fP, but most Rofi
-configuration/theming should be done via Xresources.
+\fB3.\fR Dmenu or Rofi. \fI\%Rofi\fP configuration/theming should be done via
+Rofi themes.
 
 \fB4.\fR (optional) Pinentry. Make sure to set which flavor of pinentry command
 to use in the config file.
@@ -145,15 +145,9 @@ the default presets will not be displayed unless they are uncommented.
 
 .RE
 
-\fB3.\fR If using Rofi, you can try some of the command line options in
-config.ini or set them using the \fIdmenu_command\fP setting, but I haven\(aqt
-tested most of them so I\(aqd suggest configuring via .Xresources where
-possible.
+\fB3.\fR If using Rofi, pass desired theme via \fIdmenu_command = rofi -theme
+<theme>.rasi\fP. Dmenu options are also passed via \fIdmenu_command\fP.
 
-\fB4.\fR If using dmenu for passphrase entry (pinentry not set), dmenu options
-in the [dmenu_passphrase] section of config.ini will override those in [dmenu]
-so you can, for example, set the normal foreground and background colors to be
-the same to obscure the passphrase.
 .sp
 \fBWARNING:\fP
 .INDENT 3.5
