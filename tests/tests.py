@@ -10,6 +10,7 @@ import string
 import sys
 import tempfile
 import unittest
+from pykeepass import PyKeePass
 
 KM = importlib.machinery.SourceFileLoader('*', 'keepmenu').load_module()
 
@@ -177,7 +178,7 @@ class TestFunctions(unittest.TestCase):
         database = KM.get_database()
         self.assertTrue(database == (db_name, '', 'password'))
         kpo = KM.get_entries(database)
-        self.assertIsInstance(kpo, KM.PyKeePass)
+        self.assertIsInstance(kpo, PyKeePass)
         # Switch from `password_1` to `password_cmd_1`
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'password_1', '')
@@ -186,7 +187,7 @@ class TestFunctions(unittest.TestCase):
         database = KM.get_database()
         self.assertTrue(database == (db_name, '', 'password'))
         kpo = KM.get_entries(database)
-        self.assertIsInstance(kpo, KM.PyKeePass)
+        self.assertIsInstance(kpo, PyKeePass)
 
     def test_resolve_references(self):
         """Test keepass references can be resolved to values
@@ -222,7 +223,6 @@ class TestFunctions(unittest.TestCase):
         kpo = KM.get_entries(database)
         expiring_entries = KM.get_expiring_entries(kpo.entries)
         self.assertEqual(len(expiring_entries), 1)
-
 
     def test_tokenize_autotype(self):
         """Test tokenizing autotype strings

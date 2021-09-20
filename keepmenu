@@ -15,6 +15,7 @@ from multiprocessing.managers import BaseManager
 import os
 from os.path import exists, expanduser
 import random
+from secrets import choice
 import shlex
 import socket
 import string
@@ -27,16 +28,6 @@ import re
 import webbrowser
 import construct
 from pynput import keyboard
-
-try:
-    # secrets only available python 3.6+
-    from secrets import choice
-except ImportError:
-    def choice(seq):
-        """Provide `choice` function call for pw generation
-
-        """
-        return random.SystemRandom().choice(seq)
 
 
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
