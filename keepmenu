@@ -1337,7 +1337,7 @@ def view_notes(notes):
 
 
 def edit_totp(kp_entry):
-    """
+    """Edit TOTP generation information
 
     Args: kp_entry - selected Entry object
 
@@ -1364,10 +1364,17 @@ def edit_totp(kp_entry):
         secret_key = dmenu_select(1, "Secret Key?", inp=b"\n".join(inputs_b))
 
         if not secret_key:
-            return True
+            return
+
+        SERCRET_VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+        for char in secret_key:
+            if char.upper() not in SERCRET_VALID_CHARS:
+                dmenu_err("Invaild character in secret key, valid characters are {}".format(SERCRET_VALID_CHARS))
+                return
 
         inputs_b = [
-            b"Defaut RFC 6238 token settings", b"Steam token settings",
+            b"Defaut RFC 6238 token settings",
+            b"Steam token settings",
             b"Use cusom settings"
         ]
 
@@ -1385,13 +1392,13 @@ def edit_totp(kp_entry):
             inputs_b = [b"SHA-1", b"SHA-256", b"SHA-512"]
             algorithm_choice = dmenu_select(len(inputs_b), "Algorithm", inp=b"\n".join(inputs_b))
             if not algorithm_choice:
-                return True
+                return
             algorithm_choice = algorithm_choice.replace("-", "").lower()
 
             inputs_b = b"30\n"
             time_step_choice = dmenu_select(1, "Time Step (sec)", inp=input_b)
             if not time_step_choice:
-                return True
+                return
             try:
                 time_step_choice = int(time_step_choice)
             except ValueError:
@@ -1400,7 +1407,7 @@ def edit_totp(kp_entry):
             inputs_b = b"6\n"
             code_size_choice = dmenu_select(1, "Code Size", inp=input_b)
             if not code_size_choice:
-                return True
+                return
             try:
                 code_size_choice = int(time_step_choice)
             except ValueError:
@@ -1414,7 +1421,6 @@ def edit_totp(kp_entry):
             otp_url += "&encoder=steam"
 
         kp_entry.set_custom_property("otp", otp_url)
-    return True
 
 
 def client():
