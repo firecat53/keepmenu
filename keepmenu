@@ -1373,7 +1373,7 @@ def edit_totp(kp_entry):
             algorithm_choice = "sha1"
             time_step_choice = 30
             code_size_choice = 5
-        elif otp_settings_choice == "Use cusom settings":
+        elif otp_settings_choice == "Use custom settings":
             inputs_b = [b"SHA-1", b"SHA-256", b"SHA-512"]
             algorithm_choice = dmenu_select(len(inputs_b), "Algorithm", inp=b"\n".join(inputs_b))
             if not algorithm_choice:

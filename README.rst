@@ -50,6 +50,7 @@ Features
 - Optional Pinentry support for secure passphrase entry.
 - `Keepass field references`_ are supported.
 - Supports displaying of expiring/expired passwords and shows the expiry time where set
+- Add, edit and type TOTP codes. RFC 6238, Steam and custom settings are supported.
 
 License
 -------
