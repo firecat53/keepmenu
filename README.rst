@@ -105,7 +105,7 @@ Installation
 
     * When using xdotool, call `setxkbmap` to set your keyboard type somewhere
       in your window manager or desktop environment initialization. For example:
-      `exec setxkbmap de` in ~/.config/i3/config. 
+      `exec setxkbmap de` in ~/.config/i3/config.
 
 - If using Rofi, pass desired theme via `dmenu_command = rofi -theme
   <theme>.rasi`. Dmenu options are also passed via `dmenu_command`
@@ -136,6 +136,14 @@ Usage
   select the entry, select 'Password' then select 'Manually enter password'.
   Type 'ESC' to exit without making changes.
 
+Options
+-------
+keepmenu [-h] [-a AUTOTYPE]
+
+--help, -h Output a usage message and exit.
+
+-a AUTOTYPE, --autotype AUTOTYPE Override autotype sequence in config.ini
+
 Tests
 -----
 
@@ -143,7 +151,7 @@ Tests
 
 .. _Rofi: https://davedavenport.github.io/rofi/
 .. _Passhole: https://github.com/purduelug/passhole
-.. _Keepass field references: https://keepass.info/help/base/fieldrefs.html 
+.. _Keepass field references: https://keepass.info/help/base/fieldrefs.html
 .. _Pykeepass: https://github.com/pschmitt/pykeepass
 .. _pynput: https://github.com/moses-palmer/pynput
 .. _Archlinux AUR: https://aur.archlinux.org/packages/python-keepmenu-git
