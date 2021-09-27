@@ -17,6 +17,8 @@
 # password_1 = database password  **INSECURE**
 # password_cmd_2 = <command to generate db password>
 # database_2 = <path/to/second database>
+# # Override autotype default from database_2
+# autotype_default_2 = {TOTP}{ENTER}
 # etc....
 # pw_cache_period_min = <minutes to cache database password>
 

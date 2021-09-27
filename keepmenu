@@ -3,6 +3,7 @@
 """Read and copy Keepass database entries using dmenu or rofi
 
 """
+import argparse
 import base64
 import configparser
 from contextlib import closing
@@ -288,9 +289,9 @@ def get_password_chars():
 def get_database(open_databases=[]):
     """Read databases from config or ask for user input.
 
-    Args: open_databases - list [(db_name, keyfile, pw), (db_name2, kf, pw),...]
-    Returns: (database name, keyfile, passphrase)
-             Returns (None, None, None) on error selecting database or password
+    Args: open_databases - list [(db_name, keyfile, pw, autotype), (db_name2, kf, pw, autotype),...]
+    Returns: (database name, keyfile, passphrase, autotype)
+             Returns (None, None, None, None) on error selecting database or password
 
     """
     args = CONF.items('database')
@@ -309,6 +310,10 @@ def get_database(open_databases=[]):
         except KeyError:
             passw = ''
         try:
+            autotype = args_dict['autotype_default_{}'.format(idx)]
+        except KeyError:
+            autotype = None
+        try:
             cmd = args_dict['password_cmd_{}'.format(idx)]
             res = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE).communicate()
             if res[1]:
@@ -319,28 +324,28 @@ def get_database(open_databases=[]):
         except KeyError:
             pass
         if dbn:
-            dbs.append((dbn, keyfile, passw))
+            dbs.append((dbn, keyfile, passw, autotype))
     if not dbs:
         res = get_initial_db()
         if res is True:
             dbs = [get_database()]
         else:
-            return (None, None, None)
+            return (None, None, None, None)
     if len(dbs) > 1:
         inp_bytes = "\n".join(i[0] for i in dbs).encode(ENC)
         sel = dmenu_select(len(dbs), "Select Database", inp=inp_bytes)
         dbs = [i for i in dbs if i[0] == sel]
         if not sel or not dbs:
-            return (None, None, None)
+            return (None, None, None, None)
     for dbr in open_databases:
         # Match db name to open_databases
         if dbr[0] == dbs[0][0]:
             return dbr
-    if not dbs[0][-1]:
+    if not dbs[0][-2]:
         db_l = list(dbs[0])
-        db_l[-1] = get_passphrase()
-        if not db_l[-1]:
-            return (None, None, None)
+        db_l[-2] = get_passphrase()
+        if not db_l[-2]:
+            return (None, None, None, None)
         dbs[0] = db_l
     return tuple(dbs[0])
 
@@ -371,7 +376,7 @@ def get_entries(dbo):
 
     """
     from pykeepass import PyKeePass
-    dbf, keyfile, password = dbo
+    dbf, keyfile, password, _ = dbo
     if dbf is None:
         return None
     try:
@@ -482,20 +487,28 @@ def token_command(token):
     return None
 
 
-def type_entry(entry):
+def type_entry(entry, db_autotype=None):
     """Pick which library to use to type strings
 
     Defaults to pynput
 
+    Args: entry - The entry to type
+          db_autotype - the database specific autotype that overrides 'autotype_default'
+
     """
     sequence = SEQUENCE
+
     if hasattr(entry, 'autotype_enabled') and entry.autotype_enabled is False:
         dmenu_err("Autotype disabled for this entry")
         return
+    if db_autotype is not None and db_autotype != '':
+        sequence = db_autotype
     if hasattr(entry, 'autotype_sequence') and \
             entry.autotype_sequence is not None and \
             entry.autotype_sequence != 'None':
         sequence = entry.autotype_sequence
+    if ARGS.autotype is not None:
+        sequence = ARGS.autotype
     tokens = tokenize_autotype(sequence)
 
     library = 'pynput'
@@ -1087,6 +1100,10 @@ def gen_otp(otp_url):
     parsed_otp_url = parse.urlparse(otp_url)
     query_string = parse.parse_qs(parsed_otp_url.query)
 
+    for required in ('secret', 'period', 'digits'):
+        if required not in query_string:
+            return ''
+
     try:
         steam = query_string['encoder'][0] == "steam"
     except KeyError:
@@ -1545,7 +1562,7 @@ class DmenuRunner(Process):
                 entry = filtered_entries[int(sel.split('-', 1)[0])]
             except (ValueError, TypeError):
                 return
-            type_entry(entry)
+            type_entry(entry, self.database[3])
             self.prev_entry = entry
 
     def menu_view_type_individual_entries(self, hid_groups):
@@ -1692,9 +1709,21 @@ def run():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        print("See `man keepmenu` for help")
-        sys.exit()
+    global ARGS
+
+    parser = argparse.ArgumentParser(
+        description="Dmenu/Rofi frontend for Keepass databases")
+
+    parser.add_argument(
+        "-a",
+        "--autotype",
+        type=str,
+        required=False,
+        help="Override autotype sequence in config.ini",
+    )
+
+    ARGS = parser.parse_args()
+
     try:
         MANAGER = client()
         MANAGER.set_event()  # pylint: disable=no-member

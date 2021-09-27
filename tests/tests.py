@@ -177,7 +177,7 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
         database = KM.get_database()
-        self.assertTrue(database == (db_name, '', 'password'))
+        self.assertTrue(database == (db_name, '', 'password', None))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
         # Switch from `password_1` to `password_cmd_1`
@@ -186,9 +186,17 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'password_cmd_1', 'echo password')
             KM.CONF.write(conf_file)
         database = KM.get_database()
-        self.assertTrue(database == (db_name, '', 'password'))
+        self.assertTrue(database == (db_name, '', 'password', None))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
+        with open(KM.CONF_FILE, 'w') as conf_file:
+            KM.CONF.set('database', 'autotype_default_1', '{TOTP}{ENTER}')
+            KM.CONF.write(conf_file)
+        database = KM.get_database()
+        self.assertTrue(database == (db_name, '', 'password', '{TOTP}{ENTER}'))
+        kpo = KM.get_entries(database)
+        self.assertIsInstance(kpo, PyKeePass)
+
 
     def test_resolve_references(self):
         """Test keepass references can be resolved to values
