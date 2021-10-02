@@ -12,7 +12,7 @@ import errno
 import functools
 import hmac
 import locale
-from multiprocessing import Event, Process
+from multiprocessing import Event, Process, Pipe
 from multiprocessing.managers import BaseManager
 import os
 from os.path import exists, expanduser
@@ -286,12 +286,12 @@ def get_password_chars():
     return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 
-def get_database(open_databases=[]):
-    """Read databases from config or ask for user input.
+def get_databases():
+    """Read databases from config
 
-    Args: open_databases - list [(db_name, keyfile, pw, autotype), (db_name2, kf, pw, autotype),...]
-    Returns: (database name, keyfile, passphrase, autotype)
-             Returns (None, None, None, None) on error selecting database or password
+    Returns: [(database name, keyfile, passphrase, autotype), ...]
+             If not specified in the config, the value will be None
+             If database name is None, an error has occurred
 
     """
     args = CONF.items('database')
@@ -304,11 +304,11 @@ def get_database(open_databases=[]):
         try:
             keyfile = expanduser(args_dict['keyfile_{}'.format(idx)])
         except KeyError:
-            keyfile = ''
+            keyfile = None
         try:
             passw = args_dict['password_{}'.format(idx)]
         except KeyError:
-            passw = ''
+            passw = None
         try:
             autotype = args_dict['autotype_default_{}'.format(idx)]
         except KeyError:
@@ -325,6 +325,20 @@ def get_database(open_databases=[]):
             pass
         if dbn:
             dbs.append((dbn, keyfile, passw, autotype))
+
+    return dbs
+
+
+def get_database(open_databases=()):
+    """Read databases from config or ask for user input.
+
+    Args: open_databases - list [(db_name, keyfile, pw, autotype), (db_name2, kf, pw, autotype),...]
+    Returns: (database name, keyfile, passphrase, autotype)
+             Returns (None, None, None, None) on error selecting database or password
+
+    """
+    dbs = get_databases()
+
     if not dbs:
         res = get_initial_db()
         if res is True:
@@ -1433,6 +1447,8 @@ def client():
     port, auth = get_auth()
     mgr = BaseManager(address=('', port), authkey=auth)
     mgr.register('set_event')
+    mgr.register('get_pipe')
+    mgr.register('read_args_from_pipe')
     mgr.connect()
     return mgr
 
@@ -1459,7 +1475,15 @@ class DmenuRunner(Process):
     def __init__(self, server):
         Process.__init__(self)
         self.server = server
-        self.database = get_database()
+        self.kpo = None
+        self.config_databases = get_databases()
+        self.open_databases = {}
+
+        if ARGS.database is not None:
+            self.database, self.kpo = self._get_db_from_args(ARGS.database,
+                                                             ARGS.key_file)
+        else:
+            self.database = get_database()
         self.kpo = get_entries(self.database)
         if not self.kpo:
             self.server.kill_flag.set()
@@ -1476,9 +1500,64 @@ class DmenuRunner(Process):
         self.cache_timer.daemon = True
         self.cache_timer.start()
 
+    def _get_db_from_args(self, db_file, key_file):
+        """Opens database from cli options
+
+        Args: db_file - Path to the the database file
+              key_file - Path to the key file
+
+        Returns: ((database name, keyfile, passphrase, autotype), kpo)
+
+        """
+        expanded_db = expanduser(db_file)
+
+        if key_file is not None:
+            key_file = expanduser(key_file)
+
+        for key, value in self.open_databases.items():
+            if key[0] == expanded_db:
+                return (key[0],
+                        key_file or key[1],
+                        key[2] or get_passphrase(),
+                        key[3]), value
+
+        for database in self.config_databases:
+            if database[0] == expanded_db:
+                return (database[0],
+                        key_file or database[1],
+                        database[2] or get_passphrase(),
+                        database[3]), None
+
+        return (expanded_db,
+                key_file,
+                get_passphrase(),
+                None), None
+
     def run(self):
+        global ARGS
+
         while True:
             self.server.start_flag.wait()
+            tmp_database = (None, None, None, None)
+            if self.server.args_flag.is_set():
+                ARGS = self.server.get_args()
+                if ARGS.database is not None:
+                    tmp_database, self.kpo = self._get_db_from_args(ARGS.database,
+                                                                    ARGS.key_file)
+
+                    new_kpo = get_entries(tmp_database)
+                    if new_kpo:
+                        self.kpo = new_kpo
+                        self.open_databases[tmp_database] = new_kpo
+
+                    if ARGS.autotype is not None:
+                        self.database = (tmp_database[0],
+                                         tmp_database[1],
+                                         tmp_database[2],
+                                         ARGS.autotype)
+                    else:
+                        self.database = tmp_database
+                self.server.args_flag.clear()
             if self.server.kill_flag.is_set():
                 break
             if not self.kpo:
@@ -1489,6 +1568,8 @@ class DmenuRunner(Process):
                 self.server.kill_flag.set()
             if self.server.kill_flag.is_set():
                 break
+            if tmp_database != (None, None, None, None):
+                self.database = tmp_database
             self.server.start_flag.clear()
 
     def cache_time(self):
@@ -1496,6 +1577,7 @@ class DmenuRunner(Process):
 
         """
         self.server.cache_time_expired.set()
+        self.server.args_flag.clear()
         if not self.server.start_flag.is_set():
             self.server.kill_flag.set()
             self.server.start_flag.set()
@@ -1677,11 +1759,23 @@ class Server(Process):
         self.start_flag = Event()
         self.kill_flag = Event()
         self.cache_time_expired = Event()
+        self.args_flag = Event()
         self.start_flag.set()
+        self.args = None
+        self._parent_conn, self._child_conn = Pipe(duplex=False)
 
     def run(self):
         serv = self.server()  # pylint: disable=unused-variable
         self.kill_flag.wait()
+
+    def _get_pipe(self):
+        return self._child_conn
+
+    def get_args(self):
+        """ Reads aruments sent by the client to the server
+
+        """
+        return self._parent_conn.recv()
 
     def server(self):
         """Set up BaseManager server
@@ -1690,6 +1784,8 @@ class Server(Process):
         mgr = BaseManager(address=('127.0.0.1', self.port),
                           authkey=self.authkey)
         mgr.register('set_event', callable=self.start_flag.set)
+        mgr.register('get_pipe', callable=self._get_pipe)
+        mgr.register('read_args_from_pipe', callable=self.args_flag.set)
         mgr.start()
         return mgr
 
@@ -1722,10 +1818,29 @@ if __name__ == '__main__':
         help="Override autotype sequence in config.ini",
     )
 
+    parser.add_argument(
+        "-d",
+        "--database",
+        type=str,
+        required=False,
+        help="File path to a database to open, skipping the database selection menu",
+    )
+
+    parser.add_argument(
+        "-k",
+        "--key-file",
+        type=str,
+        required=False,
+        help="File path of the keyfile needed to open the database specified by --database/-d",
+    )
+
     ARGS = parser.parse_args()
 
     try:
         MANAGER = client()
+        conn = MANAGER.get_pipe()
+        conn.send(ARGS)
+        MANAGER.read_args_from_pipe()
         MANAGER.set_event()  # pylint: disable=no-member
     except ConnectionRefusedError:
         process_config()

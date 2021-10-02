@@ -72,6 +72,18 @@ class TestServer(unittest.TestCase):
         self.assertIsInstance(KM.client(), BaseManager)
         mgr.shutdown()
 
+    def test_pipe_from_client_to_server(self):
+        """Ensure client can send message to server via a pipe
+
+        """
+
+        server = KM.Server()
+        server.start()
+        conn = server._get_pipe()
+        conn.send('test')
+        self.assertEqual('test', server.get_args())
+        server.terminate()
+
 
 class TestFunctions(unittest.TestCase):
     """Test the various Keepass functions
@@ -166,6 +178,30 @@ class TestFunctions(unittest.TestCase):
                "-p", "Password", "-nb", "#222222", "-nf", "#222222"]
         self.assertTrue(KM.dmenu_cmd(20, "Password") == res)
 
+    def test_get_databases(self):
+        """Test reading database information from config
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        db_name_2 = os.path.join(self.tmpdir, "test2.kdbx")
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w') as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'password_1', '')
+            KM.CONF.set('database', 'password_cmd_1', 'echo password')
+
+            KM.CONF.set('database', 'database_2', db_name_2)
+            KM.CONF.set('database', 'autotype_default_2', '{TOTP}{ENTER}')
+
+            KM.CONF.write(conf_file)
+
+        databases = KM.get_databases()
+
+        self.assertEqual([
+            (db_name, None, 'password', None),
+            (db_name_2, None, None, '{TOTP}{ENTER}')
+        ], databases)
+
     def test_open_database(self):
         """Test database opens properly
 
@@ -177,7 +213,7 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
         database = KM.get_database()
-        self.assertTrue(database == (db_name, '', 'password', None))
+        self.assertTrue(database == (db_name, None, 'password', None))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
         # Switch from `password_1` to `password_cmd_1`
@@ -186,14 +222,14 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'password_cmd_1', 'echo password')
             KM.CONF.write(conf_file)
         database = KM.get_database()
-        self.assertTrue(database == (db_name, '', 'password', None))
+        self.assertTrue(database == (db_name, None, 'password', None))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'autotype_default_1', '{TOTP}{ENTER}')
             KM.CONF.write(conf_file)
         database = KM.get_database()
-        self.assertTrue(database == (db_name, '', 'password', '{TOTP}{ENTER}'))
+        self.assertTrue(database == (db_name, None, 'password', '{TOTP}{ENTER}'))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
 
