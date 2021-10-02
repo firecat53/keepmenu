@@ -138,11 +138,15 @@ Usage
 
 Options
 -------
-keepmenu [-h] [-a AUTOTYPE]
+usage: keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]
 
 --help, -h Output a usage message and exit.
 
 -a AUTOTYPE, --autotype AUTOTYPE Override autotype sequence in config.ini
+
+-d DATABASE, --database DATABASE File path to a database to open, skipping the database selection menu
+
+-k KEY_FILE, --key-file KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
 
 Tests
 -----
