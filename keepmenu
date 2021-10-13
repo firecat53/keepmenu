@@ -397,6 +397,9 @@ def get_database(open_databases=None, **kwargs):
             # Use existing keyfile if available
             if not dbs[0].kfile and dbs[0].dbase in dbs_cfg_n:
                 dbs[0].kfile = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].kfile
+            # Use existing password if available
+            if not dbs[0].kfile and dbs[0].dbase in dbs_cfg_n:
+                dbs[0].kfile = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].kfile
     elif clidb.atype:
         # If only autotype is passed, use current db
         db_ = [i for i in open_databases.values() if i.is_active is True][0]
@@ -968,7 +971,7 @@ def type_text(data):
                       "Try setting `type_library = xdotool` in config.ini")
 
 
-def view_all_entries(options, kp_entries):
+def view_all_entries(options, kp_entries, dbname):
     """Generate numbered list of all Keepass entries and open with dmenu.
 
     Returns: dmenu selection
@@ -988,7 +991,9 @@ def view_all_entries(options, kp_entries):
         entries_b = options_b + kp_entries_b
     else:
         entries_b = kp_entries_b
-    return dmenu_select(min(MAX_LEN, len(options) + len(kp_entries)), inp=entries_b)
+    return dmenu_select(min(MAX_LEN, len(options) + len(kp_entries)),
+                        inp=entries_b,
+                        prompt="Entries: {}".format(dbname))
 
 
 def select_group(kpo, prompt="Groups"):
@@ -1635,7 +1640,7 @@ class DmenuRunner(Process):
         if len(self.expiring) == 0:
             del options['Edit expiring/expired passwords (0)']
 
-        sel = view_all_entries(list(options), filtered_entries)
+        sel = view_all_entries(list(options), filtered_entries, self.database.dbase)
         if not sel:
             return
         if sel in options:
@@ -1661,7 +1666,7 @@ class DmenuRunner(Process):
             i for i in self.database.kpo.entries if not
             any(j in "/".join(i.path[:-1]) for j in hid_groups)
         ]
-        sel = view_all_entries(options, filtered_entries)
+        sel = view_all_entries(options, filtered_entries, self.database.dbase)
         try:
             entry = filtered_entries[int(sel.split('-', 1)[0])]
         except (ValueError, TypeError):
@@ -1683,7 +1688,7 @@ class DmenuRunner(Process):
 
         """
         options = []
-        sel = view_all_entries(options, entries)
+        sel = view_all_entries(options, entries, self.database.dbase)
         try:
             entry = entries[int(sel.split('-', 1)[0])]
         except (ValueError, TypeError):
