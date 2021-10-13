@@ -146,7 +146,7 @@ usage: keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]
 
 -d DATABASE, --database DATABASE File path to a database to open, skipping the database selection menu
 
--k KEY_FILE, --key-file KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
+-k KEYFILE, --keyfile KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
 
 Tests
 -----

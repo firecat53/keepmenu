@@ -197,10 +197,10 @@ class TestFunctions(unittest.TestCase):
 
         databases = KM.get_databases()
 
-        self.assertEqual([
-            (db_name, None, 'password', None),
-            (db_name_2, None, None, '{TOTP}{ENTER}')
-        ], databases)
+        db1 = KM.DataBase(dbase=db_name, pword='password')
+        db2 = KM.DataBase(dbase=db_name_2, atype='{TOTP}{ENTER}')
+        self.assertEqual(db1.__dict__, databases[0].__dict__)
+        self.assertEqual(db2.__dict__, databases[1].__dict__)
 
     def test_open_database(self):
         """Test database opens properly
@@ -212,8 +212,8 @@ class TestFunctions(unittest.TestCase):
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
-        database = KM.get_database()
-        self.assertTrue(database == (db_name, None, 'password', None))
+        database, _ = KM.get_database()
+        self.assertTrue(database == KM.DataBase(dbase=db_name, pword='password'))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
         # Switch from `password_1` to `password_cmd_1`
@@ -221,18 +221,19 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'password_1', '')
             KM.CONF.set('database', 'password_cmd_1', 'echo password')
             KM.CONF.write(conf_file)
-        database = KM.get_database()
-        self.assertTrue(database == (db_name, None, 'password', None))
+        database, _ = KM.get_database()
+        self.assertTrue(database == KM.DataBase(dbase=db_name, pword='password'))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'autotype_default_1', '{TOTP}{ENTER}')
             KM.CONF.write(conf_file)
-        database = KM.get_database()
-        self.assertTrue(database == (db_name, None, 'password', '{TOTP}{ENTER}'))
+        database, _ = KM.get_database()
+        self.assertTrue(database == KM.DataBase(dbase=db_name,
+                                                pword='password',
+                                                atype='{TOTP}{ENTER}'))
         kpo = KM.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
-
 
     def test_resolve_references(self):
         """Test keepass references can be resolved to values
@@ -244,7 +245,7 @@ class TestFunctions(unittest.TestCase):
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
-        database = KM.get_database()
+        database, _ = KM.get_database()
         kpo = KM.get_entries(database)
         ref_entry = kpo.find_entries_by_title(title='.*REF.*', regex=True)[0]
         base_entry = kpo.find_entries_by_title(title='Test Title 1')[0]
@@ -264,7 +265,7 @@ class TestFunctions(unittest.TestCase):
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
-        database = KM.get_database()
+        database, _ = KM.get_database()
         kpo = KM.get_entries(database)
         expiring_entries = KM.get_expiring_entries(kpo.entries)
         self.assertEqual(len(expiring_entries), 1)
