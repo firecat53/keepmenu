@@ -7,6 +7,7 @@ import argparse
 import base64
 import configparser
 from contextlib import closing
+from copy import deepcopy
 from datetime import datetime, timedelta
 import errno
 import functools
@@ -15,7 +16,7 @@ import locale
 from multiprocessing import Event, Process, Pipe
 from multiprocessing.managers import BaseManager
 import os
-from os.path import exists, expanduser
+from os.path import exists, expanduser, realpath
 import random
 import re
 from secrets import choice
@@ -33,7 +34,6 @@ from urllib import parse
 
 import construct
 from pynput import keyboard
-
 
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
@@ -286,23 +286,53 @@ def get_password_chars():
     return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 
+class DataBase():  # pylint: disable=too-few-public-methods
+    """Define a database class for clearer reference to variables
+
+        dbase - string, filename
+        kfile - string, filename
+        pword - string, password
+        atype - string, autotype sequence
+        kpo - PyKeePass object
+        is_active - bool, is this the currently active database
+
+    """
+    def __init__(self, dbase=None, kfile=None, pword=None, atype=None, kpo=None):
+        self.dbase = expanduser('' if dbase is None else dbase)
+        self.dbase = realpath(self.dbase) if self.dbase else ''
+        self.kfile = expanduser('' if kfile is None else kfile)
+        self.kfile = realpath(self.kfile) if self.kfile else ''
+        self.pword = pword
+        self.atype = atype
+        self.kpo = kpo
+        self.is_active = False
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 def get_databases():
     """Read databases from config
 
-    Returns: [(database name, keyfile, passphrase, autotype), ...]
+    Returns: [DataBase obj, DataBase obj2,...]
              If not specified in the config, the value will be None
              If database name is None, an error has occurred
 
     """
-    args = CONF.items('database')
-    args_dict = dict(args)
+    dargs = CONF.items('database')
+    args_dict = dict(dargs)
     dbases = [i for i in args_dict if i.startswith('database')]
     dbs = []
     for dbase in dbases:
-        dbn = expanduser(args_dict[dbase])
+        dbn = args_dict[dbase]
         idx = dbase.rsplit('_', 1)[-1]
         try:
-            keyfile = expanduser(args_dict['keyfile_{}'.format(idx)])
+            keyfile = args_dict['keyfile_{}'.format(idx)]
         except KeyError:
             keyfile = None
         try:
@@ -324,48 +354,84 @@ def get_databases():
         except KeyError:
             pass
         if dbn:
-            dbs.append((dbn, keyfile, passw, autotype))
+            dbo = DataBase(dbase=dbn, kfile=keyfile, pword=passw, atype=autotype)
+            dbs.append(dbo)
 
     return dbs
 
 
-def get_database(open_databases=()):
-    """Read databases from config or ask for user input.
+def get_database(open_databases=None, **kwargs):
+    """Read databases/keyfile/autotype from config, CLI, or ask for user input.
 
-    Args: open_databases - list [(db_name, keyfile, pw, autotype), (db_name2, kf, pw, autotype),...]
-    Returns: (database name, keyfile, passphrase, autotype)
-             Returns (None, None, None, None) on error selecting database or password
+    Args: open_databases - list [DataBase1, DataBase2,...]
+          kwargs - possibly 'database', 'keyfile'
+    Returns: DataBase obj or None on error selecting database or password
+             open_databases - list [DataBase1, DataBase2,...]
+                (open_databases is managed in get_database but stored in
+                DmenuRunner for persistence instead of using a global var)
 
     """
-    dbs = get_databases()
-
-    if not dbs:
+    dbs_cfg = get_databases()
+    dbs_cfg_n = [i.dbase for i in dbs_cfg]
+    open_databases = open_databases or {}
+    clidb = DataBase(dbase=kwargs.get('database'),
+                     kfile=kwargs.get('keyfile'),
+                     atype=kwargs.get('autotype'))
+    if not dbs_cfg and not clidb.dbase and not open_databases:
+        # First run  database opening
         res = get_initial_db()
         if res is True:
-            dbs = [get_database()]
+            db_, open_databases = get_database()
+            dbs = [db_]
         else:
-            return (None, None, None, None)
+            return None, open_databases
+    elif clidb.dbase:
+        # Prefer db and autotype passed via cli
+        db_ = [i for i in open_databases.values() if i.dbase == clidb.dbase]
+        if db_:
+            dbs = [deepcopy(db_[0])]
+            if clidb.atype:
+                dbs[0].atype = clidb.atype
+        else:
+            dbs = [deepcopy(clidb)]
+            # Use existing keyfile if available
+            if not dbs[0].kfile and dbs[0].dbase in dbs_cfg_n:
+                dbs[0].kfile = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].kfile
+    elif clidb.atype:
+        # If only autotype is passed, use current db
+        db_ = [i for i in open_databases.values() if i.is_active is True][0]
+        dbs = [deepcopy(db_)]
+        dbs[0].atype = clidb.atype
+    elif open_databases:
+        # if there are dbs already open, make a list of those + dbs from config.ini
+        dbs = [deepcopy(i) for i in open_databases.values()]
+        for db_ in dbs_cfg:
+            if db_.dbase not in open_databases:
+                dbs.append(deepcopy(db_))
+    else:
+        dbs = dbs_cfg
     if len(dbs) > 1:
-        inp_bytes = "\n".join(i[0] for i in dbs).encode(ENC)
+        inp_bytes = "\n".join(i.dbase for i in dbs).encode(ENC)
         sel = dmenu_select(len(dbs), "Select Database", inp=inp_bytes)
-        dbs = [i for i in dbs if i[0] == sel]
+        dbs = [i for i in dbs if i.dbase == sel]
         if not sel or not dbs:
-            return (None, None, None, None)
-    for dbr in open_databases:
-        # Match db name to open_databases
-        if dbr[0] == dbs[0][0]:
-            return dbr
-    if not dbs[0][-2]:
-        db_l = list(dbs[0])
-        db_l[-2] = get_passphrase()
-        if not db_l[-2]:
-            return (None, None, None, None)
-        dbs[0] = db_l
-    return tuple(dbs[0])
+            return None, open_databases
+    if not dbs[0].pword:
+        dbs[0].pword = get_passphrase()
+        if not dbs[0].pword:
+            return None, open_databases
+    for db_ in open_databases.values():
+        db_.is_active = False
+    if dbs[0].dbase not in open_databases:
+        open_databases[dbs[0].dbase] = deepcopy(dbs[0])
+    if dbs[0].dbase in dbs_cfg_n:
+        open_databases[dbs[0].dbase].atype = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].atype
+    open_databases[dbs[0].dbase].is_active = True
+    return dbs[0], open_databases
 
 
 def get_initial_db():
-    """Ask for initial database name and keyfile if not entered in config file
+    """Ask for and set initial database name and keyfile if not entered in config file
 
     """
     db_name = dmenu_select(0, "Enter path to existing "
@@ -385,26 +451,25 @@ def get_initial_db():
 def get_entries(dbo):
     """Open keepass database and return the PyKeePass object
 
-        Args: dbo: tuple (db path, keyfile path, password)
-        Returns: PyKeePass object
+        Args: dbo: DataBase object
+        Returns: PyKeePass object or None
 
     """
     from pykeepass import PyKeePass
-    dbf, keyfile, password, _ = dbo
-    if dbf is None:
+    if dbo.dbase is None:
         return None
     try:
-        kpo = PyKeePass(dbf, password, keyfile=keyfile)
+        kpo = PyKeePass(dbo.dbase, dbo.pword, keyfile=dbo.kfile)
     except (FileNotFoundError, construct.core.ChecksumError) as err:
         if str(err.args[0]).startswith("wrong checksum"):
             dmenu_err("Invalid Password or keyfile")
             return None
         try:
             if err.errno == errno.ENOENT:
-                if not os.path.isfile(dbf):
-                    dmenu_err("Database does not exist. Edit ~/.config/keepmenu/config.ini")
-                elif not os.path.isfile(keyfile):
-                    dmenu_err("Keyfile does not exist. Edit ~/.config/keepmenu/config.ini")
+                if not os.path.isfile(dbo.dbase):
+                    dmenu_err("Database does not exist. Check path and filename.")
+                elif not os.path.isfile(dbo.kfile):
+                    dmenu_err("Keyfile does not exist. Check path and filename.")
         except AttributeError:
             pass
         return None
@@ -521,8 +586,6 @@ def type_entry(entry, db_autotype=None):
             entry.autotype_sequence is not None and \
             entry.autotype_sequence != 'None':
         sequence = entry.autotype_sequence
-    if ARGS.autotype is not None:
-        sequence = ARGS.autotype
     tokens = tokenize_autotype(sequence)
 
     library = 'pynput'
@@ -1472,24 +1535,16 @@ class DmenuRunner(Process):
           kpo - Keepass object
     """
 
-    def __init__(self, server):
+    def __init__(self, server, **kwargs):
         Process.__init__(self)
         self.server = server
-        self.kpo = None
-        self.config_databases = get_databases()
-        self.open_databases = {}
-
-        if ARGS.database is not None:
-            self.database, self.kpo = self._get_db_from_args(ARGS.database,
-                                                             ARGS.key_file)
-        else:
-            self.database = get_database()
-        self.kpo = get_entries(self.database)
-        if not self.kpo:
+        self.database, self.open_databases = get_database(**kwargs)
+        if self.database:
+            self.database.kpo = get_entries(self.database)
+        if not self.database or not self.database.kpo:
             self.server.kill_flag.set()
             sys.exit()
-        self.expiring = get_expiring_entries(self.kpo.entries)
-        self.open_databases = {self.database: self.kpo}
+        self.expiring = get_expiring_entries(self.database.kpo.entries)
         self.prev_entry = None
 
     def _set_timer(self):
@@ -1500,76 +1555,23 @@ class DmenuRunner(Process):
         self.cache_timer.daemon = True
         self.cache_timer.start()
 
-    def _get_db_from_args(self, db_file, key_file):
-        """Opens database from cli options
-
-        Args: db_file - Path to the the database file
-              key_file - Path to the key file
-
-        Returns: ((database name, keyfile, passphrase, autotype), kpo)
-
-        """
-        expanded_db = expanduser(db_file)
-
-        if key_file is not None:
-            key_file = expanduser(key_file)
-
-        for key, value in self.open_databases.items():
-            if key[0] == expanded_db:
-                return (key[0],
-                        key_file or key[1],
-                        key[2] or get_passphrase(),
-                        key[3]), value
-
-        for database in self.config_databases:
-            if database[0] == expanded_db:
-                return (database[0],
-                        key_file or database[1],
-                        database[2] or get_passphrase(),
-                        database[3]), None
-
-        return (expanded_db,
-                key_file,
-                get_passphrase(),
-                None), None
-
     def run(self):
-        global ARGS
-
         while True:
             self.server.start_flag.wait()
-            tmp_database = (None, None, None, None)
-            if self.server.args_flag.is_set():
-                ARGS = self.server.get_args()
-                if ARGS.database is not None:
-                    tmp_database, self.kpo = self._get_db_from_args(ARGS.database,
-                                                                    ARGS.key_file)
-
-                    new_kpo = get_entries(tmp_database)
-                    if new_kpo:
-                        self.kpo = new_kpo
-                        self.open_databases[tmp_database] = new_kpo
-
-                    if ARGS.autotype is not None:
-                        self.database = (tmp_database[0],
-                                         tmp_database[1],
-                                         tmp_database[2],
-                                         ARGS.autotype)
-                    else:
-                        self.database = tmp_database
-                self.server.args_flag.clear()
             if self.server.kill_flag.is_set():
                 break
-            if not self.kpo:
+            if not self.database or not self.database.kpo:
                 pass
+            elif self.server.args_flag.is_set():
+                dargs = self.server.get_args()
+                self.menu_open_another_database(**dargs)
+                self.server.args_flag.clear()
             else:
                 self.dmenu_run()
             if self.server.cache_time_expired.is_set():
                 self.server.kill_flag.set()
             if self.server.kill_flag.is_set():
                 break
-            if tmp_database != (None, None, None, None):
-                self.database = tmp_database
             self.server.start_flag.clear()
 
     def cache_time(self):
@@ -1588,13 +1590,13 @@ class DmenuRunner(Process):
         If 'hide_groups' is defined in config.ini, hide those from main and
         view/type all views.
 
-        Args: self.kpo - Keepass object
+        Args: self.database.kpo - Keepass object
 
         Note: I had to reload the kpo object after every save to prevent being
         affected by the gibberish password bug in pykeepass:
         https://github.com/pschmitt/pykeepass/issues/43
 
-        Once this is fixed, the extra calls to self.kpo = get_entries... can be
+        Once this is fixed, the extra calls to self.database.kpo = get_entries... can be
         deleted
 
         """
@@ -1607,12 +1609,12 @@ class DmenuRunner(Process):
             hid_groups = CONF.get("database", "hide_groups").split("\n")
             # Validate ignored group names in config.ini
             hid_groups = [i for i in hid_groups if i in
-                          [j.name for j in self.kpo.groups]]
+                          [j.name for j in self.database.kpo.groups]]
         else:
             hid_groups = []
 
         filtered_entries = [
-            i for i in self.kpo.entries if not
+            i for i in self.database.kpo.entries if not
             any(j in "/".join(i.path[:-1]) for j in hid_groups)
         ]
         options = {
@@ -1621,7 +1623,7 @@ class DmenuRunner(Process):
             'View previous entry': self.menu_view_previous_entry,
             'Edit expiring/expired passwords ({})'.format(len(self.expiring)):
                 functools.partial(self.menu_edit_entries, self.expiring),
-            'Edit entries': functools.partial(self.menu_edit_entries, self.kpo.entries),
+            'Edit entries': functools.partial(self.menu_edit_entries, self.database.kpo.entries),
             'Add entry': self.menu_add_entry,
             'Manage groups': self.menu_manage_groups,
             'Reload database': self.menu_reload_database,
@@ -1644,8 +1646,11 @@ class DmenuRunner(Process):
                 entry = filtered_entries[int(sel.split('-', 1)[0])]
             except (ValueError, TypeError):
                 return
-            type_entry(entry, self.database[3])
+            type_entry(entry, self.database.atype)
             self.prev_entry = entry
+        # Reset database autotype in between runs
+        cur_db = [i for i in self.open_databases.values() if i.is_active is True][0]
+        self.database.atype = cur_db.atype
 
     def menu_view_type_individual_entries(self, hid_groups):
         """Process menu entry - View/Type individual entries
@@ -1653,7 +1658,7 @@ class DmenuRunner(Process):
         """
         options = []
         filtered_entries = [
-            i for i in self.kpo.entries if not
+            i for i in self.database.kpo.entries if not
             any(j in "/".join(i.path[:-1]) for j in hid_groups)
         ]
         sel = view_all_entries(options, filtered_entries)
@@ -1685,58 +1690,57 @@ class DmenuRunner(Process):
             return
         edit = True
         while edit is True:
-            edit = edit_entry(self.kpo, entry)
-        self.kpo.save()
-        self.kpo = get_entries(self.database)
+            edit = edit_entry(self.database.kpo, entry)
+        self.database.kpo.save()
+        self.database.kpo = get_entries(self.database)
         self.prev_entry = entry
 
     def menu_add_entry(self):
         """Process menu entry - Add entry
 
         """
-        entry = add_entry(self.kpo)
+        entry = add_entry(self.database.kpo)
         if entry:
-            self.kpo.save()
-            self.kpo = get_entries(self.database)
+            self.database.kpo.save()
+            self.database.kpo = get_entries(self.database)
             self.prev_entry = entry
 
     def menu_manage_groups(self):
         """Process menu entry - manage groups
 
         """
-        group = manage_groups(self.kpo)
+        group = manage_groups(self.database.kpo)
         if group:
-            self.kpo.save()
-            self.kpo = get_entries(self.database)
+            self.database.kpo.save()
+            self.database.kpo = get_entries(self.database)
 
     def menu_reload_database(self):
         """Process menu entry - Reload database
 
         """
-        self.kpo = get_entries(self.database)
-        if not self.kpo:
+        self.database.kpo = get_entries(self.database)
+        if not self.database.kpo:
             return
-        self.expiring = get_expiring_entries(self.kpo.entries)
+        self.expiring = get_expiring_entries(self.database.kpo.entries)
         self.dmenu_run()
 
-    def menu_open_another_database(self):
+    def menu_open_another_database(self, **kwargs):
         """Process menu entry - Open different database
 
+        Args: kwargs - possibly 'database', 'keyfile', 'autotype'
+
         """
-        new_db = get_database(self.open_databases.keys())
-        if new_db[0] is None or new_db[0] == self.database[0]:
-            self.dmenu_run()
+        prev_db, prev_open = self.database, deepcopy(self.open_databases)
+        self.database, self.open_databases = get_database(self.open_databases, **kwargs)
+        if self.database is None:
+            self.database, self.open_databases = prev_db, prev_open
             return
-        if new_db in self.open_databases:
-            self.kpo = self.open_databases[new_db]
-            self.database = new_db
-        else:
-            new_kpo = get_entries(new_db)
-            if new_kpo:
-                self.kpo = new_kpo
-                self.database = new_db
-                self.open_databases[new_db] = new_kpo
-        self.expiring = get_expiring_entries(self.kpo.entries)
+        if not self.database.kpo:
+            self.database.kpo = get_entries(self.database)
+            if self.database.kpo is None:
+                self.database, self.open_databases = prev_db, prev_open
+                return
+        self.expiring = get_expiring_entries(self.database.kpo.entries)
         self.dmenu_run()
 
     def menu_kill_daemon(self):
@@ -1765,7 +1769,7 @@ class Server(Process):
         self._parent_conn, self._child_conn = Pipe(duplex=False)
 
     def run(self):
-        serv = self.server()  # pylint: disable=unused-variable
+        _ = self.server()
         self.kill_flag.wait()
 
     def _get_pipe(self):
@@ -1790,12 +1794,12 @@ class Server(Process):
         return mgr
 
 
-def run():
+def run(**kwargs):
     """Main entrypoint. Start the background Manager and Dmenu runner processes.
 
     """
     server = Server()
-    dmenu = DmenuRunner(server)
+    dmenu = DmenuRunner(server, **kwargs)
     dmenu.daemon = True
     server.start()
     dmenu.start()
@@ -1805,8 +1809,6 @@ def run():
 
 
 if __name__ == '__main__':
-    global ARGS
-
     parser = argparse.ArgumentParser(
         description="Dmenu/Rofi frontend for Keepass databases")
 
@@ -1828,22 +1830,24 @@ if __name__ == '__main__':
 
     parser.add_argument(
         "-k",
-        "--key-file",
+        "--keyfile",
         type=str,
         required=False,
         help="File path of the keyfile needed to open the database specified by --database/-d",
     )
 
-    ARGS = parser.parse_args()
+    args = vars(parser.parse_args())
+    args = args if any(args.values()) else {}
 
     try:
         MANAGER = client()
-        conn = MANAGER.get_pipe()
-        conn.send(ARGS)
-        MANAGER.read_args_from_pipe()
+        conn = MANAGER.get_pipe()  # pylint: disable=no-member
+        if args:
+            conn.send(args)
+            MANAGER.read_args_from_pipe()  # pylint: disable=no-member
         MANAGER.set_event()  # pylint: disable=no-member
     except ConnectionRefusedError:
         process_config()
-        run()
+        run(**args)
 
 # vim: set et ts=4 sw=4 :
