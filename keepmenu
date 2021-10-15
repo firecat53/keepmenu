@@ -35,6 +35,15 @@ from urllib import parse
 import construct
 from pynput import keyboard
 
+# Setup logging for debugging. Usage: logger.info(...)
+# import logging
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.INFO)
+# file_handler = logging.FileHandler('keepmenu.log', mode='w')
+# formatter = logging.Formatter('%(message)s')
+# file_handler.setFormatter(formatter)
+# logger.addHandler(file_handler)
+
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
 SERCRET_VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
