@@ -10,7 +10,10 @@ setup(name="keepmenu",
       author_email="firecat4153@gmail.com",
       url="https://github.com/firecat53/keepmenu",
       download_url="https://github.com/firecat53/keepmenu/tarball/1.0.0",
-      scripts=['keepmenu'],
+      packages=['keepmenu'],
+      entry_points={
+          'console_scripts': ['keepmenu=keepmenu.__main__:main']
+      },
       data_files=[('share/doc/keepmenu', ['README.rst', 'LICENSE',
                                           'config.ini.example']),
                   ('share/man/man1', ['keepmenu.1'])],

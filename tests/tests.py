@@ -1,7 +1,6 @@
 """Unit tests for keepmenu
 
 """
-import importlib
 from multiprocessing.managers import BaseManager
 import os
 from shutil import copyfile, rmtree
@@ -13,7 +12,8 @@ import unittest
 from unittest import mock
 from pykeepass import PyKeePass
 
-KM = importlib.machinery.SourceFileLoader('*', 'keepmenu').load_module()
+import keepmenu as KM
+from keepmenu import __main__
 
 SECRET1 = 'ZYTYYE5FOAGW5ML7LRWUL4WTZLNJAMZS'
 SECRET2 = 'PW4YAYYZVDE5RK2AOLKUATNZIKAFQLZO'
@@ -35,13 +35,13 @@ class TestServer(unittest.TestCase):
         time returns those same values from the cache file
 
         """
-        port, key = KM.get_auth()
+        port, key = KM.__main__.get_auth()
         self.assertIsInstance(port, int)
         if sys.version_info.major < 3:
             self.assertIsInstance(key, str)
         else:
             self.assertIsInstance(key, bytes)
-        port2, key2 = KM.get_auth()
+        port2, key2 = KM.__main__.get_auth()
         self.assertEqual(port2, port)
         self.assertEqual(key2, key)
 
@@ -49,13 +49,13 @@ class TestServer(unittest.TestCase):
         """Ensure client raises an error with no server running
 
         """
-        self.assertRaises(socket.error, KM.client)
+        self.assertRaises(socket.error, KM.__main__.client)
 
     def test_server(self):
         """Ensure BaseManager server starts
 
         """
-        server = KM.Server()
+        server = KM.__main__.Server()
         server.start()
         self.assertTrue(server.is_alive())
         server.terminate()
@@ -65,11 +65,11 @@ class TestServer(unittest.TestCase):
         instance
 
         """
-        port, key = KM.get_auth()
+        port, key = KM.__main__.get_auth()
         mgr = BaseManager(address=('127.0.0.1', port), authkey=key)
         mgr.get_server()
         mgr.start()
-        self.assertIsInstance(KM.client(), BaseManager)
+        self.assertIsInstance(KM.__main__.client(), BaseManager)
         mgr.shutdown()
 
     def test_pipe_from_client_to_server(self):
@@ -77,7 +77,7 @@ class TestServer(unittest.TestCase):
 
         """
 
-        server = KM.Server()
+        server = KM.__main__.Server()
         server.start()
         conn = server._get_pipe()
         conn.send('test')
@@ -101,7 +101,7 @@ class TestFunctions(unittest.TestCase):
 
         """
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
-        KM.process_config()
+        KM.reload_config()
         self.assertTrue(KM.CONF.has_section("password_chars"))
         self.assertTrue(KM.CONF.has_option("password_chars", "punc min") and
                         KM.CONF.get("password_chars", "punc min") == "!@#$%")
@@ -119,8 +119,8 @@ class TestFunctions(unittest.TestCase):
                  'Min Punc': {'min punc': '!@#$%',
                               'digits': string.digits,
                               'upper': 'ABCDE'}}
-        self.assertFalse(KM.gen_passwd({}))
-        pword = KM.gen_passwd(chars, 10)
+        self.assertFalse(KM.edit.gen_passwd({}))
+        pword = KM.edit.gen_passwd(chars, 10)
         self.assertEqual(len(pword), 10)
         pword = set(pword)
         self.assertFalse(pword.isdisjoint(set('ABCDE')))
@@ -129,13 +129,13 @@ class TestFunctions(unittest.TestCase):
         self.assertFalse(pword.isdisjoint(set(string.ascii_uppercase)))
         self.assertFalse(pword.isdisjoint(set('!@#$%')))
         self.assertTrue(pword.isdisjoint(set('   ')))
-        pword = KM.gen_passwd(chars, 3)
-        pword = KM.gen_passwd(chars, 5)
+        pword = KM.edit.gen_passwd(chars, 3)
+        pword = KM.edit.gen_passwd(chars, 5)
         self.assertEqual(len(pword), 5)
         chars = {'Min Punc': {'min punc': '!@#$%',
                               'digits': string.digits,
                               'upper': 'ABCDE'}}
-        pword = KM.gen_passwd(chars, 50)
+        pword = KM.edit.gen_passwd(chars, 50)
         self.assertEqual(len(pword), 50)
         pword = set(pword)
         self.assertFalse(pword.isdisjoint(set('ABCDE')))
@@ -148,7 +148,7 @@ class TestFunctions(unittest.TestCase):
         """Test generating config file when none exists
 
         """
-        KM.process_config()
+        KM.reload_config()
         self.assertTrue(KM.CONF.has_section("dmenu"))
         self.assertTrue(KM.CONF.has_section("dmenu_passphrase"))
         self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "obscure_color") and
@@ -156,8 +156,10 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "obscure") and
                         KM.CONF.get("dmenu_passphrase", "obscure") == "True")
         self.assertTrue(KM.CONF.has_section("database"))
-        self.assertTrue(KM.CONF.has_option("database", "database_1"))
-        self.assertTrue(KM.CONF.has_option("database", "keyfile_1"))
+        self.assertTrue(KM.CONF.has_option("database", "database_1") and
+                        KM.CONF.get("database", "database_1") == '')
+        self.assertTrue(KM.CONF.has_option("database", "keyfile_1") and
+                        KM.CONF.get("database", "keyfile_1") == '')
         self.assertTrue(KM.CONF.has_option("database", "pw_cache_period_min") and
                         KM.CONF.get("database", "pw_cache_period_min") ==
                         str(KM.CACHE_PERIOD_DEFAULT_MIN))
@@ -167,16 +169,15 @@ class TestFunctions(unittest.TestCase):
 
         """
         # First test default config
-        KM.process_config()
-        self.assertTrue(KM.dmenu_cmd(10, "Entries") ==
+        self.assertTrue(KM.menu.dmenu_cmd(10, "Entries") ==
                         ["dmenu", "-p", "Entries"])
         # Test full config
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
-        KM.process_config()
+        KM.reload_config()
         res = ["/usr/bin/dmenu", "-i", "-l", "10", "-fn", "Inconsolata-12",
                "-nb", "#909090", "-nf", "#999999", "-b",
                "-p", "Password", "-nb", "#222222", "-nf", "#222222"]
-        self.assertTrue(KM.dmenu_cmd(20, "Password") == res)
+        self.assertTrue(KM.menu.dmenu_cmd(20, "Password") == res)
 
     def test_get_databases(self):
         """Test reading database information from config
@@ -195,10 +196,10 @@ class TestFunctions(unittest.TestCase):
 
             KM.CONF.write(conf_file)
 
-        databases = KM.get_databases()
+        databases = KM.keepmenu.get_databases()
 
-        db1 = KM.DataBase(dbase=db_name, pword='password')
-        db2 = KM.DataBase(dbase=db_name_2, atype='{TOTP}{ENTER}')
+        db1 = KM.keepmenu.DataBase(dbase=db_name, pword='password')
+        db2 = KM.keepmenu.DataBase(dbase=db_name_2, atype='{TOTP}{ENTER}')
         self.assertEqual(db1.__dict__, databases[0].__dict__)
         self.assertEqual(db2.__dict__, databases[1].__dict__)
 
@@ -212,27 +213,27 @@ class TestFunctions(unittest.TestCase):
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
-        database, _ = KM.get_database()
-        self.assertTrue(database == KM.DataBase(dbase=db_name, pword='password'))
-        kpo = KM.get_entries(database)
+        database, _ = KM.keepmenu.get_database()
+        self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name, pword='password'))
+        kpo = KM.keepmenu.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
         # Switch from `password_1` to `password_cmd_1`
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'password_1', '')
             KM.CONF.set('database', 'password_cmd_1', 'echo password')
             KM.CONF.write(conf_file)
-        database, _ = KM.get_database()
-        self.assertTrue(database == KM.DataBase(dbase=db_name, pword='password'))
-        kpo = KM.get_entries(database)
+        database, _ = KM.keepmenu.get_database()
+        self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name, pword='password'))
+        kpo = KM.keepmenu.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'autotype_default_1', '{TOTP}{ENTER}')
             KM.CONF.write(conf_file)
-        database, _ = KM.get_database()
-        self.assertTrue(database == KM.DataBase(dbase=db_name,
-                                                pword='password',
-                                                atype='{TOTP}{ENTER}'))
-        kpo = KM.get_entries(database)
+        database, _ = KM.keepmenu.get_database()
+        self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name,
+                                                         pword='password',
+                                                         atype='{TOTP}{ENTER}'))
+        kpo = KM.keepmenu.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
 
     def test_resolve_references(self):
@@ -245,8 +246,8 @@ class TestFunctions(unittest.TestCase):
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
-        database, _ = KM.get_database()
-        kpo = KM.get_entries(database)
+        database, _ = KM.keepmenu.get_database()
+        kpo = KM.keepmenu.get_entries(database)
         ref_entry = kpo.find_entries_by_title(title='.*REF.*', regex=True)[0]
         base_entry = kpo.find_entries_by_title(title='Test Title 1')[0]
         self.assertEqual(ref_entry.deref("title"), "Reference Entry Test - " + base_entry.title)
@@ -265,20 +266,20 @@ class TestFunctions(unittest.TestCase):
         with open(KM.CONF_FILE, 'w') as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
-        database, _ = KM.get_database()
-        kpo = KM.get_entries(database)
-        expiring_entries = KM.get_expiring_entries(kpo.entries)
+        database, _ = KM.keepmenu.get_database()
+        kpo = KM.keepmenu.get_entries(database)
+        expiring_entries = KM.keepmenu.get_expiring_entries(kpo.entries)
         self.assertEqual(len(expiring_entries), 1)
 
     def test_tokenize_autotype(self):
         """Test tokenizing autotype strings
         """
-        tokens = [t for t in KM.tokenize_autotype("blah{SOMETHING}")]
+        tokens = [t for t in KM.type.tokenize_autotype("blah{SOMETHING}")]
         self.assertEqual(len(tokens), 2)
         self.assertEqual(tokens[0], ("blah", False))
         self.assertEqual(tokens[1], ("{SOMETHING}", True))
 
-        tokens = [t for t in KM.tokenize_autotype("/abc{USERNAME}{ENTER}{TAB}{TAB} {SOMETHING}")]
+        tokens = [t for t in KM.type.tokenize_autotype("/abc{USERNAME}{ENTER}{TAB}{TAB} {SOMETHING}")]
         self.assertEqual(len(tokens), 7)
         self.assertEqual(tokens[0], ("/abc", False))
         self.assertEqual(tokens[1], ("{USERNAME}", True))
@@ -286,7 +287,7 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(tokens[5], (" ", False))
         self.assertEqual(tokens[6], ("{SOMETHING}", True))
 
-        tokens = [t for t in KM.tokenize_autotype("?{}}blah{{}{}}")]
+        tokens = [t for t in KM.type.tokenize_autotype("?{}}blah{{}{}}")]
         self.assertEqual(len(tokens), 5)
         self.assertEqual(tokens[0], ("?", False))
         self.assertEqual(tokens[1], ("{}}", True))
@@ -294,13 +295,13 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(tokens[3], ("{{}", True))
         self.assertEqual(tokens[4], ("{}}", True))
 
-        tokens = [t for t in KM.tokenize_autotype("{DELAY 5}b{DELAY=50}")]
+        tokens = [t for t in KM.type.tokenize_autotype("{DELAY 5}b{DELAY=50}")]
         self.assertEqual(len(tokens), 3)
         self.assertEqual(tokens[0], ("{DELAY 5}", True))
         self.assertEqual(tokens[1], ("b", False))
         self.assertEqual(tokens[2], ("{DELAY=50}", True))
 
-        tokens = [t for t in KM.tokenize_autotype("+{DELAY 5}plus^carat~@{}}")]
+        tokens = [t for t in KM.type.tokenize_autotype("+{DELAY 5}plus^carat~@{}}")]
         self.assertEqual(len(tokens), 8)
         self.assertEqual(tokens[0], ("+", True))
         self.assertEqual(tokens[1], ("{DELAY 5}", True))
@@ -312,71 +313,71 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(tokens[7], ("{}}", True))
 
     def test_token_command(self):
-        self.assertTrue(callable(KM.token_command('{DELAY 5}')))
-        self.assertFalse(callable(KM.token_command('{DELAY 5 }')))
-        self.assertFalse(callable(KM.token_command('{DELAY 5')))
-        self.assertFalse(callable(KM.token_command('{DELAY a }')))
-        self.assertFalse(callable(KM.token_command('{DELAY }')))
-        self.assertFalse(callable(KM.token_command('{DELAY}')))
-        self.assertFalse(callable(KM.token_command('DELAY 5}')))
-        self.assertFalse(callable(KM.token_command('{DELAY a}')))
+        self.assertTrue(callable(KM.type.token_command('{DELAY 5}')))
+        self.assertFalse(callable(KM.type.token_command('{DELAY 5 }')))
+        self.assertFalse(callable(KM.type.token_command('{DELAY 5')))
+        self.assertFalse(callable(KM.type.token_command('{DELAY a }')))
+        self.assertFalse(callable(KM.type.token_command('{DELAY }')))
+        self.assertFalse(callable(KM.type.token_command('{DELAY}')))
+        self.assertFalse(callable(KM.type.token_command('DELAY 5}')))
+        self.assertFalse(callable(KM.type.token_command('{DELAY a}')))
 
     def test_hotp(self):
         # adapted from https://github.com/susam/mintotp/blob/master/test.py
-        self.assertEqual(KM.hotp(SECRET1, 0), '549419')
-        self.assertEqual(KM.hotp(SECRET2, 0), '009551')
-        self.assertEqual(KM.hotp(SECRET1, 0, 5, 'sha1', True), '9XFQT')
-        self.assertEqual(KM.hotp(SECRET2, 0, 5, 'sha1', True), 'QR5CX')
-        self.assertEqual(KM.hotp(SECRET1, 42), '626854')
-        self.assertEqual(KM.hotp(SECRET2, 42), '093610')
-        self.assertEqual(KM.hotp(SECRET1, 42, 5, 'sha1', True), '25256')
-        self.assertEqual(KM.hotp(SECRET2, 42, 5, 'sha1', True), 'RHH8D')
+        self.assertEqual(KM.totp.hotp(SECRET1, 0), '549419')
+        self.assertEqual(KM.totp.hotp(SECRET2, 0), '009551')
+        self.assertEqual(KM.totp.hotp(SECRET1, 0, 5, 'sha1', True), '9XFQT')
+        self.assertEqual(KM.totp.hotp(SECRET2, 0, 5, 'sha1', True), 'QR5CX')
+        self.assertEqual(KM.totp.hotp(SECRET1, 42), '626854')
+        self.assertEqual(KM.totp.hotp(SECRET2, 42), '093610')
+        self.assertEqual(KM.totp.hotp(SECRET1, 42, 5, 'sha1', True), '25256')
+        self.assertEqual(KM.totp.hotp(SECRET2, 42, 5, 'sha1', True), 'RHH8D')
 
     def test_totp(self):
         # adapted from https://github.com/susam/mintotp/blob/master/test.py
         with mock.patch('time.time', return_value=0):
-            self.assertEqual(KM.totp(SECRET1), '549419')
-            self.assertEqual(KM.totp(SECRET2), '009551')
-            self.assertEqual(KM.totp(SECRET1, 30, 5, 'sha1', True), '9XFQT')
-            self.assertEqual(KM.totp(SECRET2, 30, 5, 'sha1', True), 'QR5CX')
+            self.assertEqual(KM.totp.totp(SECRET1), '549419')
+            self.assertEqual(KM.totp.totp(SECRET2), '009551')
+            self.assertEqual(KM.totp.totp(SECRET1, 30, 5, 'sha1', True), '9XFQT')
+            self.assertEqual(KM.totp.totp(SECRET2, 30, 5, 'sha1', True), 'QR5CX')
         with mock.patch('time.time', return_value=10):
-            self.assertEqual(KM.totp(SECRET1), '549419')
-            self.assertEqual(KM.totp(SECRET2), '009551')
-            self.assertEqual(KM.totp(SECRET1, 30, 5, 'sha1', True), '9XFQT')
-            self.assertEqual(KM.totp(SECRET2, 30, 5, 'sha1', True), 'QR5CX')
+            self.assertEqual(KM.totp.totp(SECRET1), '549419')
+            self.assertEqual(KM.totp.totp(SECRET2), '009551')
+            self.assertEqual(KM.totp.totp(SECRET1, 30, 5, 'sha1', True), '9XFQT')
+            self.assertEqual(KM.totp.totp(SECRET2, 30, 5, 'sha1', True), 'QR5CX')
         with mock.patch('time.time', return_value=1260):
-            self.assertEqual(KM.totp(SECRET1), '626854')
-            self.assertEqual(KM.totp(SECRET2), '093610')
-            self.assertEqual(KM.totp(SECRET1, 30, 5, 'sha1', True), '25256')
-            self.assertEqual(KM.totp(SECRET2, 30, 5, 'sha1', True), 'RHH8D')
+            self.assertEqual(KM.totp.totp(SECRET1), '626854')
+            self.assertEqual(KM.totp.totp(SECRET2), '093610')
+            self.assertEqual(KM.totp.totp(SECRET1, 30, 5, 'sha1', True), '25256')
+            self.assertEqual(KM.totp.totp(SECRET2, 30, 5, 'sha1', True), 'RHH8D')
         with mock.patch('time.time', return_value=1270):
-            self.assertEqual(KM.totp(SECRET1), '626854')
-            self.assertEqual(KM.totp(SECRET2), '093610')
-            self.assertEqual(KM.totp(SECRET1, 30, 5, 'sha1', True), '25256')
-            self.assertEqual(KM.totp(SECRET2, 30, 5, 'sha1', True), 'RHH8D')
+            self.assertEqual(KM.totp.totp(SECRET1), '626854')
+            self.assertEqual(KM.totp.totp(SECRET2), '093610')
+            self.assertEqual(KM.totp.totp(SECRET1, 30, 5, 'sha1', True), '25256')
+            self.assertEqual(KM.totp.totp(SECRET2, 30, 5, 'sha1', True), 'RHH8D')
 
     def test_gen_otp(self):
         otp_url = "otpauth://totp/{name}:none?secret={secret}&period={period}&digits={digits}"
         with mock.patch('time.time', return_value=0):
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="test",
                 secret=SECRET1,
                 period=30,
                 digits=6
             )), '549419')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="test",
                 secret=SECRET2,
                 period=30,
                 digits=6
             )), '009551')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="Steam",
                 secret=SECRET1,
                 period=30,
                 digits=5
             ) + "&encoder=steam"), '9XFQT')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="Steam",
                 secret=SECRET2,
                 period=30,
@@ -384,25 +385,25 @@ class TestFunctions(unittest.TestCase):
             ) + "&encoder=steam"), 'QR5CX')
 
         with mock.patch('time.time', return_value=1260):
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="test",
                 secret=SECRET1,
                 period=30,
                 digits=6
             )), '626854')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="test",
                 secret=SECRET2,
                 period=30,
                 digits=6
             )), '093610')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="Steam",
                 secret=SECRET1,
                 period=30,
                 digits=5
             ) + "&encoder=steam"), '25256')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="Steam",
                 secret=SECRET2,
                 period=30,
@@ -410,25 +411,25 @@ class TestFunctions(unittest.TestCase):
             ) + "&encoder=steam"), 'RHH8D')
 
         with mock.patch('time.time', return_value=1270):
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="test",
                 secret=SECRET1,
                 period=30,
                 digits=6
             )), '626854')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="test",
                 secret=SECRET2,
                 period=30,
                 digits=6
             )), '093610')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="Steam",
                 secret=SECRET1,
                 period=30,
                 digits=5
             ) + "&encoder=steam"), '25256')
-            self.assertEqual(KM.gen_otp(otp_url.format(
+            self.assertEqual(KM.totp.gen_otp(otp_url.format(
                 name="Steam",
                 secret=SECRET2,
                 period=30,
