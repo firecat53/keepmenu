@@ -1,23 +1,18 @@
-Keepmenu
-========
+# Keepmenu
 
-.. Warning:: Keepmenu now depends on pykeepass>=4.0.0. It will break if you are
-   using a current distribution-packaged pykeepass. The easiest way to update
-   pykeepass is:
+Fully featured Dmenu/[Rofi][2] frontend for managing Keepass databases.
 
-            pip install --user -U pykeepass
-
-Fully featured Dmenu/Rofi frontend for managing Keepass databases.
-
-Inspired in part by Passhole_, but I wanted something more dmenu and less
+Inspired in part by [Passhole][3], but I wanted something more dmenu and less
 command line focused.
 
-I'm very aware of pass and passmenu, but I've found that the Keepass options for
-other platforms are much easier to use, especially for the non-technically
-oriented. Thus...synchronized passwords and everyone is happy!
+## Quick Install
 
-Features
---------
+`pip install --user keepmenu`
+
+Ensure `~/.local/bin` is in your `$PATH`. Run `keepmenu` and enter your database
+path, keyfile path, and password.
+
+## Features
 
 - *NOTE* Only support .kdbx databases, not .kdb
 - Auto-type username and/or password on selection. No clipboard copy/paste
@@ -48,21 +43,19 @@ Features
   Multiple character sets can be selected on the fly when using Rofi if the
   `-multi-select` option is passed via `dmenu_command`.
 - Optional Pinentry support for secure passphrase entry.
-- `Keepass field references`_ are supported.
+- [Keepass field references][4] are supported.
 - Supports displaying of expiring/expired passwords and shows the expiry time where set
 - Add, edit and type TOTP codes. RFC 6238, Steam and custom settings are supported.
 
-License
--------
+## License
 
 - GPLv3
 
-Requirements
-------------
+## Requirements
 
 1. Python 3.6+.
-2. Pykeepass_ >= 4.0.0 and pynput_. Install via pip or your distribution's package
-   manager, if available.
+2. [Pykeepass][1] >= 4.0.0 and [pynput][5]. Install via pip or your
+   distribution's package manager, if available.
 3. Dmenu or Rofi. Rofi configuration/theming should be done via Rofi themes.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
    in the config file.
@@ -70,20 +63,24 @@ Requirements
    characters or use a non-U.S.  English keyboard layout, xdotool is necessary
    to handle typing those characters.
 
-Installation
-------------
+## Installation
 
 - Installation
 
   + `pip install --user keepmenu`. Add ~/.local/bin to $PATH
   + In a virtualenv with pip. Link to the executable in
-    <path/to/virtualenv/bin/keepmenu> ::
+    <path/to/virtualenv/bin/keepmenu>
 
         mkvirtualenv keepmenu
         pip install keepmenu
 
-  + From git. Just clone, install requirements and run
-  + Available in `Archlinux AUR`_.
+  + From git.
+  
+        git clone https://github.com/firecat53/keepmenu
+        cd keepmenu
+        pip install --user .
+
+  + Available in [Archlinux AUR][6].
 
 - If you start keepmenu for the first time without a config file, it will prompt
   you for database and keyfile locations and save them in a default config file.
@@ -97,7 +94,7 @@ Installation
   + Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
   + Set the dmenu_command to `rofi` if you are using that instead
   + Adjust the autotype_default, if desired. Allowed codes are the
-    `Keepass 2.x codes`_ except for repetitions and most command codes. `{DELAY
+    [Keepass 2.x codes][7] except for repetitions and most command codes. `{DELAY
     x}` (in milliseconds) is supported.
     Individual autotype sequences can be edited or disabled inside Keepmenu.
   + Set `type_library = xdotool` or `type_library = ydotool` (Wayland) if you
@@ -119,12 +116,11 @@ Installation
   be used when generating a new password. If any custom presets are defined, the
   default presets will not be displayed unless they are uncommented.
 
-.. Warning:: If you choose to store your database password into config.ini, make
-   sure to `chmod 600 config.ini`. This is not secure and I only added it as a
-   convenience for testing.
+**Warning** If you choose to store your database password into config.ini, make
+sure to `chmod 600 config.ini`. This is not secure and I only added it as a
+convenience for testing.
 
-Usage
------
+## Usage
 
 - Run script or bind to keystroke combination
 - Enter database and keyfile if not entered into config.ini already.
@@ -136,8 +132,8 @@ Usage
   select the entry, select 'Password' then select 'Manually enter password'.
   Type 'ESC' to exit without making changes.
 
-Options
--------
+## Options
+
 usage: keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]
 
 --help, -h Output a usage message and exit.
@@ -148,15 +144,14 @@ usage: keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]
 
 -k KEYFILE, --keyfile KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
 
-Tests
------
+## Tests
 
 - To run tests: `python tests/tests.py`
 
-.. _Rofi: https://davedavenport.github.io/rofi/
-.. _Passhole: https://github.com/purduelug/passhole
-.. _Keepass field references: https://keepass.info/help/base/fieldrefs.html
-.. _Pykeepass: https://github.com/pschmitt/pykeepass
-.. _pynput: https://github.com/moses-palmer/pynput
-.. _Archlinux AUR: https://aur.archlinux.org/packages/python-keepmenu-git
-.. _Keepass 2.x codes: https://keepass.info/help/base/autotype.html#autoseq
+[1]: https://github.com/pschmitt/pykeepass "Pykeepass"
+[2]: https://davedavenport.github.io/rofi/ "Rofi"
+[3]: https://github.com/purduelug/passhole "Passhole"
+[4]: https://keepass.info/help/base/fieldrefs.html "Keepass field references"
+[5]: https://github.com/moses-palmer/pynput "pynput"
+[6]: https://aur.archlinux.org/packages/python-keepmenu-git "Archlinux AUR"
+[7]: https://keepass.info/help/base/autotype.html#autoseq "Keepass 2.x codes"
