@@ -135,7 +135,7 @@ def get_database(open_databases=None, **kwargs):
             # Use existing password if available
             if not dbs[0].kfile and dbs[0].dbase in dbs_cfg_n:
                 dbs[0].kfile = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].kfile
-    elif clidb.atype:
+    elif clidb.atype and open_databases:
         # If only autotype is passed, use current db
         db_ = [i for i in open_databases.values() if i.is_active is True][0]
         dbs = [deepcopy(db_)]
@@ -164,6 +164,8 @@ def get_database(open_databases=None, **kwargs):
         open_databases[dbs[0].dbase] = deepcopy(dbs[0])
     if dbs[0].dbase in dbs_cfg_n:
         open_databases[dbs[0].dbase].atype = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].atype
+    if clidb.atype:
+        dbs[0].atype = clidb.atype
     open_databases[dbs[0].dbase].is_active = True
     return dbs[0], open_databases
 
