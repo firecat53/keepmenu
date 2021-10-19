@@ -74,7 +74,7 @@ To run tests in a venv: `make test`
 
 - To install keepmen in a venv: `make`
 
-- Build man page from Markdown source: `make doc`
+- Build man page from Markdown source: `make man`
 
 [1]: https://github.com/pschmitt/pykeepass "Pykeepass"
 [2]: https://davedavenport.github.io/rofi/ "Rofi"

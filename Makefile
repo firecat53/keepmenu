@@ -18,7 +18,7 @@ clean:
 	rm -rf __pycache__
 	rm -rf $(VENV)
 
-doc: keepmenu.1.md
+man: keepmenu.1.md
 	pandoc keepmenu.1.md -s -t man -o keepmenu.1
 
 test: venv
