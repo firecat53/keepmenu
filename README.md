@@ -1,157 +1,84 @@
 # Keepmenu
 
-Fully featured Dmenu/[Rofi][2] frontend for managing Keepass databases.
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/keepmenu)
+![PyPI](https://img.shields.io/pypi/v/keepmenu)
+![GitHub contributors](https://img.shields.io/github/contributors/firecat53/keepmenu)
 
-Inspired in part by [Passhole][3], but I wanted something more dmenu and less
-command line focused.
+Fully featured Dmenu/[Rofi][2] frontend for autotype and managing of Keepass databases.
 
-## Quick Install
+Inspired in part by [Passhole][3], but more dmenu and less command line focused.
+
+## Installation
 
 `pip install --user keepmenu`
 
 Ensure `~/.local/bin` is in your `$PATH`. Run `keepmenu` and enter your database
 path, keyfile path, and password.
 
+For full installation documention see the [installation docs][docs/install.md].
+
+## Full Documentation
+
+[Installation](docs/install.md) - [Configuration](docs/configure.md) - [Usage](docs/usage.md)
+
+## Requirements
+
+1. Python 3.6+
+2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
+3. Dmenu or Rofi
+4. (optional) Pinentry
+5. (optional) xdotool or ydotool (for Wayland).
+
 ## Features
 
-- *NOTE* Only support .kdbx databases, not .kdb
+- Supports .kdbx databases, not .kdb.
 - Auto-type username and/or password on selection. No clipboard copy/paste
   involved.
-- Use a custom Keepass 2.x style auto-type sequence if you have one defined
-  (except for character repetition and the 'special commands'). Set it per entry
-  or set a default in the config file for all entries. Disable autotype for an
-  entry, if desired.
-- Select any single field and have it typed into the active window. Notes fields
-  can be viewed line-by-line from within dmenu and the selected line will be
-  typed when selected.
-- Open the URL in the default web browser from the View/Type menu.
-- Alternate keyboard languages and layouts supported via xdotool or ydotool (for
-  Wayland)
-- Edit entry title, username, URL and password (manually typed or auto-generate)
-- Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)
-- Add and Delete entries
-- Rename, move, delete and add groups
-- Prompts for and saves initial database and keyfile locations if config file
-  isn't setup before first run.
-- Set multiple databases and keyfiles in the config file. Switch databases on
-  the fly.
+- Background process allows selectable time-out for locking the database.
+- Multiple databases can be unlocked and switched on the fly.
+- Use a custom [Keepass 2.x style auto-type sequence][6].
+- Type, view or edit any field.
+- Open the URL in the default web browser.
+- Non U.S. English keyboard languages and layouts supported via xdotool or
+  ydotool (for Wayland).
+- Edit notes using terminal or gui editor.
+- Add and Delete entries.
+- Add, delete, rename and move groups.
 - Hide selected groups from the default and 'View/Type Individual entries' views.
-- Keepmenu runs in the background after initial startup and will retain the
-  entered passphrase for `pw_cache_period_min` minutes after the last activity.
 - Configure the characters and groups of characters used during password
-  generation in the config file (see config.ini.example for instructions).
-  Multiple character sets can be selected on the fly when using Rofi if the
-  `-multi-select` option is passed via `dmenu_command`.
+  generation.
 - Optional Pinentry support for secure passphrase entry.
 - [Keepass field references][4] are supported.
-- Supports displaying of expiring/expired passwords and shows the expiry time where set
-- Add, edit and type TOTP codes. RFC 6238, Steam and custom settings are supported.
+- Display and manage expired passwords.
+- Add, edit and type TOTP codes.
 
 ## License
 
 - GPLv3
 
-## Requirements
-
-1. Python 3.6+.
-2. [Pykeepass][1] >= 4.0.0 and [pynput][5]. Install via pip or your
-   distribution's package manager, if available.
-3. Dmenu or Rofi. Rofi configuration/theming should be done via Rofi themes.
-4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
-   in the config file.
-5. (optional) xdotool or ydotool (for Wayland). If you have a lot of Unicode
-   characters or use a non-U.S.  English keyboard layout, xdotool is necessary
-   to handle typing those characters.
-
-## Installation
-
-- Installation
-
-  + `pip install --user keepmenu`. Add ~/.local/bin to $PATH
-  + In a virtualenv with pip. Link to the executable in
-    <path/to/virtualenv/bin/keepmenu>
-
-        mkvirtualenv keepmenu
-        pip install keepmenu
-
-  + From git.
-  
-        git clone https://github.com/firecat53/keepmenu
-        cd keepmenu
-        pip install --user .
-
-  + Available in [Archlinux AUR][6].
-
-- If you start keepmenu for the first time without a config file, it will prompt
-  you for database and keyfile locations and save them in a default config file.
-
-- Copy config.ini.example to ~/.config/keepmenu/config.ini, or use it as a
-  reference for additional options.
-
-  + Add your database(s) and keyfile(s)
-  + To use a command (e.g. gpg) to lookup db password, set `password_cmd_<n>`
-    in config.ini.
-  + Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
-  + Set the dmenu_command to `rofi` if you are using that instead
-  + Adjust the autotype_default, if desired. Allowed codes are the
-    [Keepass 2.x codes][7] except for repetitions and most command codes. `{DELAY
-    x}` (in milliseconds) is supported.
-    Individual autotype sequences can be edited or disabled inside Keepmenu.
-  + Set `type_library = xdotool` or `type_library = ydotool` (Wayland) if you
-    need support for non-U.S. English keyboard layouts and/or characters.
-
-    * When using xdotool, call `setxkbmap` to set your keyboard type somewhere
-      in your window manager or desktop environment initialization. For example:
-      `exec setxkbmap de` in ~/.config/i3/config.
-
-- If using Rofi, pass desired theme via `dmenu_command = rofi -theme
-  <theme>.rasi`. Dmenu options are also passed via `dmenu_command`
-- New sets of characters can be set in config.ini in the `[password_chars]`
-  section. A new preset for each custom set will be listed in addition to the
-  default presets. If you redefine one of the default sets (upper, lower,
-  digits, punctuation), it will replace the default values.
-- New preset groups of character sets can be defined in config.ini in the
-  `[password_char_presets]` section. You can set any combination of default and
-  custom character sets. A minimum of one character from each distinct set will
-  be used when generating a new password. If any custom presets are defined, the
-  default presets will not be displayed unless they are uncommented.
-
-**Warning** If you choose to store your database password into config.ini, make
-sure to `chmod 600 config.ini`. This is not secure and I only added it as a
-convenience for testing.
-
 ## Usage
 
-- Run script or bind to keystroke combination
-- Enter database and keyfile if not entered into config.ini already.
+`keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]`
+
+- Run `keepmenu` or bind to keystroke combination.
+- Enter database path on first run.
 - Start typing to match entries.
-- Hit Enter immediately after dmenu opens ("`View/Type individual entries`") to
-  switch modes to view and/or type the individual fields for the entry. If
-  selected, the URL will open in the default browser instead of being typed.
-- To view a password without typing it, use the 'Edit Entries' option, then
-  select the entry, select 'Password' then select 'Manually enter password'.
-  Type 'ESC' to exit without making changes.
-
-## Options
-
-usage: keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]
-
---help, -h Output a usage message and exit.
-
--a AUTOTYPE, --autotype AUTOTYPE Override autotype sequence in config.ini
-
--d DATABASE, --database DATABASE File path to a database to open, skipping the database selection menu
-
--k KEYFILE, --keyfile KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
+- [Configure](docs/configure.md) config.ini as desired.
+- More detailed [usage information](docs/usage.md).
 
 ## Tests
 
-- To run tests: `python tests/tests.py`
+To run tests in a venv: `make test`
+
+## Development
+
+- To install keepmen in a venv: `make`
+
+- Build man page from Markdown source: `make doc`
 
 [1]: https://github.com/pschmitt/pykeepass "Pykeepass"
 [2]: https://davedavenport.github.io/rofi/ "Rofi"
 [3]: https://github.com/purduelug/passhole "Passhole"
 [4]: https://keepass.info/help/base/fieldrefs.html "Keepass field references"
 [5]: https://github.com/moses-palmer/pynput "pynput"
-[6]: https://aur.archlinux.org/packages/python-keepmenu-git "Archlinux AUR"
-[7]: https://keepass.info/help/base/autotype.html#autoseq "Keepass 2.x codes"
+[6]: https://keepass.info/help/base/autotype.html#autoseq "Keepass 2.x codes"
