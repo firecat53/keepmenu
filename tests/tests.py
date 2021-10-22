@@ -233,6 +233,11 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name,
                                                          pword='password',
                                                          atype='{TOTP}{ENTER}'))
+
+        database, _ = KM.keepmenu.get_database(database=db_name)
+        self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name,
+                                                         pword='password',
+                                                         atype='{TOTP}{ENTER}'))
         kpo = KM.keepmenu.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
 

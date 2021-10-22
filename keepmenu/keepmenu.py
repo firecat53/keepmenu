@@ -163,7 +163,10 @@ def get_database(open_databases=None, **kwargs):
     if dbs[0].dbase not in open_databases:
         open_databases[dbs[0].dbase] = deepcopy(dbs[0])
     if dbs[0].dbase in dbs_cfg_n:
-        open_databases[dbs[0].dbase].atype = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].atype
+        db_cfg_atype = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].atype
+        open_databases[dbs[0].dbase].atype = db_cfg_atype
+        if not dbs[0].atype:
+            dbs[0].atype = db_cfg_atype
     if clidb.atype:
         dbs[0].atype = clidb.atype
     open_databases[dbs[0].dbase].is_active = True
