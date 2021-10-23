@@ -29,9 +29,32 @@ def view_all_entries(options, kp_entries, dbname):
         entries_b = options_b + kp_entries_b
     else:
         entries_b = kp_entries_b
+
+    prompt = "Entries: {}".format(dbname)
+    if keepmenu.CONF.has_option('dmenu', 'title_path'):
+        try:
+            path_length = keepmenu.CONF.getboolean('dmenu', 'title_path')
+        except ValueError:
+            path_length = keepmenu.CONF.getint('dmenu', 'title_path')
+
+        if path_length is False or path_length == 0:
+            prompt = "Entries"
+        elif path_length is not True:
+            assert isinstance(path_length, int)
+
+            # Truncate the path so that it is no more than path_length
+            # or the length of the filename, whichever is larger
+            filename = os.path.basename(dbname)
+            if len(filename) >= path_length - 3:
+                prompt = "Entries: {}".format(filename)
+            else:
+                path = dbname.replace(os.path.expanduser("~"), "~")
+                path = path[:(path_length - len(filename) - 3)]
+                prompt = "Entries: {}...{}".format(path, filename)
+
     return dmenu_select(min(keepmenu.MAX_LEN, len(options) + len(kp_entries)),
                         inp=entries_b,
-                        prompt="Entries: {}".format(dbname))
+                        prompt=prompt)
 
 
 def view_entry(kp_entry):
