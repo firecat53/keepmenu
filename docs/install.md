@@ -59,5 +59,5 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
 
 ### Available in [Archlinux AUR][1]
 
-[1]: https://aur.archlinux.org/packages/python-keepmenu-git "Archlinux AUR"
+[1]: https://aur.archlinux.org/packages/keepmenu-git "Archlinux AUR"
 [2]: https://github.com/moses-palmer/pynput "pynput"
