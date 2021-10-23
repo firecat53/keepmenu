@@ -10,34 +10,35 @@ reference for additional options.
 
 #### Config.ini values
 
-| Section                   | Key                          | Default                                 | Notes                                       |
-|---------------------------|------------------------------|-----------------------------------------|---------------------------------------------|
-| `[dmenu]`                 | `dmenu_command`              | `dmenu`                                 | Command can include arguments               |
-|                           | `pinentry`                   | None                                    |                                             |
-| `[dmenu_passphrase]`      | `obscure`                    | `False`                                 |                                             |
-|                           | `obscure_color`              | `#222222`                               | Only applicable to dmenu                    |
-| `[database]`              | `database_n`                 | None                                    | `n` is any integer                          |
-|                           | `keyfile_n`                  | None                                    |                                             |
-|                           | `password_n`                 | None                                    |                                             |
-|                           | `password_cmd_n`             | None                                    |                                             |
-|                           | `autotype_default_n`         | None                                    | Overrides global default                    |
-|                           | `pw_cache_period_min`        | `360`                                   | Value in minutes                            |
-|                           | `editor`                     | `vim`                                   |                                             |
-|                           | `terminal`                   | `xterm`                                 |                                             |
-|                           | `gui_editor`                 | None                                    |                                             |
-|                           | `type_library`               | `pynput`                                | xdotool, ydotool or pynput                  |
-|                           | `hide_groups`                | None                                    | See below for formatting of multiple groups |
-|                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`      | [Keepass autotype sequences][1]             |
-| `[password_chars]`        | `lower`                      | `abcdefghijklmnopqrstuvwxyz`            |                                             |
-|                           | `upper`                      | `ABCDEFGHIJKLMNOPQRSTUVWXYZ`            |                                             |
-|                           | `digits`                     | `0123456789`                            |                                             |
-|                           | `punctuation`                | ``!"#$%%&'()*+,-./:;<=>?@[\]^_`{│}~``   |                                             |
-|                           | `Custom Name(s)`             | `Any string`                            |                                             |
-| `[password_char_presets]` | `Letters+Digits+Punctuation` | `upper lower digits punctuation`        |                                             |
-|                           | `Letters+Digits`             | `upper lower digits`                    |                                             |
-|                           | `Letters`                    | `upper lower`                           |                                             |
-|                           | `Digits`                     | `digits`                                |                                             |
-|                           | `Custom Name(s)`             | `Any combo of [password_chars] entries` |                                             |
+| Section                   | Key                          | Default                                 | Notes                                                        |
+|---------------------------|------------------------------|-----------------------------------------|--------------------------------------------------------------|
+| `[dmenu]`                 | `dmenu_command`              | `dmenu`                                 | Command can include arguments                                |
+|                           | `pinentry`                   | None                                    |                                                              |
+|                           | `title_path`                 | `True`                                  | Max path length to show (int), or show/hide full path (bool) |
+| `[dmenu_passphrase]`      | `obscure`                    | `False`                                 |                                                              |
+|                           | `obscure_color`              | `#222222`                               | Only applicable to dmenu                                     |
+| `[database]`              | `database_n`                 | None                                    | `n` is any integer                                           |
+|                           | `keyfile_n`                  | None                                    |                                                              |
+|                           | `password_n`                 | None                                    |                                                              |
+|                           | `password_cmd_n`             | None                                    |                                                              |
+|                           | `autotype_default_n`         | None                                    | Overrides global default                                     |
+|                           | `pw_cache_period_min`        | `360`                                   | Value in minutes                                             |
+|                           | `editor`                     | `vim`                                   |                                                              |
+|                           | `terminal`                   | `xterm`                                 |                                                              |
+|                           | `gui_editor`                 | None                                    |                                                              |
+|                           | `type_library`               | `pynput`                                | xdotool, ydotool or pynput                                   |
+|                           | `hide_groups`                | None                                    | See below for formatting of multiple groups                  |
+|                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`      | [Keepass autotype sequences][1]                              |
+| `[password_chars]`        | `lower`                      | `abcdefghijklmnopqrstuvwxyz`            |                                                              |
+|                           | `upper`                      | `ABCDEFGHIJKLMNOPQRSTUVWXYZ`            |                                                              |
+|                           | `digits`                     | `0123456789`                            |                                                              |
+|                           | `punctuation`                | ``!"#$%%&'()*+,-./:;<=>?@[\]^_`{│}~``   |                                                              |
+|                           | `Custom Name(s)`             | `Any string`                            |                                                              |
+| `[password_char_presets]` | `Letters+Digits+Punctuation` | `upper lower digits punctuation`        |                                                              |
+|                           | `Letters+Digits`             | `upper lower digits`                    |                                                              |
+|                           | `Letters`                    | `upper lower`                           |                                                              |
+|                           | `Digits`                     | `digits`                                |                                                              |
+|                           | `Custom Name(s)`             | `Any combo of [password_chars] entries` |                                                              |
 
 #### Config.ini example
 
