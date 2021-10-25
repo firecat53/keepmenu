@@ -43,34 +43,35 @@ reference for additional options.
 
 ## config.ini options and defaults
 
-| Section                   | Key                          | Default                                                |
-|---------------------------|------------------------------|--------------------------------------------------------|
-| `[dmenu]`                 | `dmenu_command`              | `dmenu`                                                |
-|                           | `pinentry`                   | None                                                   |
-| `[dmenu_passphrase]`      | `obscure`                    | `False`                                                |
-|                           | `obscure_color`              | `#222222`                                              |
-| `[database]`              | `database_n`                 | None                                                   |
-|                           | `keyfile_n`                  | None                                                   |
-|                           | `password_n`                 | None                                                   |
-|                           | `password_cmd_n`             | None                                                   |
-|                           | `autotype_default_n`         | None                                                   |
-|                           | `pw_cache_period_min`        | `360`                                                  |
-|                           | `editor`                     | `vim`                                                  |
-|                           | `terminal`                   | `xterm`                                                |
-|                           | `gui_editor`                 | None                                                   |
-|                           | `type_library`               | `pynput`                                               |
-|                           | `hide_groups`                | None                                                   |
-|                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`                     |
-| `[password_chars]`        | `lower`                      | `abcdefghijklmnopqrstuvwxyz`                           |
-|                           | `upper`                      | `ABCDEFGHIJKLMNOPQRSTUVWXYZ`                           |
-|                           | `digits`                     | `0123456789`                                           |
-|                           | `punctuation`                | ``!"#$%%&'()*+,-./:;<=>?@[\]^_`{│}~``                  |
-|                           | `Custom Name(s)`             | `Any string`                                           |
-| `[password_char_presets]` | `Letters+Digits+Punctuation` | `upper lower digits punctuation`                       |
-|                           | `Letters+Digits`             | `upper lower digits`                                   |
-|                           | `Letters`                    | `upper lower`                                          |
-|                           | `Digits`                     | `digits`                                               |
-|                           | `Custom Name(s)`             | `Any combo of [password_chars] entries`                |
+| Section                   | Key                          | Default                                 |
+|---------------------------|------------------------------|-----------------------------------------|
+| `[dmenu]`                 | `dmenu_command`              | `dmenu`                                 |
+|                           | `pinentry`                   | None                                    |
+|                           | `title_path`                 | `True`                                  |
+| `[dmenu_passphrase]`      | `obscure`                    | `False`                                 |
+|                           | `obscure_color`              | `#222222`                               |
+| `[database]`              | `database_n`                 | None                                    |
+|                           | `keyfile_n`                  | None                                    |
+|                           | `password_n`                 | None                                    |
+|                           | `password_cmd_n`             | None                                    |
+|                           | `autotype_default_n`         | None                                    |
+|                           | `pw_cache_period_min`        | `360`                                   |
+|                           | `editor`                     | `vim`                                   |
+|                           | `terminal`                   | `xterm`                                 |
+|                           | `gui_editor`                 | None                                    |
+|                           | `type_library`               | `pynput`                                |
+|                           | `hide_groups`                | None                                    |
+|                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`      |
+| `[password_chars]`        | `lower`                      | `abcdefghijklmnopqrstuvwxyz`            |
+|                           | `upper`                      | `ABCDEFGHIJKLMNOPQRSTUVWXYZ`            |
+|                           | `digits`                     | `0123456789`                            |
+|                           | `punctuation`                | ``!"#$%%&'()*+,-./:;<=>?@[\]^_`{│}~``   |
+|                           | `Custom Name(s)`             | `Any string`                            |
+| `[password_char_presets]` | `Letters+Digits+Punctuation` | `upper lower digits punctuation`        |
+|                           | `Letters+Digits`             | `upper lower digits`                    |
+|                           | `Letters`                    | `upper lower`                           |
+|                           | `Digits`                     | `digits`                                |
+|                           | `Custom Name(s)`             | `Any combo of [password_chars] entries` |
 
 # FILES
 
