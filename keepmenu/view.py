@@ -100,18 +100,15 @@ def generate_prompt(max_length, dbname):
     """
     if max_length is False or max_length == 0:
         return "Entries"
-    elif max_length is True or max_length is None:
+    if max_length is True or max_length is None:
         return "Entries: {}".format(dbname)
-    else:
-        # Truncate the path so that it is no more than max_length
-        # or the length of the filename, whichever is larger
-        filename = os.path.basename(dbname)
-        if len(filename) >= max_length - 3:
-            return "Entries: {}".format(filename)
-        else:
-            path = dbname.replace(os.path.expanduser("~"), "~")
-            if len(path) <= max_length:
-                return "Entries: {}".format(path)
-            else:
-                path = path[:(max_length - len(filename) - 3)]
-                return "Entries: {}...{}".format(path, filename)
+    # Truncate the path so that it is no more than max_length
+    # or the length of the filename, whichever is larger
+    filename = os.path.basename(dbname)
+    if len(filename) >= max_length - 3:
+        return "Entries: {}".format(filename)
+    path = dbname.replace(os.path.expanduser("~"), "~")
+    if len(path) <= max_length:
+        return "Entries: {}".format(path)
+    path = path[:(max_length - len(filename) - 3)]
+    return "Entries: {}...{}".format(path, filename)
