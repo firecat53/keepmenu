@@ -14,7 +14,7 @@ reference for additional options.
 |---------------------------|------------------------------|-----------------------------------------|--------------------------------------------------------------|
 | `[dmenu]`                 | `dmenu_command`              | `dmenu`                                 | Command can include arguments                                |
 |                           | `pinentry`                   | None                                    |                                                              |
-|                           | `title_path`                 | `True`                                  | Max path length to show (int), or show/hide full path (bool) |
+|                           | `title_path`                 | `True`                                  | True, False or int                                           |
 | `[dmenu_passphrase]`      | `obscure`                    | `False`                                 |                                                              |
 |                           | `obscure_color`              | `#222222`                               | Only applicable to dmenu                                     |
 | `[database]`              | `database_n`                 | None                                    | `n` is any integer                                           |
@@ -47,6 +47,7 @@ reference for additional options.
     dmenu_command = rofi -dmenu -theme keepmenu -i
     # dmenu_command = dmenu -i -l 25 -b -nb #909090 -nf #303030
     pinentry = pinentry-gtk
+    title_path = 25
 
     [dmenu_passphrase]
     ## Obscure password entry.

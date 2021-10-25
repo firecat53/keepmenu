@@ -5,6 +5,7 @@
 # # `dmenu_command = rofi -dmenu -width 30 -password -i`
 # # `dmenu_command = dmenu -i -l 25 -b -nb #222222 -nf #222222`
 # pinentry = Pinentry command
+# title_path = <True>, <False> or <int>. Length of database path to display.
 
 [dmenu_passphrase]
 # # Uses the -password flag for Rofi. For dmenu, sets -nb and -nf to the same color.
