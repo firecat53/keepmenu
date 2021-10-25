@@ -179,6 +179,30 @@ class TestFunctions(unittest.TestCase):
                "-p", "Password", "-nb", "#222222", "-nf", "#222222"]
         self.assertTrue(KM.menu.dmenu_cmd(20, "Password") == res)
 
+    def test_generate_prompt(self):
+        """Test properly generating prompt using various values of max_length
+        (the title_path option in the config)
+
+        """
+        dbname = "{}/docs/passwords.kdbx".format(os.path.expanduser("~"))
+        self.assertTrue(KM.view.generate_prompt(True, dbname) ==
+                        "Entries: {}".format(dbname))
+        self.assertTrue(KM.view.generate_prompt(len(dbname), dbname) ==
+                        "Entries: ~/docs/passwords.kdbx")
+        self.assertTrue(KM.view.generate_prompt(len("~/docs/passwords.kdbx"),
+                                                dbname) ==
+                        "Entries: ~/docs/passwords.kdbx")
+        self.assertTrue(KM.view.generate_prompt(20, dbname) ==
+                        "Entries: ~/d...passwords.kdbx")
+        self.assertTrue(KM.view.generate_prompt(18, dbname) ==
+                        "Entries: ~...passwords.kdbx")
+        self.assertTrue(KM.view.generate_prompt(10, dbname) ==
+                        "Entries: passwords.kdbx")
+        self.assertTrue(KM.view.generate_prompt(0, dbname) ==
+                        "Entries")
+        self.assertTrue(KM.view.generate_prompt(False, dbname) ==
+                        "Entries")
+
     def test_get_databases(self):
         """Test reading database information from config
 

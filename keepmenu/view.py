@@ -33,24 +33,10 @@ def view_all_entries(options, kp_entries, dbname):
     prompt = "Entries: {}".format(dbname)
     if keepmenu.CONF.has_option('dmenu', 'title_path'):
         try:
-            path_length = keepmenu.CONF.getboolean('dmenu', 'title_path')
+            max_length = keepmenu.CONF.getboolean('dmenu', 'title_path')
         except ValueError:
-            path_length = keepmenu.CONF.getint('dmenu', 'title_path')
-
-        if path_length is False or path_length == 0:
-            prompt = "Entries"
-        elif path_length is not True:
-            assert isinstance(path_length, int)
-
-            # Truncate the path so that it is no more than path_length
-            # or the length of the filename, whichever is larger
-            filename = os.path.basename(dbname)
-            if len(filename) >= path_length - 3:
-                prompt = "Entries: {}".format(filename)
-            else:
-                path = dbname.replace(os.path.expanduser("~"), "~")
-                path = path[:(path_length - len(filename) - 3)]
-                prompt = "Entries: {}...{}".format(path, filename)
+            max_length = keepmenu.CONF.getint('dmenu', 'title_path')
+        prompt = generate_prompt(max_length, dbname)
 
     return dmenu_select(min(keepmenu.MAX_LEN, len(options) + len(kp_entries)),
                         inp=entries_b,
@@ -100,3 +86,32 @@ def view_notes(notes):
     notes_b = "\n".join(notes_l).encode(keepmenu.ENC)
     sel = dmenu_select(min(keepmenu.MAX_LEN, len(notes_l)), inp=notes_b)
     return sel
+
+
+def generate_prompt(max_length, dbname):
+    """Generate a prompt in the format "Entries: {}", with "{}" replaced by
+    the full path to the database truncated to a certain length
+
+    max_length: an int giving the maximum length for the path, or a bool
+    specifying whether to show the entire path (True) or to hide it (False)
+
+    dbname: the full path to the database
+
+    """
+    if max_length is False or max_length == 0:
+        return "Entries"
+    elif max_length is True or max_length is None:
+        return "Entries: {}".format(dbname)
+    else:
+        # Truncate the path so that it is no more than max_length
+        # or the length of the filename, whichever is larger
+        filename = os.path.basename(dbname)
+        if len(filename) >= max_length - 3:
+            return "Entries: {}".format(filename)
+        else:
+            path = dbname.replace(os.path.expanduser("~"), "~")
+            if len(path) <= max_length:
+                return "Entries: {}".format(path)
+            else:
+                path = path[:(max_length - len(filename) - 3)]
+                return "Entries: {}...{}".format(path, filename)
