@@ -59,5 +59,34 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
 
 ### Available in [Archlinux AUR][1]
 
+
+## Wayland (wlroots - Sway)
+
+- Dmenu and Rofi work under XWayland.
+- To enable ydotool to work without sudo
+    - Pick a group that one or more users
+      belong to (e.g. `users`) and:
+
+            $ echo "KERNEL==\"uinput\", GROUP=\"users\", MODE=\"0660\", \
+            OPTIONS+=\"static_node=uinput\"" | sudo tee \
+            /etc/udev/rules.d/80-uinput.rules > /dev/null
+            # udevadm control --reload-rules && udevadm trigger
+        
+    - Create a systemd user service for ydotoold:
+
+            ~/.config/systemd/user/ydotoold.service
+            [Unit]
+            Description=ydotoold Service
+
+            [Service]
+            ExecStart=/usr/bin/ydotoold
+
+            [Install]
+            WantedBy=default.target
+
+    - Enable and start ydotoold.service:
+
+            $ systemctl --user daemon-reload 
+            $ systemctl --user enable --now ydotoold.service
 [1]: https://aur.archlinux.org/packages/keepmenu-git "Archlinux AUR"
 [2]: https://github.com/moses-palmer/pynput "pynput"
