@@ -77,8 +77,6 @@ def reload_config():
         command = 'dmenu'
     if "-l" in command:
         MAX_LEN = int(command[command.index("-l") + 1])
-    else:
-        MAX_LEN = 24
     if CONF.has_option("database", "pw_cache_period_min"):
         CACHE_PERIOD_MIN = int(CONF.get("database", "pw_cache_period_min"))
     else:
