@@ -72,6 +72,9 @@ def reload_config():
         sys.exit()
     if CONF.has_option('dmenu', 'dmenu_command'):
         command = shlex.split(CONF.get('dmenu', 'dmenu_command'))
+    else:
+        CONF.set('dmenu', 'dmenu_command', 'dmenu')
+        command = 'dmenu'
     if "-l" in command:
         MAX_LEN = int(command[command.index("-l") + 1])
     else:
