@@ -25,7 +25,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 1. Python 3.6+
 2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
-3. Dmenu or Rofi
+3. Dmenu, Rofi, or Bemenu
 4. (optional) Pinentry
 5. (optional) xdotool or ydotool (for Wayland).
 
