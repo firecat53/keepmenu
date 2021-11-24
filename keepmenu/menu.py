@@ -37,6 +37,10 @@ def dmenu_cmd(num_lines, prompt):
         dmenu = [dmenu_command, "-p", str(prompt)]
         if obscure is True and prompt == "Password":
             dmenu.extend(["-nb", obscure_color, "-nf", obscure_color])
+    elif "bemenu" in dmenu_command:
+        dmenu = [dmenu_command, "-p", str(prompt)]
+        if obscure is True and prompt == "Password":
+            dmenu.append("-x")
     else:
         # Catchall for some other menu programs. Maybe it'll run and not fail?
         dmenu = [dmenu_command]

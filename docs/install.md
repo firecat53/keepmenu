@@ -7,7 +7,7 @@
 1. Python 3.6+.
 2. [Pykeepass][1] >= 4.0.0 and [pynput][2]. Install via pip or your
    distribution's package manager, if available.
-3. Dmenu or Rofi. Rofi configuration/theming should be done via Rofi themes.
+3. Dmenu, Rofi or Bemenu.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
    in the config file.
 5. (optional) xdotool or ydotool (for Wayland). If you have a lot of Unicode
@@ -62,7 +62,7 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
 
 ## Wayland (wlroots - Sway)
 
-- Dmenu and Rofi work under XWayland.
+- Dmenu and Rofi work under XWayland. Bemenu can operate natively in Wayland.
 - To enable ydotool to work without sudo
     - Pick a group that one or more users
       belong to (e.g. `users`) and:
@@ -88,5 +88,6 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
 
             $ systemctl --user daemon-reload 
             $ systemctl --user enable --now ydotoold.service
+
 [1]: https://aur.archlinux.org/packages/keepmenu-git "Archlinux AUR"
 [2]: https://github.com/moses-palmer/pynput "pynput"

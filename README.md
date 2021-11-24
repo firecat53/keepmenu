@@ -4,7 +4,8 @@
 ![PyPI](https://img.shields.io/pypi/v/keepmenu)
 ![GitHub contributors](https://img.shields.io/github/contributors/firecat53/keepmenu)
 
-Fully featured Dmenu/[Rofi][2] frontend for autotype and managing of Keepass databases.
+Fully featured Dmenu/[Rofi][2]/[Bemenu][7] frontend for autotype and managing of
+Keepass databases.
 
 Inspired in part by [Passhole][3], but more dmenu and less command line focused.
 
@@ -25,7 +26,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 1. Python 3.6+
 2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
-3. Dmenu or Rofi
+3. Dmenu, Rofi, or Bemenu
 4. (optional) Pinentry
 5. (optional) xdotool or ydotool (for Wayland).
 
@@ -82,3 +83,4 @@ To run tests in a venv: `make test`
 [4]: https://keepass.info/help/base/fieldrefs.html "Keepass field references"
 [5]: https://github.com/moses-palmer/pynput "pynput"
 [6]: https://keepass.info/help/base/autotype.html#autoseq "Keepass 2.x codes"
+[7]: https://github.com/Cloudef/bemenu "Bemenu"
