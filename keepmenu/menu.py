@@ -30,15 +30,15 @@ def dmenu_cmd(num_lines, prompt):
         if keepmenu.CONF.has_option('dmenu_passphrase', 'obscure_color'):
             obscure_color = keepmenu.CONF.get('dmenu_passphrase', 'obscure_color')
     if "rofi" in dmenu_command:
-        dmenu = [dmenu_command, "-dmenu", "-p", str(prompt), "-l", str(num_lines)]
+        dmenu = [dmenu_command, "-dmenu", "-p", str(prompt), "-l", str(num_lines), "-i"]
         if obscure is True and prompt == "Password":
             dmenu.append("-password")
     elif "dmenu" in dmenu_command:
-        dmenu = [dmenu_command, "-p", str(prompt)]
+        dmenu = [dmenu_command, "-p", str(prompt), "-i"]
         if obscure is True and prompt == "Password":
             dmenu.extend(["-nb", obscure_color, "-nf", obscure_color])
     elif "bemenu" in dmenu_command:
-        dmenu = [dmenu_command, "-p", str(prompt)]
+        dmenu = [dmenu_command, "-p", str(prompt), "-i"]
         if obscure is True and prompt == "Password":
             dmenu.append("-x")
     else:
