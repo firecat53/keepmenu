@@ -37,7 +37,7 @@ def get_auth():
     auth = configparser.ConfigParser()
     if not exists(keepmenu.AUTH_FILE):
         fd_ = os.open(keepmenu.AUTH_FILE, os.O_WRONLY | os.O_CREAT, 0o600)
-        with open(fd_, 'w') as a_file:
+        with open(fd_, 'w', encoding=keepmenu.ENC) as a_file:
             auth.set('DEFAULT', 'port', str(find_free_port()))
             auth.set('DEFAULT', 'authkey', random_str())
             auth.write(a_file)
@@ -77,7 +77,7 @@ def client():
     return mgr
 
 
-class Server(Process):
+class Server(Process):  # pylint: disable=too-many-instance-attributes
     """Run BaseManager server to listen for dmenu calling events
 
     """
@@ -114,7 +114,7 @@ class Server(Process):
         mgr.register('set_event', callable=self.start_flag.set)
         mgr.register('get_pipe', callable=self._get_pipe)
         mgr.register('read_args_from_pipe', callable=self.args_flag.set)
-        mgr.start()
+        mgr.start()  # pylint: disable=consider-using-with
         return mgr
 
 

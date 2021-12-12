@@ -9,7 +9,7 @@ from multiprocessing import Process
 import os
 from os.path import expanduser, realpath
 import shlex
-from subprocess import Popen, PIPE
+import subprocess
 import sys
 from threading import Timer
 
@@ -33,6 +33,7 @@ class DataBase():  # pylint: disable=too-few-public-methods
 
     """
     def __init__(self, dbase=None, kfile=None, pword=None, atype=None, kpo=None):
+        # pylint: disable=too-many-arguments
         self.dbase = expanduser('' if dbase is None else dbase)
         self.dbase = realpath(self.dbase) if self.dbase else ''
         self.kfile = expanduser('' if kfile is None else kfile)
@@ -67,25 +68,28 @@ def get_databases():
         dbn = args_dict[dbase]
         idx = dbase.rsplit('_', 1)[-1]
         try:
-            keyfile = args_dict['keyfile_{}'.format(idx)]
+            keyfile = args_dict[f'keyfile_{idx}']
         except KeyError:
             keyfile = None
         try:
-            passw = args_dict['password_{}'.format(idx)]
+            passw = args_dict[f'password_{idx}']
         except KeyError:
             passw = None
         try:
-            autotype = args_dict['autotype_default_{}'.format(idx)]
+            autotype = args_dict[f'autotype_default_{idx}']
         except KeyError:
             autotype = None
         try:
-            cmd = args_dict['password_cmd_{}'.format(idx)]
-            res = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE).communicate()
-            if res[1]:
-                dmenu_err("Password command error: {}".format(res[1]))
+            cmd = args_dict[f'password_cmd_{idx}']
+            res = subprocess.run(shlex.split(cmd),
+                                 capture_output=True,
+                                 check=False,
+                                 encoding=keepmenu.ENC)
+            if res.stderr:
+                dmenu_err(f"Password command error: {res.stderr}")
                 sys.exit()
             else:
-                passw = res[0].decode().rstrip('\n') if res[0] else passw
+                passw = res.stdout.rstrip('\n') if res.stdout else passw
         except KeyError:
             pass
         if dbn:
@@ -96,6 +100,7 @@ def get_databases():
 
 
 def get_database(open_databases=None, **kwargs):
+    # pylint: disable=too-many-statements,too-many-branches
     """Read databases/keyfile/autotype from config, CLI, or ask for user input.
 
     Args: open_databases - list [DataBase1, DataBase2,...]
@@ -149,8 +154,8 @@ def get_database(open_databases=None, **kwargs):
     else:
         dbs = dbs_cfg
     if len(dbs) > 1:
-        inp_bytes = "\n".join(i.dbase for i in dbs).encode(keepmenu.ENC)
-        sel = dmenu_select(len(dbs), "Select Database", inp=inp_bytes)
+        inp = "\n".join(i.dbase for i in dbs)
+        sel = dmenu_select(len(dbs), "Select Database", inp=inp)
         dbs = [i for i in dbs if i.dbase == sel]
         if not sel or not dbs:
             return None, open_databases
@@ -183,7 +188,7 @@ def get_initial_db():
         dmenu_err("No database entered. Try again.")
         return False
     keyfile_name = dmenu_select(0, "Enter path to keyfile. ~/ for $HOME is ok")
-    with open(keepmenu.CONF_FILE, 'w') as conf_file:
+    with open(keepmenu.CONF_FILE, 'w', encoding=keepmenu.ENC) as conf_file:
         keepmenu.CONF.set('database', 'database_1', db_name)
         if keyfile_name:
             keepmenu.CONF.set('database', 'keyfile_1', keyfile_name)
@@ -198,7 +203,7 @@ def get_entries(dbo):
         Returns: PyKeePass object or None
 
     """
-    from pykeepass import PyKeePass
+    from pykeepass import PyKeePass  # pylint: disable=import-outside-toplevel
     if dbo.dbase is None:
         return None
     try:
@@ -216,8 +221,8 @@ def get_entries(dbo):
         except AttributeError:
             pass
         return None
-    except Exception as err:
-        dmenu_err("Error: {}".format(err))
+    except Exception as err:  # pylint: disable=broad-except
+        dmenu_err(f"Error: {err}")
         return None
     return kpo
 
@@ -228,19 +233,18 @@ def get_passphrase():
     Returns: string
 
     """
-    pinentry = None
-    if keepmenu.CONF.has_option("dmenu", "pinentry"):
-        pinentry = keepmenu.CONF.get("dmenu", "pinentry")
+    pinentry = keepmenu.CONF.get("dmenu", "pinentry", fallback=None)
     if pinentry:
         password = ""
-        out = Popen(pinentry,
-                    stdout=PIPE,
-                    stdin=PIPE).communicate(
-                        input=b'setdesc Enter database password\ngetpin\n')[0]
-        if out:
-            res = out.decode(keepmenu.ENC).split("\n")[2]
-            if res.startswith("D "):
-                password = res.split("D ")[1]
+        res = subprocess.run(pinentry,
+                             capture_output=True,
+                             check=False,
+                             encoding=keepmenu.ENC,
+                             input='setdesc Enter database password\ngetpin\n')
+        if res.stdout:
+            pin = res.stdout.split("\n")[2]
+            if pin.startswith("D "):
+                password = pin.split("D ")[1]
     else:
         password = dmenu_select(0, "Password")
     return None or password
@@ -281,6 +285,7 @@ class DmenuRunner(Process):
         """Set inactivity timer
 
         """
+        # pylint: disable=attribute-defined-outside-init
         self.cache_timer = Timer(keepmenu.CACHE_PERIOD_MIN * 60, self.cache_time)
         self.cache_timer.daemon = True
         self.cache_timer.start()
@@ -351,7 +356,7 @@ class DmenuRunner(Process):
             'View/Type Individual entries':
                 functools.partial(self.menu_view_type_individual_entries, hid_groups),
             'View previous entry': self.menu_view_previous_entry,
-            'Edit expiring/expired passwords ({})'.format(len(self.expiring)):
+            f'Edit expiring/expired passwords ({len(self.expiring)})':
                 functools.partial(self.menu_edit_entries, self.expiring),
             'Edit entries': functools.partial(self.menu_edit_entries, self.database.kpo.entries),
             'Add entry': self.menu_add_entry,

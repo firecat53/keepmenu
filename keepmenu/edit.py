@@ -43,8 +43,8 @@ def delete_entry(kpo, kp_entry):
              False if delete
 
     """
-    input_b = b"NO\nYes - confirm delete\n"
-    delete = dmenu_select(2, "Confirm delete", inp=input_b)
+    inp = "NO\nYes - confirm delete\n"
+    delete = dmenu_select(2, "Confirm delete", inp=inp)
     if delete != "Yes - confirm delete":
         return True
     kpo.delete_entry(kp_entry)
@@ -52,7 +52,8 @@ def delete_entry(kpo, kp_entry):
     return False
 
 
-def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, too-many-branches
+def edit_entry(kpo, kp_entry):
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
     """Edit title, username, password, url and autotype sequence for an entry.
 
     Args: kpo - Keepass object
@@ -62,21 +63,21 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
              False if done
 
     """
-    fields = [str("Title: {}").format(kp_entry.title),
-              str("Path: {}").format("/".join(kp_entry.path[:-1])),
-              str("Username: {}").format(kp_entry.username),
+    fields = [str(f"Title: {kp_entry.title}"),
+              str(f"Path: {'/'.join(kp_entry.path[:-1])}"),
+              str(f"Username: {kp_entry.username}"),
               str("Password: **********") if kp_entry.password else "Password: None",
               str("TOTP: ******") if kp_entry.get_custom_property("otp") else "TOTP: None",
-              str("Url: {}").format(kp_entry.url),
+              str(f"Url: {kp_entry.url}"),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
-              str("Expiry time: {}").format(kp_entry.expiry_time)
-                    if kp_entry.expires is True else "Expiry date: None",
+              str(f"Expiry time: {kp_entry.expiry_time}")
+              if kp_entry.expires is True else "Expiry date: None",
               "Delete Entry: "]
     if hasattr(kp_entry, 'autotype_sequence') and hasattr(kp_entry, 'autotype_enabled'):
-        fields[5:5] = [str("Autotype Sequence: {}").format(kp_entry.autotype_sequence),
-                       str("Autotype Enabled: {}").format(kp_entry.autotype_enabled)]
-    input_b = "\n".join(fields).encode(keepmenu.ENC)
-    sel = dmenu_select(len(fields), inp=input_b)
+        fields[5:5] = [str(f"Autotype Sequence: {kp_entry.autotype_sequence}"),
+                       str(f"Autotype Enabled: {kp_entry.autotype_enabled}")]
+    inp = "\n".join(fields)
+    sel = dmenu_select(len(fields), inp=inp)
     try:
         field, sel = sel.split(": ", 1)
     except (ValueError, TypeError):
@@ -84,7 +85,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     field = field.lower().replace(" ", "_")
     if field == 'password':
         sel = kp_entry.password
-    edit_b = sel.encode(keepmenu.ENC) + b"\n" if sel is not None else b"\n"
+    edit = f"{sel}\n" if sel is not None else "\n"
     if field == 'delete_entry':
         return delete_entry(kpo, kp_entry)
     if field == 'path':
@@ -95,13 +96,13 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         return True
     pw_choice = ""
     if field == 'password':
-        inputs_b = [
-            b"Generate password",
-            b"Manually enter password",
+        inputs = [
+            "Generate password",
+            "Manually enter password",
         ]
         if kp_entry.password:
-            inputs_b.append(b"Type existing password")
-        pw_choice = dmenu_select(len(inputs_b), "Password Options", inp=b"\n".join(inputs_b))
+            inputs.append("Type existing password")
+        pw_choice = dmenu_select(len(inputs), "Password Options", inp="\n".join(inputs))
         if pw_choice == "Manually enter password":
             pass
         elif pw_choice == "Type existing password":
@@ -111,8 +112,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
             return True
         else:
             pw_choice = ''
-            input_b = b"20\n"
-            length = dmenu_select(1, "Password Length?", inp=input_b)
+            length = dmenu_select(1, "Password Length?", inp="20\n")
             if not length:
                 return True
             try:
@@ -130,17 +130,17 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
         edit_totp(kp_entry)
         return True
     if field == 'autotype_enabled':
-        input_b = b"True\nFalse\n"
-        at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=input_b)
+        inp = "True\nFalse\n"
+        at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=inp)
         if not at_enab:
             return True
         sel = not at_enab == 'False'
     if (field not in ('password', 'notes', 'path', 'autotype_enabled')) or pw_choice:
-        sel = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
+        sel = dmenu_select(1, f"{field.capitalize()}", inp=edit)
         if not sel:
             return True
         if pw_choice:
-            sel_check = dmenu_select(1, "{}".format(field.capitalize()), inp=edit_b)
+            sel_check = dmenu_select(1, f"{field.capitalize()}", inp=edit)
             if not sel_check or sel_check != sel:
                 dmenu_err("Passwords do not match. No changes made.")
                 return True
@@ -150,7 +150,7 @@ def edit_entry(kpo, kp_entry):  # pylint: disable=too-many-return-statements, to
     return True
 
 
-def edit_totp(kp_entry):
+def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branches
     """Edit TOTP generation information
 
     Args: kp_entry - selected Entry object
@@ -159,23 +159,23 @@ def edit_totp(kp_entry):
     otp_url = kp_entry.get_custom_property("otp")
 
     if otp_url is not None:
-        inputs_b = [
-            b"Enter secret key",
-            b"Type TOTP",
+        inputs = [
+            "Enter secret key",
+            "Type TOTP",
         ]
-        otp_choice = dmenu_select(len(inputs_b), "TOTP", inp=b"\n".join(inputs_b))
+        otp_choice = dmenu_select(len(inputs), "TOTP", inp="\n".join(inputs))
     else:
         otp_choice = "Enter secret key"
 
     if otp_choice == "Type TOTP":
         type_text(gen_otp(otp_url))
     elif otp_choice == "Enter secret key":
-        inputs_b = []
+        inputs = []
         if otp_url:
             parsed_otp_url = parse.urlparse(otp_url)
             query_string = parse.parse_qs(parsed_otp_url.query)
-            inputs_b = [bytes(query_string["secret"][0], "utf-8")]
-        secret_key = dmenu_select(1, "Secret Key?", inp=b"\n".join(inputs_b))
+            inputs = [query_string["secret"][0]]
+        secret_key = dmenu_select(1, "Secret Key?", inp="\n".join(inputs))
 
         if not secret_key:
             return
@@ -183,16 +183,16 @@ def edit_totp(kp_entry):
         for char in secret_key:
             if char.upper() not in keepmenu.SERCRET_VALID_CHARS:
                 dmenu_err("Invaild character in secret key, "
-                          "valid characters are {}".format(keepmenu.SERCRET_VALID_CHARS))
+                          f"valid characters are {keepmenu.SERCRET_VALID_CHARS}")
                 return
 
-        inputs_b = [
-            b"Defaut RFC 6238 token settings",
-            b"Steam token settings",
-            b"Use cusom settings"
+        inputs = [
+            "Defaut RFC 6238 token settings",
+            "Steam token settings",
+            "Use cusom settings"
         ]
 
-        otp_settings_choice = dmenu_select(len(inputs_b), "Settings", inp=b"\n".join(inputs_b))
+        otp_settings_choice = dmenu_select(len(inputs), "Settings", inp="\n".join(inputs))
 
         if otp_settings_choice == "Defaut RFC 6238 token settings":
             algorithm_choice = "sha1"
@@ -203,14 +203,13 @@ def edit_totp(kp_entry):
             time_step_choice = 30
             code_size_choice = 5
         elif otp_settings_choice == "Use custom settings":
-            inputs_b = [b"SHA-1", b"SHA-256", b"SHA-512"]
-            algorithm_choice = dmenu_select(len(inputs_b), "Algorithm", inp=b"\n".join(inputs_b))
+            inputs = ["SHA-1", "SHA-256", "SHA-512"]
+            algorithm_choice = dmenu_select(len(inputs), "Algorithm", inp="\n".join(inputs))
             if not algorithm_choice:
                 return
             algorithm_choice = algorithm_choice.replace("-", "").lower()
 
-            inputs_b = b"30\n"
-            time_step_choice = dmenu_select(1, "Time Step (sec)", inp=inputs_b)
+            time_step_choice = dmenu_select(1, "Time Step (sec)", inp="30\n")
             if not time_step_choice:
                 return
             try:
@@ -218,8 +217,7 @@ def edit_totp(kp_entry):
             except ValueError:
                 time_step_choice = 30
 
-            inputs_b = b"6\n"
-            code_size_choice = dmenu_select(1, "Code Size", inp=inputs_b)
+            code_size_choice = dmenu_select(1, "Code Size", inp="6\n")
             if not code_size_choice:
                 return
             try:
@@ -227,8 +225,8 @@ def edit_totp(kp_entry):
             except ValueError:
                 code_size_choice = 6
 
-        otp_url = "otpauth://totp/Main:none?secret={}&period={}&digits={}&issuer=Main".format(
-            secret_key, time_step_choice, code_size_choice)
+        otp_url = (f"otpauth://totp/Main:none?secret={secret_key}&period={time_step_choice}"
+                   f"&digits={code_size_choice}&issuer=Main")
         if algorithm_choice != "sha1":
             otp_url += "&algorithm=" + algorithm_choice
         if otp_settings_choice == "Steam token settings":
@@ -333,11 +331,11 @@ def get_password_chars():
             try:
                 presets[name.title()] = {k: chars[k] for k in shlex.split(val)}
             except KeyError:
-                print("Error: Unknown value in preset {}. Ignoring.".format(name))
+                print(f"Error: Unknown value in preset {name}. Ignoring.")
                 continue
-    input_b = "\n".join(presets).encode(keepmenu.ENC)
+    inp = "\n".join(presets)
     char_sel = dmenu_select(len(presets),
-                            "Pick character set(s) to use", inp=input_b)
+                            "Pick character set(s) to use", inp=inp)
     # This dictionary return also handles Rofi multiple select
     return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
@@ -355,9 +353,9 @@ def select_group(kpo, prompt="Groups"):
     groups = kpo.groups
     num_align = len(str(len(groups)))
     pattern = str("{:>{na}} - {}")
-    input_b = str("\n").join([pattern.format(j, "/".join(i.path), na=num_align)
-                              for j, i in enumerate(groups)]).encode(keepmenu.ENC)
-    sel = dmenu_select(min(keepmenu.MAX_LEN, len(groups)), prompt, inp=input_b)
+    inp = str("\n").join([pattern.format(j, "/".join(i.path), na=num_align)
+                         for j, i in enumerate(groups)])
+    sel = dmenu_select(min(keepmenu.MAX_LEN, len(groups)), prompt, inp=inp)
     if not sel:
         return False
     try:
@@ -380,9 +378,9 @@ def manage_groups(kpo):
                'Delete']
     group = False
     while edit is True:
-        input_b = b"\n".join(i.encode(keepmenu.ENC) for i in options) + b"\n\n" + \
-            b"\n".join("/".join(i.path).encode(keepmenu.ENC) for i in kpo.groups)
-        sel = dmenu_select(len(options) + len(kpo.groups) + 1, "Groups", inp=input_b)
+        inp = "\n".join(i for i in options) + "\n\n" + \
+            "\n".join("/".join(i.path) for i in kpo.groups)
+        sel = dmenu_select(len(options) + len(kpo.groups) + 1, "Groups", inp=inp)
         if not sel:
             edit = False
         elif sel == 'Create':
@@ -426,8 +424,8 @@ def delete_group(kpo):
     group = select_group(kpo, prompt="Delete Group:")
     if not group:
         return False
-    input_b = b"NO\nYes - confirm delete\n"
-    delete = dmenu_select(2, "Confirm delete", inp=input_b)
+    inp = "NO\nYes - confirm delete\n"
+    delete = dmenu_select(2, "Confirm delete", inp=inp)
     if delete != "Yes - confirm delete":
         return True
     kpo.delete_group(group)
@@ -463,7 +461,7 @@ def rename_group(kpo):
     group = select_group(kpo, prompt="Select group to rename")
     if not group:
         return False
-    name = dmenu_select(1, "New group name", inp=group.name.encode(keepmenu.ENC))
+    name = dmenu_select(1, "New group name", inp=group.name)
     if not name:
         return False
     group.name = name

@@ -18,19 +18,20 @@ def view_all_entries(options, kp_entries, dbname):
     num_align = len(str(len(kp_entries)))
     kp_entry_pattern = str("{:>{na}} - {} - {} - {}")  # Path,username,url
     # Have to number each entry to capture duplicates correctly
-    kp_entries_b = str("\n").join([kp_entry_pattern.format(j,
-                                       os.path.join("/".join(i.path[:-1]), i.deref('title') or ""),
-                                       i.deref('username'),
-                                       i.deref('url'),
-                                       na=num_align)
-                                   for j, i in enumerate(kp_entries)]).encode(keepmenu.ENC)
+    kps = str("\n").join([kp_entry_pattern.format(j,
+                                                  os.path.join("/".join(i.path[:-1]),
+                                                               i.deref('title') or ""),
+                                                  i.deref('username'),
+                                                  i.deref('url'),
+                                                  na=num_align)
+                         for j, i in enumerate(kp_entries)])
     if options:
-        options_b = ("\n".join(options) + "\n").encode(keepmenu.ENC)
-        entries_b = options_b + kp_entries_b
+        options_s = ("\n".join(options) + "\n")
+        entries_s = options_s + kps
     else:
-        entries_b = kp_entries_b
+        entries_s = kps
 
-    prompt = "Entries: {}".format(dbname)
+    prompt = f"Entries: {dbname}"
     if keepmenu.CONF.has_option('dmenu', 'title_path'):
         try:
             max_length = keepmenu.CONF.getboolean('dmenu', 'title_path')
@@ -39,7 +40,7 @@ def view_all_entries(options, kp_entries, dbname):
         prompt = generate_prompt(max_length, dbname)
 
     return dmenu_select(min(keepmenu.MAX_LEN, len(options) + len(kp_entries)),
-                        inp=entries_b,
+                        inp=entries_s,
                         prompt=prompt)
 
 
@@ -56,11 +57,10 @@ def view_entry(kp_entry):
               "TOTP: ******" if kp_entry.get_custom_property("otp") else "TOTP: None",
               kp_entry.deref('url') or "URL: None",
               "Notes: <Enter to view>" if kp_entry.deref('notes') else "Notes: None",
-              str("Expire time: {}").format(kp_entry.expiry_time)
+              str(f"Expire time: {kp_entry.expiry_time}")
               if kp_entry.expires is True else "Expiry date: None"]
 
-    kp_entries_b = "\n".join(fields).encode(keepmenu.ENC)
-    sel = dmenu_select(len(fields), inp=kp_entries_b)
+    sel = dmenu_select(len(fields), inp="\n".join(fields))
     if sel == "Notes: <Enter to view>":
         sel = view_notes(kp_entry.deref('notes'))
     elif sel == "Notes: None":
@@ -83,8 +83,7 @@ def view_notes(notes):
 
     """
     notes_l = notes.split('\n')
-    notes_b = "\n".join(notes_l).encode(keepmenu.ENC)
-    sel = dmenu_select(min(keepmenu.MAX_LEN, len(notes_l)), inp=notes_b)
+    sel = dmenu_select(min(keepmenu.MAX_LEN, len(notes_l)), inp=notes)
     return sel
 
 
@@ -101,14 +100,14 @@ def generate_prompt(max_length, dbname):
     if max_length is False or max_length == 0:
         return "Entries"
     if max_length is True or max_length is None:
-        return "Entries: {}".format(dbname)
+        return f"Entries: {dbname}"
     # Truncate the path so that it is no more than max_length
     # or the length of the filename, whichever is larger
     filename = os.path.basename(dbname)
     if len(filename) >= max_length - 3:
-        return "Entries: {}".format(filename)
+        return f"Entries: {filename}"
     path = dbname.replace(os.path.expanduser("~"), "~")
     if len(path) <= max_length:
-        return "Entries: {}".format(path)
+        return f"Entries: {path}"
     path = path[:(max_length - len(filename) - 3)]
-    return "Entries: {}...{}".format(path, filename)
+    return f"Entries: {path}...{filename}"

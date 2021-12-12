@@ -34,11 +34,12 @@ SEQUENCE = "{USERNAME}{TAB}{PASSWORD}{ENTER}"
 MAX_LEN = 24
 CONF = configparser.ConfigParser()
 
-def reload_config():
+
+def reload_config():  # pylint: disable=too-many-statements,too-many-branches
     """Reload config file. Primarly for use with tests.
 
     """
-    # pragma pylint: disable=global-statement
+    # pragma pylint: disable=global-statement,global-variable-not-assigned
     global CACHE_PERIOD_MIN, \
         CACHE_PERIOD_DEFAULT_MIN, \
         CONF, \
@@ -46,14 +47,14 @@ def reload_config():
         ENV, \
         ENC, \
         SEQUENCE
-    # pragma pylint: enable=global-variable-undefined
+    # pragma pylint: enable=global-variable-undefined,global-variable-not-assigned
     CONF = configparser.ConfigParser()
     if not exists(CONF_FILE):
         try:
             os.mkdir(os.path.dirname(CONF_FILE))
         except OSError:
             pass
-        with open(CONF_FILE, 'w') as conf_file:
+        with open(CONF_FILE, 'w', encoding=ENC) as conf_file:
             CONF.add_section('dmenu')
             CONF.set('dmenu', 'dmenu_command', 'dmenu')
             CONF.add_section('dmenu_passphrase')
@@ -68,7 +69,7 @@ def reload_config():
     try:
         CONF.read(CONF_FILE)
     except configparser.ParsingError as err:
-        dmenu_err("Config file error: {}".format(err))
+        dmenu_err(f"Config file error: {err}")
         sys.exit()
     if CONF.has_option('dmenu', 'dmenu_command'):
         command = shlex.split(CONF.get('dmenu', 'dmenu_command'))
