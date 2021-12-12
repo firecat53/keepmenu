@@ -6,7 +6,7 @@ import configparser
 import locale
 import os
 import shlex
-from subprocess import call
+from subprocess import run, DEVNULL
 import sys
 from os.path import exists, expanduser
 
@@ -87,14 +87,14 @@ def reload_config():  # pylint: disable=too-many-statements,too-many-branches
     if CONF.has_option("database", "type_library"):
         if CONF.get("database", "type_library") == "xdotool":
             try:
-                call(['xdotool', 'version'])
+                run(['xdotool', 'version'], check=False, stdout=DEVNULL)
             except OSError:
                 dmenu_err("Xdotool not installed.\n"
                           "Please install or remove that option from config.ini")
                 sys.exit()
         elif CONF.get("database", "type_library") == "ydotool":
             try:
-                call(['ydotool'])
+                run(['ydotool'], check=False, stdout=DEVNULL)
             except OSError:
                 dmenu_err("Ydotool not installed.\n"
                           "Please install or remove that option from config.ini")
