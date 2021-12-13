@@ -73,7 +73,7 @@ def view_entry(kp_entry):
         if sel != "URL: None":
             webbrowser.open(sel)
         sel = ""
-    return sel
+    return sel if not sel.endswith(": None") else ""
 
 
 def view_notes(notes):
