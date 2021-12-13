@@ -69,7 +69,7 @@ def view_entry(kp_entry):
         sel = kp_entry.deref('password')
     elif sel == "TOTP: ******":
         sel = gen_otp(kp_entry.get_custom_property("otp"))
-    elif sel == fields[3]:
+    elif sel == fields[4]:
         if sel != "URL: None":
             webbrowser.open(sel)
         sel = ""
