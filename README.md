@@ -24,7 +24,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Requirements
 
-1. Python 3.6+
+1. Python 3.7+
 2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
 3. Dmenu, Rofi, or Bemenu
 4. (optional) Pinentry

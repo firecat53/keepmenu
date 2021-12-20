@@ -4,7 +4,7 @@
 
 ## Requirements
 
-1. Python 3.6+.
+1. Python 3.7+.
 2. [Pykeepass][1] >= 4.0.0 and [pynput][2]. Install via pip or your
    distribution's package manager, if available.
 3. Dmenu, Rofi or Bemenu.
