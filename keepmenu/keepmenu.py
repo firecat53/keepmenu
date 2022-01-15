@@ -138,7 +138,7 @@ def get_database(open_databases=None, **kwargs):
             if not dbs[0].kfile and dbs[0].dbase in dbs_cfg_n:
                 dbs[0].kfile = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].kfile
             # Use existing password if available
-            if not dbs[0].pword and dbs[0].dbase in dbs_cfg_n:
+            if dbs[0].pword is None and dbs[0].dbase in dbs_cfg_n:
                 dbs[0].pword = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].pword
     elif clidb.atype and open_databases:
         # If only autotype is passed, use current db
@@ -159,9 +159,9 @@ def get_database(open_databases=None, **kwargs):
         dbs = [i for i in dbs if i.dbase == sel]
         if not sel or not dbs:
             return None, open_databases
-    if not dbs[0].pword:
+    if dbs[0].pword is None:
         dbs[0].pword = get_passphrase()
-        if not dbs[0].pword:
+        if dbs[0].pword is None:
             return None, open_databases
     for db_ in open_databases.values():
         db_.is_active = False
