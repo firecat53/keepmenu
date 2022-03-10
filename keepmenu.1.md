@@ -2,7 +2,7 @@
 title: Keepmenu
 section: 1
 header: User Manual
-footer: Keepmenu 1.1.0
+footer: Keepmenu 1.2.2
 date: 18 October 2021
 ---
 
