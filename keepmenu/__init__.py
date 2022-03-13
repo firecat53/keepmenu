@@ -99,6 +99,13 @@ def reload_config():  # pylint: disable=too-many-statements,too-many-branches
                 dmenu_err("Ydotool not installed.\n"
                           "Please install or remove that option from config.ini")
                 sys.exit()
+        elif CONF.get("database", "type_library") == "wtype":
+            try:
+                run(['wtype'], check=False, stdout=DEVNULL, stderr=DEVNULL)
+            except OSError:
+                dmenu_err("wtype not installed.\n"
+                          "Please install or remove that option from config.ini")
+                sys.exit()
 
 
 reload_config()

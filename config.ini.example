@@ -29,7 +29,7 @@
 # editor = <path/to/terminal editor> 'vim' by default
 # terminal = <xterm, urxvt> <options if necessary>. 'xterm' by default
 # gui_editor = <path/to/editor> <options>  e.g. gui_editor = gvim -f
-# type_library = pynput (default), xdotool (for alternate keyboard layout support) or ydotool (for Wayland)
+# type_library = pynput (default), xdotool (for alternate keyboard layout support), ydotool (for Wayland), or wtype (also for Wayland)
 # hide_groups = Recycle Bin  <Note formatting for adding multiple groups>
 #               Group 2
 #               Group 3
