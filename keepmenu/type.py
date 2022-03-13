@@ -1,4 +1,4 @@
-"""Methods for typing entries with pynput, xdotool and ydotool
+"""Methods for typing entries with pynput, xdotool, ydotool, wtype
 
 """
 # flake8: noqa
@@ -104,6 +104,8 @@ def type_entry(entry, db_autotype=None):
         type_entry_xdotool(entry, tokens)
     elif library == 'ydotool':
         type_entry_ydotool(entry, tokens)
+    elif library == 'wtype':
+        type_entry_wtype(entry, tokens)
     else:
         type_entry_pynput(entry, tokens)
 
@@ -456,6 +458,98 @@ def type_entry_ydotool(entry, tokens):
         else:
             call(['ydotool', 'type', '--', token])
 
+WTYPE_AUTOTYPE_TOKENS = {
+    "{TAB}"       : 'Tab',
+    "{ENTER}"     : 'Return',
+    "~"           : 'Return',
+    "{UP}"        : 'Up',
+    "{DOWN}"      : 'Down',
+    "{LEFT}"      : 'Left',
+    "{RIGHT}"     : 'Right',
+    "{INSERT}"    : 'Insert',
+    "{INS}"       : 'Insert',
+    "{DELETE}"    : 'Delete',
+    "{DEL}"       : 'Delete',
+    "{HOME}"      : 'Home',
+    "{END}"       : 'End',
+    "{PGUP}"      : 'Page_Up',
+    "{PGDN}"      : 'Page_Down',
+    "{SPACE}"     : 'Space',
+    "{BACKSPACE}" : 'BackSpace',
+    "{BS}"        : 'BackSpace',
+    "{BKSP}"      : 'BackSpace',
+    "{BREAK}"     : 'Break',
+    "{CAPSLOCK}"  : 'Caps_Lock',
+    "{ESC}"       : 'Escape',
+    "{WIN}"       : 'Meta_L',
+    "{LWIN}"      : 'Meta_L',
+    "{RWIN}"      : 'Meta_R',
+    # "{APPS}"      :  '',
+    "{HELP}"      :  'Help',
+    "{NUMLOCK}"   :  'Num_Lock',
+    "{PRTSC}"     :  'Print',
+    "{SCROLLLOCK}":  'Scroll_Lock',
+    "{F1}"        :  'F1',
+    "{F2}"        :  'F2',
+    "{F3}"        :  'F3',
+    "{F4}"        :  'F4',
+    "{F5}"        :  'F5',
+    "{F6}"        :  'F6',
+    "{F7}"        :  'F7',
+    "{F8}"        :  'F8',
+    "{F9}"        :  'F9',
+    "{F10}"       :  'F10',
+    "{F11}"       :  'F11',
+    "{F12}"       :  'F12',
+    "{F13}"       :  'F13',
+    "{F14}"       :  'F14',
+    "{F15}"       :  'F15',
+    "{F16}"       :  'F16',
+    "{ADD}"       :  'KP_Add',
+    "{SUBTRACT}"  :  'KP_Subtract',
+    "{MULTIPLY}"  :  'KP_Multiply',
+    "{DIVIDE}"    :  'KP_Divide',
+    "{NUMPAD0}"   :  'KP_0',
+    "{NUMPAD1}"   :  'KP_1',
+    "{NUMPAD2}"   :  'KP_2',
+    "{NUMPAD3}"   :  'KP_3',
+    "{NUMPAD4}"   :  'KP_4',
+    "{NUMPAD5}"   :  'KP_5',
+    "{NUMPAD6}"   :  'KP_6',
+    "{NUMPAD7}"   :  'KP_7',
+    "{NUMPAD8}"   :  'KP_8',
+    "{NUMPAD9}"   :  'KP_9',
+    "+"           :  'Shift_L',
+    "^"           :  'Ctrl_L',
+    "%"           :  'Alt_L',
+    "@"           :  'Meta_L',
+}
+
+def type_entry_wtype(entry, tokens):
+    """Auto-type entry entry using wtype
+
+    """
+    enter_idx = True
+    for token, special in tokens:
+        if special:
+            cmd = token_command(token)
+            if callable(cmd):
+                cmd()  # pylint: disable=not-callable
+            elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
+                to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
+                if to_type:
+                    call(['wtype', '--', to_type])
+            elif token in STRING_AUTOTYPE_TOKENS:
+                to_type = STRING_AUTOTYPE_TOKENS[token]
+                call(['wtype', '--', to_type])
+            elif token in WTYPE_AUTOTYPE_TOKENS:
+                cmd = ['wtype', '-k', WTYPE_AUTOTYPE_TOKENS[token]]
+                call(cmd)
+            else:
+                dmenu_err(f"Unsupported auto-type token (wtype): \"{token}\"")
+                return
+        else:
+            call(['wtype', '--', token])
 
 def type_text(data):
     """Type the given text data
@@ -468,6 +562,8 @@ def type_text(data):
         call(['xdotool', 'type', '--', data])
     elif library == 'ydotool':
         call(['ydotool', 'type', '--', data])
+    elif library == 'wtype':
+        call(['wtype', '--', data])
     else:
         kbd = keyboard.Controller()
         try:
