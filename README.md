@@ -41,7 +41,7 @@ For full installation documention see the [installation docs][docs/install.md].
 - Type, view or edit any field.
 - Open the URL in the default web browser.
 - Non U.S. English keyboard languages and layouts supported via xdotool or
-  ydotool (for Wayland).
+  ydotool(>=1.0.0, for Wayland).
 - Edit notes using terminal or gui editor.
 - Add and Delete entries.
 - Add, delete, rename and move groups.
