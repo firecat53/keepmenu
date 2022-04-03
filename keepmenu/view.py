@@ -1,6 +1,7 @@
 """Methods to view database items
 
 """
+import re
 import os.path
 import webbrowser
 
@@ -60,6 +61,9 @@ def view_entry(kp_entry):
               str(f"Expire time: {kp_entry.expiry_time}")
               if kp_entry.expires is True else "Expiry date: None"]
 
+    for attr in kp_entry.custom_properties:
+        fields.append(f'Attribute "{attr}": "{kp_entry.get_custom_property(attr)}"')
+
     sel = dmenu_select(len(fields), inp="\n".join(fields))
     if sel == "Notes: <Enter to view>":
         sel = view_notes(kp_entry.deref('notes'))
@@ -73,6 +77,10 @@ def view_entry(kp_entry):
         if sel != "URL: None":
             webbrowser.open(sel)
         sel = ""
+    elif sel.startswith("Attribute "):
+        match = re.match(r'Attribute "(.*)": "(.*)"', sel)
+        sel = match.group(2)
+
     return sel if not sel.endswith(": None") else ""
 
 
@@ -85,6 +93,18 @@ def view_notes(notes):
     notes_l = notes.split('\n')
     sel = dmenu_select(min(keepmenu.MAX_LEN, len(notes_l)), inp=notes)
     return sel
+
+
+def view_additional_attributes(kp_entry):
+    """View custom attributes associated with an entry
+
+    Args: kpo - Keepass object
+    Returns: The value of the attribute
+
+    """
+    fields = kp_entry.custom_properties.keys()
+    sel = dmenu_select(len(fields), inp="\n".join(fields))
+    return kp_entry.custom_properties[sel]
 
 
 def generate_prompt(max_length, dbname):

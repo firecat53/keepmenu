@@ -3,6 +3,7 @@
 """
 import os
 import random
+import re
 from secrets import choice
 import shlex
 import string
@@ -71,13 +72,28 @@ def edit_entry(kpo, kp_entry):
               str(f"Url: {kp_entry.url}"),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               str(f"Expiry time: {kp_entry.expiry_time}")
-              if kp_entry.expires is True else "Expiry date: None",
-              "Delete Entry: "]
+              if kp_entry.expires is True else "Expiry date: None"]
+
+    for attr in kp_entry.custom_properties:
+        fields.append(f'Attribute "{attr}": "{kp_entry.get_custom_property(attr)}"')
+
+    fields.append("Add Attribute: ")
+    fields.append("Delete Entry: ")
+
     if hasattr(kp_entry, 'autotype_sequence') and hasattr(kp_entry, 'autotype_enabled'):
         fields[5:5] = [str(f"Autotype Sequence: {kp_entry.autotype_sequence}"),
                        str(f"Autotype Enabled: {kp_entry.autotype_enabled}")]
     inp = "\n".join(fields)
     sel = dmenu_select(len(fields), inp=inp)
+
+    # Needs to be above so that underscores are not added to the key
+    if sel.startswith("Attribute"):
+        match = re.match(r'Attribute "(.*)": "(.*)"', sel)
+        key = match.group(1)
+        value = match.group(2)
+        edit_addtional_attributes(kp_entry, key, value)
+        return True
+
     try:
         field, sel = sel.split(": ", 1)
     except (ValueError, TypeError):
@@ -129,12 +145,18 @@ def edit_entry(kpo, kp_entry):
     if field == 'totp':
         edit_totp(kp_entry)
         return True
+
+    if field == "add_attribute":
+        add_additional_attribute(kp_entry)
+        return True
+
     if field == 'autotype_enabled':
         inp = "True\nFalse\n"
         at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=inp)
         if not at_enab:
             return True
         sel = not at_enab == 'False'
+
     if (field not in ('password', 'notes', 'path', 'autotype_enabled')) or pw_choice:
         sel = dmenu_select(1, f"{field.capitalize()}", inp=edit)
         if not sel:
@@ -146,6 +168,7 @@ def edit_entry(kpo, kp_entry):
                 return True
     elif field == 'notes':
         sel = edit_notes(kp_entry.notes)
+
     setattr(kp_entry, field, sel)
     return True
 
@@ -233,6 +256,52 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
             otp_url += "&encoder=steam"
 
         kp_entry.set_custom_property("otp", otp_url)
+
+
+def add_additional_attribute(kp_entry):
+    """Add additional attribute
+
+    Args: kpo - Keepass object
+
+    """
+    key = dmenu_select(0, "New Attribute", inp="")
+
+    if key == '':
+        return
+
+    value = dmenu_select(0, f"{key}'s value", inp="")
+
+    if value == '':
+        return
+
+    kp_entry.set_custom_property(key, value)
+
+
+def edit_addtional_attributes(kp_entry, key, curr_val):
+    """Edit/Delete additional attributes
+
+    Args: kpo - Keepass object
+          key - The attribute's key to edit
+          curr_val 1 The attribute's current value
+
+    """
+    options = [curr_val, "Delete"]
+    sel = dmenu_select(len(options), f"{key}:", inp="\n".join(options))
+
+    if sel == curr_val:
+        _edit_additional_attrs(kp_entry, key)
+    elif sel == "Delete":
+        _delete_additional_attr(kp_entry, key)
+
+
+def _edit_additional_attrs(kp_entry, key):
+    prev_val = [kp_entry.custom_properties[key]]
+    new_val = dmenu_select(len(prev_val), "New Value", inp="\n".join(prev_val))
+    kp_entry.set_custom_property(key, new_val)
+
+
+def _delete_additional_attr(kp_entry, key):
+    kp_entry.delete_custom_property(key)
 
 
 def edit_notes(note):

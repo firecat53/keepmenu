@@ -37,12 +37,14 @@
     - Use a custom [Keepass 2.x style auto-type sequence][1] if you have one defined
       (except for character repetition and the 'special commands'). Set it per entry
       or set a global default. Disable autotype for an entry, if desired.
+    - Auto-type custom attributes by hitting `Enter` on the desired attribute or
+      by using the `{S:<ATTR_NAME>}` action code in your auto-type sequence.
     - Select any single field and have it typed into the active window. Notes fields
       can be viewed line-by-line and the selected line will be typed when
       selected.
     - `Enter` to open the URL in the default web browser from the View/Type menu.
 - *Edit*
-    - Edit entry title, username, URL and password (manually typed or auto-generate)
+    - Edit entry title, username, URL, attributes, and password (manually typed or auto-generate)
     - Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)
     - Add and Delete entries
     - Rename, move, delete and add groups
