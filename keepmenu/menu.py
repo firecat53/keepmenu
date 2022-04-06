@@ -41,6 +41,10 @@ def dmenu_cmd(num_lines, prompt):
         dmenu = [dmenu_command, "-p", str(prompt)]
         if obscure is True and prompt == "Password":
             dmenu.append("-x")
+    elif "wofi" in dmenu_command:
+        dmenu = [dmenu_command, "-p", str(prompt)]
+        if obscure is True and prompt == "Password":
+            dmenu.append("-P")
     else:
         # Catchall for some other menu programs. Maybe it'll run and not fail?
         dmenu = [dmenu_command]
@@ -65,7 +69,7 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
               encoding=keepmenu.ENC,
               env=keepmenu.ENV,
               input=inp)
-    if res.stderr:
+    if res.stderr and "rofi" in cmd[0]:
         cmd = [cmd[0]] + ["-dmenu"] if "rofi" in cmd[0] else [""]
         run(cmd[0], check=False, input=res.stderr, env=keepmenu.ENV)
         sys.exit()
