@@ -3,7 +3,6 @@
 """
 import os
 import random
-import re
 from secrets import choice
 import shlex
 import string
@@ -74,8 +73,12 @@ def edit_entry(kpo, kp_entry):
               str(f"Expiry time: {kp_entry.expiry_time}")
               if kp_entry.expires is True else "Expiry date: None"]
 
-    for attr in kp_entry.custom_properties:
-        fields.append(f'Attribute "{attr}": "{kp_entry.get_custom_property(attr)}"')
+    attrs = kp_entry.custom_properties
+    for attr in attrs:
+        if attr != "otp":
+            val = attrs.get(attr) or ""
+            value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to Edit>"
+            fields.append(f'{attr}: {value}')
 
     fields.append("Add Attribute: ")
     fields.append("Delete Entry: ")
@@ -87,12 +90,10 @@ def edit_entry(kpo, kp_entry):
     sel = dmenu_select(len(fields), inp=inp)
 
     # Needs to be above so that underscores are not added to the key
-    if sel.startswith("Attribute"):
-        match = re.match(r'Attribute "(.*)": "(.*)"', sel)
-        key = match.group(1)
-        value = match.group(2)
-        edit_addtional_attributes(kp_entry, key, value)
-        return True
+    for attr in attrs:
+        if sel in (f'{attr}: {attrs.get(attr) or "None"}', f'{attr}: <Enter to Edit>'):
+            edit_additional_attributes(kp_entry, attr, attrs.get(attr) or "")
+            return True
 
     try:
         field, sel = sel.split(": ", 1)
@@ -261,47 +262,34 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
 def add_additional_attribute(kp_entry):
     """Add additional attribute
 
-    Args: kpo - Keepass object
+        Args: kp_entry - Entry object
 
     """
-    key = dmenu_select(0, "New Attribute", inp="")
-
-    if key == '':
+    key = dmenu_select(0, "Attribute Name: ", inp="")
+    if not key:
         return
-
-    value = dmenu_select(0, f"{key}'s value", inp="")
-
-    if value == '':
-        return
-
-    kp_entry.set_custom_property(key, value)
+    edit_additional_attributes(kp_entry, key, "")
 
 
-def edit_addtional_attributes(kp_entry, key, curr_val):
+def edit_additional_attributes(kp_entry, key, value):
     """Edit/Delete additional attributes
 
-    Args: kpo - Keepass object
-          key - The attribute's key to edit
-          curr_val 1 The attribute's current value
+    Args: kp_entry - Entry object
+          key - attr name (string)
+          value - attr value (string)
 
     """
-    options = [curr_val, "Delete"]
+    options = ["Multi-line Edit", "Delete"]
+    if len(value.split('\n')) == 1:
+        options.insert(0, value)
     sel = dmenu_select(len(options), f"{key}:", inp="\n".join(options))
-
-    if sel == curr_val:
-        _edit_additional_attrs(kp_entry, key)
-    elif sel == "Delete":
-        _delete_additional_attr(kp_entry, key)
-
-
-def _edit_additional_attrs(kp_entry, key):
-    prev_val = [kp_entry.custom_properties[key]]
-    new_val = dmenu_select(len(prev_val), "New Value", inp="\n".join(prev_val))
-    kp_entry.set_custom_property(key, new_val)
-
-
-def _delete_additional_attr(kp_entry, key):
-    kp_entry.delete_custom_property(key)
+    if sel == "Delete":
+        kp_entry.delete_custom_property(key)
+        return
+    if sel == "Multi-line Edit":
+        sel = edit_notes(value)
+    if sel:
+        kp_entry.set_custom_property(key, sel)
 
 
 def edit_notes(note):
@@ -345,7 +333,7 @@ def edit_notes(note):
         fname.seek(0)
         note = fname.read()
     note = '' if not note else note.decode(keepmenu.ENC)
-    return note
+    return note.strip()
 
 
 def gen_passwd(chars, length=20):
