@@ -32,8 +32,9 @@ Passhole, but is more dmenu and less command line focused.
 
 	keepmenu
     keepmenu -d ~/docs/totp_passwords.kdbx -a '{TOTP}{ENTER}'
+    keepmenu -d ~/passwords.kdbx -k ~/passwords.keyfile -a '{S:security question}{ENTER}'
 
-# CONFIGURATION  
+# CONFIGURATION
 
 If you start keepmenu for the first time without a config file, it will prompt
 you for database and keyfile locations and save them in a default config file.
@@ -81,7 +82,7 @@ reference for additional options.
 
 Scott Hansen - <firecat4153@gmail.com>
 
-# COPYRIGHT  
+# COPYRIGHT
 
 GNU General Public License 3
 

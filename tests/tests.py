@@ -285,6 +285,25 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(ref_entry.deref("url"), base_entry.url)
         self.assertEqual(ref_entry.deref("notes"), base_entry.notes)
 
+    def test_additional_attributes(self):
+        """Test if additional attributes are correctly accessed
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'password_1', "password")
+            KM.CONF.write(conf_file)
+
+        database, _ = KM.keepmenu.get_database(database=db_name)
+        kpo = KM.keepmenu.get_entries(database)
+        entry = kpo.find_entries_by_title(title='Additional Attributes')[0]
+
+        self.assertEqual(KM.type.token_command('{S:Attr 1}')(entry), "one")
+        self.assertEqual(KM.type.token_command('{S:Attr 2}')(entry), "two")
+
     def test_expiry(self):
         """Test expiring/expired entries can be found
 
@@ -342,7 +361,7 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(tokens[7], ("{}}", True))
 
     def test_token_command(self):
-        """ test the token command (delay)
+        """ test the token command
         """
         self.assertTrue(callable(KM.type.token_command('{DELAY 5}')))
         self.assertFalse(callable(KM.type.token_command('{DELAY 5 }')))
@@ -352,6 +371,11 @@ class TestFunctions(unittest.TestCase):
         self.assertFalse(callable(KM.type.token_command('{DELAY}')))
         self.assertFalse(callable(KM.type.token_command('DELAY 5}')))
         self.assertFalse(callable(KM.type.token_command('{DELAY a}')))
+
+        self.assertTrue(callable(KM.type.token_command('{S:a}')))
+        self.assertTrue(callable(KM.type.token_command('{S: a}')))
+        self.assertTrue(callable(KM.type.token_command('{S: a }')))
+        self.assertFalse(callable(KM.type.token_command('S: a}')))
 
     def test_hotp(self):
         """ adapted from https://github.com/susam/mintotp/blob/master/test.py

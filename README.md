@@ -52,6 +52,7 @@ For full installation documention see the [installation docs][docs/install.md].
 - [Keepass field references][4] are supported.
 - Display and manage expired passwords.
 - Add, edit and type TOTP codes.
+- Add, edit, type and delete custom attributes.
 
 ## License
 

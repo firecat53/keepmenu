@@ -60,6 +60,13 @@ def view_entry(kp_entry):
               str(f"Expire time: {kp_entry.expiry_time}")
               if kp_entry.expires is True else "Expiry date: None"]
 
+    attrs = kp_entry.custom_properties
+    for attr in attrs:
+        if attr != "otp":
+            val = attrs.get(attr) or ""
+            value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to view>"
+            fields.append(f'{attr}: {value}')
+
     sel = dmenu_select(len(fields), inp="\n".join(fields))
     if sel == "Notes: <Enter to view>":
         sel = view_notes(kp_entry.deref('notes'))
@@ -73,6 +80,14 @@ def view_entry(kp_entry):
         if sel != "URL: None":
             webbrowser.open(sel)
         sel = ""
+    else:
+        for attr in attrs:
+            if sel == f'{attr}: {attrs.get(attr) or ""}':
+                sel = attrs.get(attr)
+                break
+            if sel == f'{attr}: <Enter to view>':
+                sel = view_notes(attrs.get(attr) or "")
+
     return sel if not sel.endswith(": None") else ""
 
 
