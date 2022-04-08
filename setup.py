@@ -3,14 +3,14 @@
 from setuptools import setup
 
 setup(name="keepmenu",
-      version="1.2.2",
+      version="1.3.0",
       description="Dmenu frontend for Keepass databases",
       long_description=open('README.md', 'rb').read().decode('utf-8'),
       long_description_content_type="text/markdown",
       author="Scott Hansen",
       author_email="firecat4153@gmail.com",
       url="https://github.com/firecat53/keepmenu",
-      download_url="https://github.com/firecat53/keepmenu/tarball/1.2.2",
+      download_url="https://github.com/firecat53/keepmenu/tarball/1.3.0",
       packages=['keepmenu'],
       entry_points={
           'console_scripts': ['keepmenu=keepmenu.__main__:main']
