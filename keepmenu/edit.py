@@ -71,13 +71,30 @@ def edit_entry(kpo, kp_entry):
               str(f"Url: {kp_entry.url}"),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               str(f"Expiry time: {kp_entry.expiry_time}")
-              if kp_entry.expires is True else "Expiry date: None",
-              "Delete Entry: "]
+              if kp_entry.expires is True else "Expiry date: None"]
+
+    attrs = kp_entry.custom_properties
+    for attr in attrs:
+        if attr != "otp":
+            val = attrs.get(attr) or ""
+            value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to Edit>"
+            fields.append(f'{attr}: {value}')
+
+    fields.append("Add Attribute: ")
+    fields.append("Delete Entry: ")
+
     if hasattr(kp_entry, 'autotype_sequence') and hasattr(kp_entry, 'autotype_enabled'):
         fields[5:5] = [str(f"Autotype Sequence: {kp_entry.autotype_sequence}"),
                        str(f"Autotype Enabled: {kp_entry.autotype_enabled}")]
     inp = "\n".join(fields)
     sel = dmenu_select(len(fields), inp=inp)
+
+    # Needs to be above so that underscores are not added to the key
+    for attr in attrs:
+        if sel in (f'{attr}: {attrs.get(attr) or "None"}', f'{attr}: <Enter to Edit>'):
+            edit_additional_attributes(kp_entry, attr, attrs.get(attr) or "")
+            return True
+
     try:
         field, sel = sel.split(": ", 1)
     except (ValueError, TypeError):
@@ -129,12 +146,18 @@ def edit_entry(kpo, kp_entry):
     if field == 'totp':
         edit_totp(kp_entry)
         return True
+
+    if field == "add_attribute":
+        add_additional_attribute(kp_entry)
+        return True
+
     if field == 'autotype_enabled':
         inp = "True\nFalse\n"
         at_enab = dmenu_select(2, "Autotype Enabled? True/False", inp=inp)
         if not at_enab:
             return True
         sel = not at_enab == 'False'
+
     if (field not in ('password', 'notes', 'path', 'autotype_enabled')) or pw_choice:
         sel = dmenu_select(1, f"{field.capitalize()}", inp=edit)
         if not sel:
@@ -146,6 +169,7 @@ def edit_entry(kpo, kp_entry):
                 return True
     elif field == 'notes':
         sel = edit_notes(kp_entry.notes)
+
     setattr(kp_entry, field, sel)
     return True
 
@@ -235,6 +259,39 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
         kp_entry.set_custom_property("otp", otp_url)
 
 
+def add_additional_attribute(kp_entry):
+    """Add additional attribute
+
+        Args: kp_entry - Entry object
+
+    """
+    key = dmenu_select(0, "Attribute Name: ", inp="")
+    if not key:
+        return
+    edit_additional_attributes(kp_entry, key, "")
+
+
+def edit_additional_attributes(kp_entry, key, value):
+    """Edit/Delete additional attributes
+
+    Args: kp_entry - Entry object
+          key - attr name (string)
+          value - attr value (string)
+
+    """
+    options = ["Multi-line Edit", "Delete"]
+    if len(value.split('\n')) == 1:
+        options.insert(0, value)
+    sel = dmenu_select(len(options), f"{key}:", inp="\n".join(options))
+    if sel == "Delete":
+        kp_entry.delete_custom_property(key)
+        return
+    if sel == "Multi-line Edit":
+        sel = edit_notes(value)
+    if sel:
+        kp_entry.set_custom_property(key, sel)
+
+
 def edit_notes(note):
     """Use $EDITOR (or 'vim' if not set) to edit the notes entry
 
@@ -276,7 +333,7 @@ def edit_notes(note):
         fname.seek(0)
         note = fname.read()
     note = '' if not note else note.decode(keepmenu.ENC)
-    return note
+    return note.strip()
 
 
 def gen_passwd(chars, length=20):

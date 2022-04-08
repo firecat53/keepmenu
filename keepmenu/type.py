@@ -66,12 +66,25 @@ def token_command(token):
         if match:
             delay = match.group(1)
             nonlocal cmd
-            cmd = lambda t=delay: time.sleep(int(t) / 1000)
+            cmd = lambda _, t=delay: time.sleep(int(t) / 1000)
+            return True
+        return False
+
+    def _check_additional_attribute():
+        match = re.match(r'{S:(.*)}', token)
+        if match:
+            attr = match.group(1)
+            nonlocal cmd
+            cmd = lambda e, a=attr: e.get_custom_property(a)
             return True
         return False
 
     if _check_delay():  # {DELAY x}
         return cmd
+
+    if _check_additional_attribute():  # {S:<attr>}
+        return cmd
+
     return None
 
 
@@ -156,7 +169,13 @@ def type_entry_pynput(entry, tokens):  # pylint: disable=too-many-branches
         if special:
             cmd = token_command(token)
             if callable(cmd):
-                cmd()  # pylint: disable=not-callable
+                to_type = cmd(entry)  # pylint: disable=not-callable
+                if to_type is not None:
+                    try:
+                        kbd.type(to_type)
+                    except kbd.InvalidCharacterException:
+                        dmenu_err("Unable to type string...bad character.\n"
+                                  "Try setting `type_library = xdotool` in config.ini")
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
@@ -204,7 +223,9 @@ def type_entry_xdotool(entry, tokens):
         if special:
             cmd = token_command(token)
             if callable(cmd):
-                cmd()  # pylint: disable=not-callable
+                to_type = cmd(entry)  # pylint: disable=not-callable
+                if to_type is not None:
+                    call(['xdotool', 'type', '--', to_type])
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
@@ -237,7 +258,9 @@ def type_entry_ydotool(entry, tokens):
         if special:
             cmd = token_command(token)
             if callable(cmd):
-                cmd()  # pylint: disable=not-callable
+                to_type = cmd(entry)  # pylint: disable=not-callable
+                if to_type is not None:
+                    call(['ydotool', 'type', '--', to_type])
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
@@ -264,7 +287,9 @@ def type_entry_wtype(entry, tokens):
         if special:
             cmd = token_command(token)
             if callable(cmd):
-                cmd()  # pylint: disable=not-callable
+                to_type = cmd(entry)  # pylint: disable=not-callable
+                if to_type is not None:
+                    call(['wtype', '--', to_type])
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
