@@ -104,7 +104,7 @@ reference for additional options.
    codes][1] except for repetitions and most command codes. `{DELAY x}`
    (in milliseconds) is supported. Individual autotype sequences can be edited
    or disabled inside Keepmenu.
-6. Set `type_library = xdotool` or `type_library = ydotool` (Wayland) if you
+6. Set `type_library = xdotool` or `type_library = wtype` (Wayland) if you
    need support for non-U.S. English keyboard layouts and/or characters.
 
     * When using xdotool, call `setxkbmap` to set your keyboard type somewhere
