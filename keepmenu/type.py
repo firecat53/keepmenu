@@ -2,6 +2,7 @@
 
 """
 # flake8: noqa
+# pylint: disable=import-outside-toplevel
 import re
 from subprocess import call
 import time
