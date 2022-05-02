@@ -23,7 +23,7 @@ from keepmenu.menu import dmenu_err
 
 AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
-SERCRET_VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+SECRET_VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 
 ENV = os.environ.copy()
 ENV['LC_ALL'] = 'C'

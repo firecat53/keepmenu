@@ -205,9 +205,9 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
             return
 
         for char in secret_key:
-            if char.upper() not in keepmenu.SERCRET_VALID_CHARS:
+            if char.upper() not in keepmenu.SECRET_VALID_CHARS:
                 dmenu_err("Invaild character in secret key, "
-                          f"valid characters are {keepmenu.SERCRET_VALID_CHARS}")
+                          f"valid characters are {keepmenu.SECRET_VALID_CHARS}")
                 return
 
         inputs = [
