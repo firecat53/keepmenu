@@ -40,7 +40,7 @@ def delete_entry(kpo, kp_entry):
     Args: kpo - Keepass object
           kp_entry - keepass entry
     Returns: True if no delete
-             False if delete
+             'del' if delete
 
     """
     inp = "NO\nYes - confirm delete\n"
@@ -49,7 +49,7 @@ def delete_entry(kpo, kp_entry):
         return True
     kpo.delete_entry(kp_entry)
     kpo.save()
-    return False
+    return 'del'
 
 
 def edit_entry(kpo, kp_entry):
@@ -61,6 +61,7 @@ def edit_entry(kpo, kp_entry):
 
     Returns: True to continue editing
              False if done
+             "del" if entry was deleted
 
     """
     fields = [str(f"Title: {kp_entry.title}"),

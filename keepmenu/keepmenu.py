@@ -428,7 +428,7 @@ class DmenuRunner(Process):
             edit = edit_entry(self.database.kpo, entry)
         self.database.kpo.save()
         self.database.kpo = get_entries(self.database)
-        self.prev_entry = entry
+        self.prev_entry = entry if edit != "del" else None
 
     def menu_add_entry(self):
         """Process menu entry - Add entry
