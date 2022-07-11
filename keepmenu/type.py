@@ -9,7 +9,7 @@ import time
 
 import keepmenu
 from keepmenu.menu import dmenu_err
-from keepmenu.totp import gen_otp, get_otp
+from keepmenu.totp import gen_otp, get_otp_url
 
 
 def tokenize_autotype(autotype):
@@ -129,7 +129,7 @@ PLACEHOLDER_AUTOTYPE_TOKENS = {
     "{URL}"     : lambda e: e.deref('url'),
     "{PASSWORD}": lambda e: e.deref('password'),
     "{NOTES}"   : lambda e: e.deref('notes'),
-    "{TOTP}"    : lambda e: gen_otp(get_otp(e)),
+    "{TOTP}"    : lambda e: gen_otp(get_otp_url(e)),
 }
 
 STRING_AUTOTYPE_TOKENS = {

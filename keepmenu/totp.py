@@ -79,7 +79,7 @@ def gen_otp(otp_url):
         not in query_string else query_string['algorithm'][0].lower(), steam)
 
 
-def get_otp(kp_entry):
+def get_otp_url(kp_entry):
     """ Shim to return otp url from KeePass entry
     This is required to fully support pykeepass>=4.0.0
     "otp" was upgraded to a reserved property in pykeepass==4.0.3

@@ -6,7 +6,7 @@ import webbrowser
 
 import keepmenu
 from keepmenu.menu import dmenu_select
-from keepmenu.totp import gen_otp, get_otp
+from keepmenu.totp import gen_otp, get_otp_url
 
 
 def view_all_entries(options, kp_entries, dbname):
@@ -54,7 +54,7 @@ def view_entry(kp_entry):
               or "Title: None",
               kp_entry.deref('username') or "Username: None",
               '**********' if kp_entry.deref('password') else "Password: None",
-              "TOTP: ******" if get_otp(kp_entry) else "TOTP: None",
+              "TOTP: ******" if get_otp_url(kp_entry) else "TOTP: None",
               kp_entry.deref('url') or "URL: None",
               "Notes: <Enter to view>" if kp_entry.deref('notes') else "Notes: None",
               str(f"Expire time: {kp_entry.expiry_time}")
@@ -75,7 +75,7 @@ def view_entry(kp_entry):
     elif sel == '**********':
         sel = kp_entry.deref('password')
     elif sel == "TOTP: ******":
-        sel = gen_otp(get_otp(kp_entry))
+        sel = gen_otp(get_otp_url(kp_entry))
     elif sel == fields[4]:
         if sel != "URL: None":
             webbrowser.open(sel)

@@ -12,7 +12,7 @@ from urllib import parse
 
 import keepmenu
 from keepmenu.menu import dmenu_select, dmenu_err
-from keepmenu.totp import gen_otp, get_otp
+from keepmenu.totp import gen_otp, get_otp_url
 from keepmenu.type import type_text
 
 
@@ -68,7 +68,7 @@ def edit_entry(kpo, kp_entry):
               str(f"Path: {'/'.join(kp_entry.path[:-1])}"),
               str(f"Username: {kp_entry.username}"),
               str("Password: **********") if kp_entry.password else "Password: None",
-              str("TOTP: ******") if get_otp(kp_entry) else "TOTP: None",
+              str("TOTP: ******") if get_otp_url(kp_entry) else "TOTP: None",
               str(f"Url: {kp_entry.url}"),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               str(f"Expiry time: {kp_entry.expiry_time}")
@@ -181,7 +181,7 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
     Args: kp_entry - selected Entry object
 
     """
-    otp_url = get_otp(kp_entry)
+    otp_url = get_otp_url(kp_entry)
 
     if otp_url is not None:
         inputs = [
