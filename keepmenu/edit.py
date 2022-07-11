@@ -12,7 +12,7 @@ from urllib import parse
 
 import keepmenu
 from keepmenu.menu import dmenu_select, dmenu_err
-from keepmenu.totp import gen_otp
+from keepmenu.totp import gen_otp, get_otp
 from keepmenu.type import type_text
 
 
@@ -68,7 +68,7 @@ def edit_entry(kpo, kp_entry):
               str(f"Path: {'/'.join(kp_entry.path[:-1])}"),
               str(f"Username: {kp_entry.username}"),
               str("Password: **********") if kp_entry.password else "Password: None",
-              str("TOTP: ******") if kp_entry.deref("otp") else "TOTP: None",
+              str("TOTP: ******") if get_otp(kp_entry) else "TOTP: None",
               str(f"Url: {kp_entry.url}"),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
               str(f"Expiry time: {kp_entry.expiry_time}")
@@ -76,9 +76,10 @@ def edit_entry(kpo, kp_entry):
 
     attrs = kp_entry.custom_properties
     for attr in attrs:
-        val = attrs.get(attr) or ""
-        value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to Edit>"
-        fields.append(f'{attr}: {value}')
+        if attr != "otp":
+            val = attrs.get(attr) or ""
+            value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to Edit>"
+            fields.append(f'{attr}: {value}')
 
     fields.append("Add Attribute: ")
     fields.append("Delete Entry: ")
@@ -180,7 +181,7 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
     Args: kp_entry - selected Entry object
 
     """
-    otp_url = kp_entry.deref("otp")
+    otp_url = get_otp(kp_entry)
 
     if otp_url is not None:
         inputs = [
@@ -256,7 +257,10 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
         if otp_settings_choice == "Steam token settings":
             otp_url += "&encoder=steam"
 
-        setattr(kp_entry, "otp", otp_url)
+        if hasattr(kp_entry, "otp"):
+            setattr(kp_entry, "otp", otp_url)
+        else:
+            kp_entry.set_custom_property("otp", otp_url)
 
 
 def add_additional_attribute(kp_entry):
