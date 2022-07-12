@@ -2,8 +2,8 @@
 title: Keepmenu
 section: 1
 header: User Manual
-footer: Keepmenu 1.3.0
-date: 08 April 2022
+footer: Keepmenu 1.3.1
+date: 11 July 2022
 ---
 
 # NAME
