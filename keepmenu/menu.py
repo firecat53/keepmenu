@@ -1,9 +1,9 @@
 """Methods for calling dmenu/Rofi
 
 """
+from os.path import basename
 import shlex
 from subprocess import run
-import sys
 
 import keepmenu
 
@@ -22,15 +22,15 @@ def dmenu_cmd(num_lines, prompt):
                 "rofi": ["-dmenu", "-p", str(prompt), "-l", str(num_lines)],
                 "wofi": ["--dmenu", "-p", str(prompt), "-L", str(num_lines)]}
     command = shlex.split(keepmenu.CONF.get('dmenu', 'dmenu_command', fallback='dmenu'))
-    command.extend(commands.get(command[0], []))
+    command.extend(commands.get(basename(command[0]), []))
     pwprompts = ("Password", "password", "client_secret", "Verify password", "Enter Password")
     obscure = keepmenu.CONF.getboolean('dmenu_passphrase', 'obscure', fallback=True)
     if any(i == prompt for i in pwprompts) and obscure is True:
-        pass_prompts = {"dmenu": dmenu_pass(command[0]),
+        pass_prompts = {"dmenu": dmenu_pass(basename(command[0])),
                         "rofi": ['-password'],
                         "bemenu": ['-x'],
                         "wofi": ['-P']}
-        command.extend(pass_prompts.get(command[0], []))
+        command.extend(pass_prompts.get(basename(command[0]), []))
     return command
 
 

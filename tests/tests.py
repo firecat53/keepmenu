@@ -168,15 +168,17 @@ class TestFunctions(unittest.TestCase):
         """Test proper reading of dmenu command string from config.ini
 
         """
+        self.tmpdir = tempfile.mkdtemp()
+        KM.CONF_FILE = os.path.join(self.tmpdir, "config.ini")
+        KM.reload_config()
         # First test default config
-        self.assertTrue(KM.menu.dmenu_cmd(10, "Entries") ==
-                        ["dmenu", "-p", "Entries"])
+        self.assertTrue(KM.menu.dmenu_cmd(10, "Entries") == ["dmenu", "-p", "Entries", "-l", "10"])
         # Test full config
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
         KM.reload_config()
         res = ["/usr/bin/dmenu", "-i", "-l", "10", "-fn", "Inconsolata-12",
-               "-nb", "#909090", "-nf", "#999999", "-b",
-               "-p", "Password", "-nb", "#222222", "-nf", "#222222"]
+               "-nb", "#909090", "-nf", "#999999", "-b", "-p", "Password",
+               "-l", "20", "-nb", "#222222", "-nf", "#222222"]
         self.assertTrue(KM.menu.dmenu_cmd(20, "Password") == res)
 
     def test_generate_prompt(self):
@@ -210,6 +212,7 @@ class TestFunctions(unittest.TestCase):
         db_name = os.path.join(self.tmpdir, "test.kdbx")
         db_name_2 = os.path.join(self.tmpdir, "test2.kdbx")
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        KM.reload_config()
         with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.set('database', 'password_1', '')
