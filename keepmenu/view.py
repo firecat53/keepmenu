@@ -62,7 +62,7 @@ def view_entry(kp_entry):
 
     attrs = kp_entry.custom_properties
     for attr in attrs:
-        if attr != "otp":
+        if attr not in ("otp", "TOTP Seed", "TOTP Settings"):
             val = attrs.get(attr) or ""
             value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to view>"
             fields.append(f'{attr}: {value}')

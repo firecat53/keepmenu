@@ -64,19 +64,19 @@ def gen_otp(otp_url):
     parsed_otp_url = parse.urlparse(otp_url)
     query_string = parse.parse_qs(parsed_otp_url.query)
 
-    for required in ('secret', 'period', 'digits'):
-        if required not in query_string:
-            return ''
+    if not any(i in query_string for i in ('secret', 'period', 'digits')):
+        return ''
 
     try:
         steam = query_string['encoder'][0] == "steam"
     except KeyError:
         steam = False
 
-    return totp(
-        query_string['secret'][0], int(query_string['period'][0]),
-        int(query_string['digits'][0]), 'sha1' if 'algorithm'
-        not in query_string else query_string['algorithm'][0].lower(), steam)
+    return totp(query_string['secret'][0],
+                int(query_string['period'][0]),
+                int(query_string['digits'][0]),
+                'sha1' if 'algorihm' not in query_string else query_string['algorithm'][0].lower(),
+                steam)
 
 
 def get_otp_url(kp_entry):
@@ -88,7 +88,21 @@ def get_otp_url(kp_entry):
     Returns: otp url string or None
 
     """
+    otp = ""
     if hasattr(kp_entry, "otp"):
-        return kp_entry.deref("otp")
+        otp = kp_entry.deref("otp")
     else:
-        return kp_entry.get_custom_property("otp")
+        otp = kp_entry.get_custom_property("otp")
+    if otp:
+        return otp
+    # Support some TOTP schemes that use custom properties "TOTP Seed" and "TOTP Settings"
+    seed = kp_entry.get_custom_property("TOTP Seed")
+    digits, period = (6, 30)
+    settings = kp_entry.get_custom_property("TOTP Settings") or ""
+    try:
+        period, digits = settings.split(";")
+    except ValueError:
+        pass
+    if seed:
+        return f"otpauth://totp/Entry?secret={seed}&period={period}&digits={digits}"
+    return ""
