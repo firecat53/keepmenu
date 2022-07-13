@@ -43,7 +43,7 @@ def totp(key, time_step=30, digits=6, digest='sha1', steam=False):
     """ Generates Time Based OTP
 
     Args: key - Secret key
-          counter - The length of time in seconds each otp is valid for
+          time_step - The length of time in seconds each otp is valid for
           digits - The number of characters/digits that the otp should have
           digest - Algorithm to use to generate the otp
           steam - whether or not to use steam settings
@@ -75,7 +75,7 @@ def gen_otp(otp_url):
 
     return totp(
         query_string['secret'][0], int(query_string['period'][0]),
-        int(query_string['digits'][0]), 'sha1' if 'algorihm'
+        int(query_string['digits'][0]), 'sha1' if 'algorithm'
         not in query_string else query_string['algorithm'][0].lower(), steam)
 
 
