@@ -419,84 +419,82 @@ class TestFunctions(unittest.TestCase):
     def test_gen_otp(self):
         """ Test OTP generation
         """
-        otp_url = "otpauth://totp/{name}:none?secret={secret}&period={period}&digits={digits}"
-        with mock.patch('time.time', return_value=0):
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="test",
-                secret=SECRET1,
-                period=30,
-                digits=6
-            )), '549419')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="test",
-                secret=SECRET2,
-                period=30,
-                digits=6
-            )), '009551')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="Steam",
-                secret=SECRET1,
-                period=30,
-                digits=5
-            ) + "&encoder=steam"), '9XFQT')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="Steam",
-                secret=SECRET2,
-                period=30,
-                digits=5
-            ) + "&encoder=steam"), 'QR5CX')
+        otp_url_1 = "otpauth://totp/test:none?secret={secret}&period={period}&digits={digits}"
+        otp_url_2 = "key={secret}&step={period}&size={digits}"
+        for otp_url in [otp_url_1, otp_url_2]:
+            with mock.patch('time.time', return_value=0):
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET1,
+                    period=30,
+                    digits=6
+                )), '549419')
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET2,
+                    period=30,
+                    digits=6
+                )), '009551')
 
-        with mock.patch('time.time', return_value=1260):
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="test",
-                secret=SECRET1,
-                period=30,
-                digits=6
-            )), '626854')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="test",
-                secret=SECRET2,
-                period=30,
-                digits=6
-            )), '093610')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="Steam",
-                secret=SECRET1,
-                period=30,
-                digits=5
-            ) + "&encoder=steam"), '25256')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="Steam",
-                secret=SECRET2,
-                period=30,
-                digits=5
-            ) + "&encoder=steam"), 'RHH8D')
+            with mock.patch('time.time', return_value=1260):
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET1,
+                    period=30,
+                    digits=6
+                )), '626854')
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET2,
+                    period=30,
+                    digits=6
+                )), '093610')
 
-        with mock.patch('time.time', return_value=1270):
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="test",
-                secret=SECRET1,
-                period=30,
-                digits=6
-            )), '626854')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="test",
-                secret=SECRET2,
-                period=30,
-                digits=6
-            )), '093610')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="Steam",
-                secret=SECRET1,
-                period=30,
-                digits=5
-            ) + "&encoder=steam"), '25256')
-            self.assertEqual(KM.totp.gen_otp(otp_url.format(
-                name="Steam",
-                secret=SECRET2,
-                period=30,
-                digits=5
-            ) + "&encoder=steam"), 'RHH8D')
+            with mock.patch('time.time', return_value=1270):
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET1,
+                    period=30,
+                    digits=6
+                )), '626854')
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET2,
+                    period=30,
+                    digits=6
+                )), '093610')
+
+        # keeotp's otp field empirically doesn't support steam encoding
+        for otp_url in [otp_url_1]:
+            with mock.patch('time.time', return_value=0):
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET1,
+                    period=30,
+                    digits=5
+                ) + "&encoder=steam"), '9XFQT')
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET2,
+                    period=30,
+                    digits=5
+                ) + "&encoder=steam"), 'QR5CX')
+
+            with mock.patch('time.time', return_value=1260):
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET1,
+                    period=30,
+                    digits=5
+                ) + "&encoder=steam"), '25256')
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET2,
+                    period=30,
+                    digits=5
+                ) + "&encoder=steam"), 'RHH8D')
+
+            with mock.patch('time.time', return_value=1270):
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET1,
+                    period=30,
+                    digits=5
+                ) + "&encoder=steam"), '25256')
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET2,
+                    period=30,
+                    digits=5
+                ) + "&encoder=steam"), 'RHH8D')
 
 
 if __name__ == "__main__":
