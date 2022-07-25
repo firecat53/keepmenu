@@ -129,9 +129,9 @@ def get_otp_url(kp_entry):
     if otp_url:
         return otp_url
 
-    otp_url_format = "otpauth://totp/Entry?secret={}&period={}&digits={}"
+    otp_url_format = "otpauth://totp/Entry?secret={}&period={}&digits={}&algorithm={}"
     # Support some TOTP schemes that use custom properties "TOTP Seed" and "TOTP Settings"
-    digits, period = (6, 30)
+    digits, period, algorithm = (6, 30, "sha1")
     seed = kp_entry.get_custom_property("TOTP Seed")
     if seed:
         settings = kp_entry.get_custom_property("TOTP Settings") or ""
@@ -139,13 +139,20 @@ def get_otp_url(kp_entry):
             period, digits = settings.split(";")
         except ValueError:
             pass
-        return otp_url_format.format(seed, period, digits)
+        return otp_url_format.format(seed, period, digits, algorithm)
 
-    # TODO: Support keepass2's default TOTP properties
+    # Support keepass2's default TOTP properties
     seed = kp_entry.get_custom_property("TimeOtp-Secret-Base32")
     if seed:
         period = int(kp_entry.get_custom_property("TimeOtp-Period") or period)
         digits = int(kp_entry.get_custom_property("TimeOtp-Length") or digits)
-        return otp_url_format.format(seed, period, digits)
+        algorithm = kp_entry.get_custom_property("TimeOtp-Algorithm") or algorithm
+        algo_map = {
+            "hmac-sha-1": "sha1",
+            "hmac-sha-256": "sha256",
+            "hmac-sha-512": "sha512",
+        }
+        algorithm = algo_map.get(algorithm.lower(), "sha1")
+        return otp_url_format.format(seed, period, digits, algorithm)
 
     return otp_url
