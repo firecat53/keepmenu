@@ -62,21 +62,49 @@ def gen_otp(otp_url):
 
     """
     parsed_otp_url = parse.urlparse(otp_url)
-    query_string = parse.parse_qs(parsed_otp_url.query)
+    if parsed_otp_url.scheme == "otpauth":
+        query_string = parse.parse_qs(parsed_otp_url.query)
+    else:
+        query_string = parse.parse_qs(otp_url)
+    params = {}
 
-    if not any(i in query_string for i in ('secret', 'period', 'digits')):
+    if 'secret' in query_string:
+        params['key'] = query_string['secret'][0]
+        try:
+            params['time_step'] = int(query_string['periods'][0])
+        except KeyError:
+            pass
+        try:
+            params['digits'] = int(query_string['digits'][0])
+        except KeyError:
+            pass
+        try:
+            params['digest'] = query_string['algorithm'][0].lower()
+        except KeyError:
+            pass
+        try:
+            params["steam"] = query_string['encoder'][0] == "steam"
+        except KeyError:
+            pass
+    # support keeotp format
+    elif 'key' in query_string:
+        params['key'] = query_string['key'][0]
+        try:
+            params['time_step'] = int(query_string['step'][0])
+        except KeyError:
+            pass
+        try:
+            params['digits'] = int(query_string['size'][0])
+        except KeyError:
+            pass
+        try:
+            params['digest'] = query_string['otpHashMode'][0].lower()
+        except KeyError:
+            pass
+    else:
         return ''
 
-    try:
-        steam = query_string['encoder'][0] == "steam"
-    except KeyError:
-        steam = False
-
-    return totp(query_string['secret'][0],
-                int(query_string['period'][0]),
-                int(query_string['digits'][0]),
-                'sha1' if 'algorithm' not in query_string else query_string['algorithm'][0].lower(),
-                steam)
+    return totp(**params)
 
 
 def get_otp_url(kp_entry):
@@ -95,6 +123,7 @@ def get_otp_url(kp_entry):
         otp = kp_entry.get_custom_property("otp")
     if otp:
         return otp
+
     # Support some TOTP schemes that use custom properties "TOTP Seed" and "TOTP Settings"
     seed = kp_entry.get_custom_property("TOTP Seed")
     digits, period = (6, 30)
@@ -105,4 +134,7 @@ def get_otp_url(kp_entry):
         pass
     if seed:
         return f"otpauth://totp/Entry?secret={seed}&period={period}&digits={digits}"
+
+    # TODO: Support keepass2's default TOTP properties
+
     return ""
