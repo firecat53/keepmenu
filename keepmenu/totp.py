@@ -8,6 +8,11 @@ import time
 from urllib import parse
 
 
+TOTP_PUBLIC_FIELDS = ('TOTP Settings', 'TimeOtp-Length', 'TimeOtp-Period')
+TOTP_SECRET_FIELDS = ('otp', 'TOTP Seed', 'TimeOtp-Secret-Base32')
+TOTP_FIELDS = TOTP_PUBLIC_FIELDS + TOTP_SECRET_FIELDS
+
+
 def hotp(key, counter, digits=6, digest='sha1', steam=False):
     """ Generates HMAC OTP.  Taken from https://github.com/susam/mintotp
 
@@ -116,25 +121,31 @@ def get_otp_url(kp_entry):
     Returns: otp url string or None
 
     """
-    otp = ""
+    otp_url = ""
     if hasattr(kp_entry, "otp"):
-        otp = kp_entry.deref("otp")
+        otp_url = kp_entry.deref("otp")
     else:
-        otp = kp_entry.get_custom_property("otp")
-    if otp:
-        return otp
+        otp_url = kp_entry.get_custom_property("otp")
+    if otp_url:
+        return otp_url
 
+    otp_url_format = "otpauth://totp/Entry?secret={}&period={}&digits={}"
     # Support some TOTP schemes that use custom properties "TOTP Seed" and "TOTP Settings"
-    seed = kp_entry.get_custom_property("TOTP Seed")
     digits, period = (6, 30)
-    settings = kp_entry.get_custom_property("TOTP Settings") or ""
-    try:
-        period, digits = settings.split(";")
-    except ValueError:
-        pass
+    seed = kp_entry.get_custom_property("TOTP Seed")
     if seed:
-        return f"otpauth://totp/Entry?secret={seed}&period={period}&digits={digits}"
+        settings = kp_entry.get_custom_property("TOTP Settings") or ""
+        try:
+            period, digits = settings.split(";")
+        except ValueError:
+            pass
+        return otp_url_format.format(seed, period, digits)
 
     # TODO: Support keepass2's default TOTP properties
+    seed = kp_entry.get_custom_property("TimeOtp-Secret-Base32")
+    if seed:
+        period = int(kp_entry.get_custom_property("TimeOtp-Period") or period)
+        digits = int(kp_entry.get_custom_property("TimeOtp-Length") or digits)
+        return otp_url_format.format(seed, period, digits)
 
-    return ""
+    return otp_url

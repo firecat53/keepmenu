@@ -12,7 +12,7 @@ from urllib import parse
 
 import keepmenu
 from keepmenu.menu import dmenu_select, dmenu_err
-from keepmenu.totp import gen_otp, get_otp_url
+from keepmenu.totp import gen_otp, get_otp_url, TOTP_FIELDS
 from keepmenu.type import type_text
 
 
@@ -76,7 +76,7 @@ def edit_entry(kpo, kp_entry):
 
     attrs = kp_entry.custom_properties
     for attr in attrs:
-        if attr != "otp":
+        if attr not in TOTP_FIELDS:
             val = attrs.get(attr) or ""
             value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to Edit>"
             fields.append(f'{attr}: {value}')

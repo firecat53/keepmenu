@@ -6,7 +6,7 @@ import webbrowser
 
 import keepmenu
 from keepmenu.menu import dmenu_select
-from keepmenu.totp import gen_otp, get_otp_url
+from keepmenu.totp import gen_otp, get_otp_url, TOTP_FIELDS
 
 
 def view_all_entries(options, kp_entries, dbname):
@@ -62,7 +62,7 @@ def view_entry(kp_entry):
 
     attrs = kp_entry.custom_properties
     for attr in attrs:
-        if attr not in ("otp", "TOTP Seed", "TOTP Settings"):
+        if attr not in TOTP_FIELDS:
             val = attrs.get(attr) or ""
             value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to view>"
             fields.append(f'{attr}: {value}')
