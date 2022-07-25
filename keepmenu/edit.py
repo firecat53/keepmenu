@@ -214,7 +214,7 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
         inputs = [
             "Defaut RFC 6238 token settings",
             "Steam token settings",
-            "Use cusom settings"
+            "Use custom settings"
         ]
 
         otp_settings_choice = dmenu_select(len(inputs), "Settings", inp="\n".join(inputs))
