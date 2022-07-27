@@ -496,6 +496,36 @@ class TestFunctions(unittest.TestCase):
                     digits=5
                 ) + "&encoder=steam"), 'RHH8D')
 
+    def test_entry_otp(self):
+        """Test OTP generation from kdbx entries
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.write(conf_file)
+        database = KM.keepmenu.DataBase(dbase=db_name, pword='password')
+        kpo = KM.keepmenu.get_entries(database)
+        # entry with otpsecret=SECRET1 in keepass2 fieldset
+        kp2_entry = kpo.find_entries_by_title(title='keepass2 totp')[0]
+        # entry with otpsecret=SECRET2, size=8, period=60 in keepass2 fieldset
+        kp2_more_entry = kpo.find_entries_by_title(title='keepass2 totp - more fields')[0]
+        # entry with otpsecret=SECRET1 as keepass2 fieldset and SECRET2 in otp field which comes first
+        kp2_multi_entry = kpo.find_entries_by_title(title='keepass2 totp - multiple configs')[0]
+        with mock.patch('time.time', return_value=0):
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_entry)), "549419")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "04607023")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_multi_entry)), "009551")
+        with mock.patch('time.time', return_value=1260):
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_entry)), "626854")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "59008166")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_multi_entry)), "093610")
+        with mock.patch('time.time', return_value=1270):
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_entry)), "626854")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "59008166")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_multi_entry)), "093610")
+
 
 if __name__ == "__main__":
     unittest.main()
