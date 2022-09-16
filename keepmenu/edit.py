@@ -441,7 +441,7 @@ def manage_groups(kpo):
     while edit is True:
         inp = "\n".join(i for i in options) + "\n\n" + \
             "\n".join("/".join(i.path) for i in kpo.groups)
-        sel = dmenu_select(len(options) + len(kpo.groups) + 1, "Groups", inp=inp)
+        sel = dmenu_select(len(options) + min(keepmenu.MAX_LEN, len(kpo.groups)) + 1, "Groups", inp=inp)
         if not sel:
             edit = False
         elif sel == 'Create':
