@@ -64,7 +64,12 @@ def view_entry(kp_entry):
     for attr in attrs:
         if attr not in TOTP_FIELDS:
             val = attrs.get(attr) or ""
-            value = val or "None" if len(val.split('\n')) <= 1 else "<Enter to view>"
+            protected = kp_entry.is_custom_property_protected(attr) if \
+                        hasattr(kp_entry, 'is_custom_property_protected') \
+                        else False
+            value = val or "None" if len(val.split('\n')) <= 1 and \
+                                     not protected \
+                                     else "<Enter to view>"
             fields.append(f'{attr}: {value}')
 
     sel = dmenu_select(len(fields), inp="\n".join(fields))
