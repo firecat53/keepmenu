@@ -19,6 +19,7 @@ from keepmenu.edit import add_entry, edit_entry, manage_groups
 from keepmenu.menu import dmenu_err, dmenu_select
 from keepmenu.type import type_entry, type_text
 from keepmenu.view import view_all_entries, view_entry
+from keepmenu.totp import gen_otp, get_otp_url
 
 
 class DataBase():  # pylint: disable=too-few-public-methods
@@ -28,11 +29,12 @@ class DataBase():  # pylint: disable=too-few-public-methods
         kfile - string, filename
         pword - string, password
         atype - string, autotype sequence
+        totp - bool, TOTP mode
         kpo - PyKeePass object
         is_active - bool, is this the currently active database
 
     """
-    def __init__(self, dbase=None, kfile=None, pword=None, atype=None, kpo=None):
+    def __init__(self, dbase=None, kfile=None, pword=None, atype=None, totp=False, kpo=None):
         # pylint: disable=too-many-arguments
         self.dbase = expanduser('' if dbase is None else dbase)
         self.dbase = realpath(self.dbase) if self.dbase else ''
@@ -40,6 +42,7 @@ class DataBase():  # pylint: disable=too-few-public-methods
         self.kfile = realpath(self.kfile) if self.kfile else ''
         self.pword = pword
         self.atype = atype
+        self.totp = totp
         self.kpo = kpo
         self.is_active = False
 
@@ -116,7 +119,8 @@ def get_database(open_databases=None, **kwargs):
     open_databases = open_databases or {}
     clidb = DataBase(dbase=kwargs.get('database'),
                      kfile=kwargs.get('keyfile'),
-                     atype=kwargs.get('autotype'))
+                     atype=kwargs.get('autotype'),
+                     totp=kwargs.get('totp', False))
     if not dbs_cfg and not clidb.dbase and not open_databases:
         # First run  database opening
         res = get_initial_db()
@@ -126,12 +130,14 @@ def get_database(open_databases=None, **kwargs):
         else:
             return None, open_databases
     elif clidb.dbase:
-        # Prefer db and autotype passed via cli
+        # Prefer db, autotype, totp passed via cli
         db_ = [i for i in open_databases.values() if i.dbase == clidb.dbase]
         if db_:
             dbs = [deepcopy(db_[0])]
             if clidb.atype:
                 dbs[0].atype = clidb.atype
+            if clidb.totp:
+                dbs[0].totp = clidb.totp
         else:
             dbs = [deepcopy(clidb)]
             # Use existing keyfile if available
@@ -140,11 +146,12 @@ def get_database(open_databases=None, **kwargs):
             # Use existing password if available
             if dbs[0].pword is None and dbs[0].dbase in dbs_cfg_n:
                 dbs[0].pword = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].pword
-    elif clidb.atype and open_databases:
-        # If only autotype is passed, use current db
+    elif (clidb.atype or clidb.totp) and open_databases:
+        # If only autotype or totp is passed, use current db
         db_ = [i for i in open_databases.values() if i.is_active is True][0]
         dbs = [deepcopy(db_)]
         dbs[0].atype = clidb.atype
+        dbs[0].totp = clidb.totp
     elif open_databases:
         # if there are dbs already open, make a list of those + dbs from config.ini
         dbs = [deepcopy(i) for i in open_databases.values()]
@@ -174,6 +181,8 @@ def get_database(open_databases=None, **kwargs):
             dbs[0].atype = db_cfg_atype
     if clidb.atype:
         dbs[0].atype = clidb.atype
+    if clidb.totp:
+        dbs[0].totp = clidb.totp
     open_databases[dbs[0].dbase].is_active = True
     return dbs[0], open_databases
 
@@ -301,8 +310,12 @@ class DmenuRunner(Process):
                 dargs = self.server.get_args()
                 self.menu_open_another_database(**dargs)
                 self.server.args_flag.clear()
+
+                if self.server.totp_flag.is_set():
+                    self.server.totp_flag.clear()
             else:
-                self.dmenu_run()
+                self.dmenu_run(self.server.totp_flag.is_set())
+                self.server.totp_flag.clear()
             if self.server.cache_time_expired.is_set():
                 self.server.kill_flag.set()
             if self.server.kill_flag.is_set():
@@ -319,7 +332,7 @@ class DmenuRunner(Process):
             self.server.kill_flag.set()
             self.server.start_flag.set()
 
-    def dmenu_run(self):
+    def dmenu_run(self, totp_mode=False):
         """Run dmenu with the given list of Keepass Entry objects
 
         If 'hide_groups' is defined in config.ini, hide those from main and
@@ -370,7 +383,11 @@ class DmenuRunner(Process):
         if len(self.expiring) == 0:
             del options['Edit expiring/expired passwords (0)']
 
-        sel = view_all_entries(list(options), filtered_entries, self.database.dbase)
+        if totp_mode:
+           sel = self.menu_view_type_individual_entries(hid_groups, totp_only=True)
+        else:
+           sel = view_all_entries(list(options), filtered_entries, self.database.dbase)
+
         if not sel:
             return
         if sel in options:
@@ -383,25 +400,26 @@ class DmenuRunner(Process):
                 return
             type_entry(entry, self.database.atype)
             self.prev_entry = entry
-        # Reset database autotype in between runs
+        # Reset database autotype and totp in between runs
         cur_db = [i for i in self.open_databases.values() if i.is_active is True][0]
         self.database.atype = cur_db.atype
+        self.database.totp = cur_db.totp
 
-    def menu_view_type_individual_entries(self, hid_groups):
+    def menu_view_type_individual_entries(self, hid_groups, totp_only=False):
         """Process menu entry - View/Type individual entries
 
         """
         options = []
         filtered_entries = [
             i for i in self.database.kpo.entries if not
-            any(j in "/".join(i.path[:-1]) for j in hid_groups)
+            any(j in "/".join(i.path[:-1]) for j in hid_groups) and (get_otp_url(i) if totp_only else True)
         ]
         sel = view_all_entries(options, filtered_entries, self.database.dbase)
         try:
             entry = filtered_entries[int(sel.split('-', 1)[0])]
         except (ValueError, TypeError):
             return
-        text = view_entry(entry)
+        text = gen_otp(get_otp_url(entry)) if totp_only else view_entry(entry)
         type_text(text)
         self.prev_entry = entry
 
@@ -462,7 +480,7 @@ class DmenuRunner(Process):
     def menu_open_another_database(self, **kwargs):
         """Process menu entry - Open different database
 
-        Args: kwargs - possibly 'database', 'keyfile', 'autotype'
+        Args: kwargs - possibly 'database', 'keyfile', 'autotype', 'totp'
 
         """
         prev_db, prev_open = self.database, deepcopy(self.open_databases)
@@ -476,7 +494,7 @@ class DmenuRunner(Process):
                 self.database, self.open_databases = prev_db, prev_open
                 return
         self.expiring = get_expiring_entries(self.database.kpo.entries)
-        self.dmenu_run()
+        self.dmenu_run(self.database.totp)
 
     def menu_kill_daemon(self):
         """Process menu entry - Kill keepmenu daemon

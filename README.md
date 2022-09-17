@@ -60,7 +60,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Usage
 
-`keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]`
+`keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE] [-t]`
 
 - Run `keepmenu` or bind to keystroke combination.
 - Enter database path on first run.

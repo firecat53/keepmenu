@@ -73,6 +73,7 @@ def client():
     mgr.register('set_event')
     mgr.register('get_pipe')
     mgr.register('read_args_from_pipe')
+    mgr.register('totp_mode')
     mgr.connect()
     return mgr
 
@@ -88,6 +89,7 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
         self.kill_flag = Event()
         self.cache_time_expired = Event()
         self.args_flag = Event()
+        self.totp_flag = Event()
         self.start_flag.set()
         self.args = None
         self._parent_conn, self._child_conn = Pipe(duplex=False)
@@ -114,6 +116,7 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
         mgr.register('set_event', callable=self.start_flag.set)
         mgr.register('get_pipe', callable=self._get_pipe)
         mgr.register('read_args_from_pipe', callable=self.args_flag.set)
+        mgr.register('totp_mode', callable=self.totp_flag.set)
         mgr.start()  # pylint: disable=consider-using-with
         return mgr
 
@@ -123,6 +126,8 @@ def run(**kwargs):
 
     """
     server = Server()
+    if kwargs.get('totp'):
+        server.totp_flag.set()
     dmenu = DmenuRunner(server, **kwargs)
     dmenu.daemon = True
     server.start()
@@ -163,14 +168,22 @@ def main():
         help="File path of the keyfile needed to open the database specified by --database/-d",
     )
 
-    args = vars(parser.parse_args())
+    parser.add_argument(
+        "-t",
+        "--totp",
+        action='store_true',
+        required=False,
+        help="TOTP mode",
+    )
 
-    args = args if any(args.values()) else {}
+    args = vars(parser.parse_args())
 
     try:
         manager = client()
         conn = manager.get_pipe()  # pylint: disable=no-member
-        if args:
+        if args.get('totp'):
+            manager.totp_mode()  # pylint: disable=no-member
+        if any(args.values()):
             conn.send(args)
             manager.read_args_from_pipe()  # pylint: disable=no-member
         manager.set_event()  # pylint: disable=no-member
