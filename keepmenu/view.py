@@ -76,7 +76,7 @@ def view_entry(kp_entry):
         sel = kp_entry.deref('password')
     elif sel == "TOTP: ******":
         sel = gen_otp(get_otp_url(kp_entry))
-    elif sel == fields[4]:
+    elif sel == fields[4] and not keepmenu.CONF.getboolean("database", "type_url", fallback=False):
         if sel != "URL: None":
             webbrowser.open(sel)
         sel = ""
