@@ -7,7 +7,7 @@
 1. Python 3.7+.
 2. [Pykeepass][1] >= 4.0.0 and [pynput][2]. Install via pip or your
    distribution's package manager, if available.
-3. Dmenu, Rofi, Wofi or Bemenu.
+3. Dmenu, Rofi, Wofi, Yofi or Bemenu.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
    in the config file.
 5. (optional) xdotool (for X) or ydotool (>=1.0.0, for Wayland), wtype (for
@@ -19,7 +19,7 @@
 
 `$ sudo pacman -S python-pip dmenu`
 
-#### Fedora 34
+#### Fedora 36
 
 `$ sudo dnf install python3-devel dmenu`
 
@@ -100,13 +100,15 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
 | Rofi           | Yes | Yes                         | No                   | No               |                 |
 | Bemenu         | Yes | Yes                         | Yes                  | No               |                 |
 | Wofi           | No  | Yes                         | Yes                  | Yes              |                 |
+| Yofi           | No  | Yes                         | Yes                  | Yes              |                 |
 | *Typing Tools* |     |                             |                      |                  |                 |
 | Pynput         | Yes | No                          | No                   | No               | No              |
 | Xdotool        | Yes | No                          | No                   | No               | Yes             |
 | Ydotool (1)    | Yes | Yes                         | Yes                  | Yes              | No (4)          |
 | Wtype (2)      | No  | Yes                         | Yes                  | No               | Yes             |
 
-(1) Ydotool has a [bug](https://github.com/ReimuNotMoe/ydotool/pull/133) currently that incorrectly types `^` as `~`.
+(1) Ydotool had a [bug](https://github.com/ReimuNotMoe/ydotool/pull/133) that
+incorrectly types `^` as `~` until this PR was merged 2022-09.
 
 (2) Wtype has a [bug](https://github.com/atx/wtype/issues/37) currently that
 prevents it from typing into web based applications such as Firefox, Chromium,

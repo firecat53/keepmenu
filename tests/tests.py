@@ -176,9 +176,9 @@ class TestFunctions(unittest.TestCase):
         # Test full config
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
         KM.reload_config()
-        res = ["/usr/bin/dmenu", "-i", "-l", "10", "-fn", "Inconsolata-12",
-               "-nb", "#909090", "-nf", "#999999", "-b", "-p", "Password",
-               "-l", "20", "-nb", "#222222", "-nf", "#222222"]
+        res = ["/usr/bin/dmenu", "-nb", "#222222", "-nf", "#222222", "-i", "-l",
+               "10", "-fn", "Inconsolata-12", "-nb", "#909090", "-nf",
+               "#999999", "-b", "-p", "Password", "-l", "20"]
         self.assertTrue(KM.menu.dmenu_cmd(20, "Password") == res)
 
     def test_generate_prompt(self):

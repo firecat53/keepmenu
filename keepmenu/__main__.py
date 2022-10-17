@@ -137,7 +137,7 @@ def main():
 
     """
     parser = argparse.ArgumentParser(
-        description="Dmenu/Rofi frontend for Keepass databases")
+        description="Dmenu (or compatible launcher) frontend for Keepass databases")
 
     parser.add_argument(
         "-a",

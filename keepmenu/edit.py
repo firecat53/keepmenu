@@ -397,7 +397,7 @@ def get_password_chars():
     inp = "\n".join(presets)
     char_sel = dmenu_select(len(presets),
                             "Pick character set(s) to use", inp=inp)
-    # This dictionary return also handles Rofi multiple select
+    # This dictionary return also handles launcher multiple select
     return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 

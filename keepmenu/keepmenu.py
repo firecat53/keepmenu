@@ -1,4 +1,4 @@
-"""Read and copy Keepass database entries using dmenu or rofi
+"""Read and copy Keepass database entries using dmenu style launchers
 
 """
 from copy import deepcopy

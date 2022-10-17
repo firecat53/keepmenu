@@ -1,4 +1,4 @@
-"""Methods for calling dmenu/Rofi
+"""Launcher functions
 
 """
 from os.path import basename
@@ -20,7 +20,8 @@ def dmenu_cmd(num_lines, prompt):
     commands = {"bemenu": ["-p", str(prompt), "-l", str(num_lines)],
                 "dmenu": ["-p", str(prompt), "-l", str(num_lines)],
                 "rofi": ["-dmenu", "-p", str(prompt), "-l", str(num_lines)],
-                "wofi": ["--dmenu", "-p", str(prompt), "-L", str(num_lines)]}
+                "wofi": ["--dmenu", "-p", str(prompt), "-L", str(num_lines)],
+                "yofi": ["-p", str(prompt), "dialog"]}
     command = shlex.split(keepmenu.CONF.get('dmenu', 'dmenu_command', fallback='dmenu'))
     command.extend(commands.get(basename(command[0]), []))
     pwprompts = ("Password", "password", "client_secret", "Verify password", "Enter Password")
@@ -29,8 +30,9 @@ def dmenu_cmd(num_lines, prompt):
         pass_prompts = {"dmenu": dmenu_pass(basename(command[0])),
                         "rofi": ['-password'],
                         "bemenu": ['-x'],
-                        "wofi": ['-P']}
-        command.extend(pass_prompts.get(basename(command[0]), []))
+                        "wofi": ['-P'],
+                        "yofi": ['--password']}
+        command[1:1] = pass_prompts.get(basename(command[0]), [])
     return command
 
 
