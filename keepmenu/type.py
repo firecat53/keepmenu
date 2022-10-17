@@ -130,6 +130,7 @@ PLACEHOLDER_AUTOTYPE_TOKENS = {
     "{PASSWORD}": lambda e: e.deref('password'),
     "{NOTES}"   : lambda e: e.deref('notes'),
     "{TOTP}"    : lambda e: gen_otp(get_otp_url(e)),
+    "{TIMEOTP}" : lambda e: gen_otp(get_otp_url(e)),
 }
 
 STRING_AUTOTYPE_TOKENS = {
