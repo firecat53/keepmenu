@@ -12,7 +12,7 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing of Keepa
 
 # SYNOPSIS
 
-**keepmenu** [**--database** file] [**--keyfile** file] [**--autotype** pattern]
+**keepmenu** [**--database** file] [**--keyfile** file] [**--autotype** pattern] [**--totp**]
 
 # DESCRIPTION
 
@@ -28,9 +28,12 @@ Passhole, but is more dmenu and less command line focused.
 
 **-a**, **--autotype**  Autotype sequence from https://keepass.info/help/base/autotype.html#autoseq . Overrides global default from config.ini for current database.
 
+**-t**, **--totp**  TOTP mode
+
 # EXAMPLES
 
-	keepmenu
+    keepmenu
+    keepmenu -t
     keepmenu -d ~/docs/totp_passwords.kdbx -a '{TOTP}{ENTER}'
     keepmenu -d ~/passwords.kdbx -k ~/passwords.keyfile -a '{S:security question}{ENTER}'
 
