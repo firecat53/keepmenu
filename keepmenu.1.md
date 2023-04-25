@@ -3,7 +3,7 @@ title: Keepmenu
 section: 1
 header: User Manual
 footer: Keepmenu 1.3.1
-date: 11 July 2022
+date: 25 April 2023
 ---
 
 # NAME
@@ -66,6 +66,7 @@ reference for additional options.
 |                           | `type_library`               | `pynput`                                |
 |                           | `hide_groups`                | None                                    |
 |                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`      |
+|                           | `type_url`                   | `False`                                 |
 | `[password_chars]`        | `lower`                      | `abcdefghijklmnopqrstuvwxyz`            |
 |                           | `upper`                      | `ABCDEFGHIJKLMNOPQRSTUVWXYZ`            |
 |                           | `digits`                     | `0123456789`                            |

@@ -36,6 +36,7 @@
 
 ## Set the default autotype sequence (https://keepass.info/help/base/autotype.html#autoseq)
 # autotype_default = {USERNAME}{TAB}{PASSWORD}{ENTER}
+# type_url = <boolean> Default False. When True, types instead of opens the URL entry
 
 [password_chars]
 # Set custom groups of characters for password generation. Any name is fine and

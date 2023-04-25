@@ -29,6 +29,7 @@ reference for additional options.
 |                           | `type_library`               | `pynput`                                | xdotool, ydotool, wtype  or pynput                           |
 |                           | `hide_groups`                | None                                    | See below for formatting of multiple groups                  |
 |                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`      | [Keepass autotype sequences][1]                              |
+|                           | `type_url`                   | `False`                                 |                                                              |
 | `[password_chars]`        | `lower`                      | `abcdefghijklmnopqrstuvwxyz`            |                                                              |
 |                           | `upper`                      | `ABCDEFGHIJKLMNOPQRSTUVWXYZ`            |                                                              |
 |                           | `digits`                     | `0123456789`                            |                                                              |
@@ -68,6 +69,7 @@ reference for additional options.
     hide_groups = Recycle Bin
                   Group 2
                   Group 3
+    type_url = True
 
     ## Set the global default
     autotype_default = {USERNAME}{TAB}{PASSWORD}{ENTER}
