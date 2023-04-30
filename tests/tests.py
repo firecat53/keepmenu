@@ -96,6 +96,20 @@ class TestFunctions(unittest.TestCase):
     def tearDown(self):
         rmtree(self.tmpdir)
 
+    def test_config_option(self):
+        self.tmpdir = tempfile.mkdtemp()
+        # First test default config
+        KM.reload_config(os.path.join(self.tmpdir, "config.ini"))
+        self.assertTrue(KM.menu.dmenu_cmd(10, "Entries") == ["dmenu", "-p", "Entries", "-l", "10"])
+        # Test full config
+        copyfile("tests/keepmenu-config.ini", os.path.join(self.tmpdir, "keepmenu-config.ini"))
+        KM.reload_config(os.path.join(self.tmpdir, "keepmenu-config.ini"))
+        self.assertTrue(KM.CONF.get("database", "database_1") == "test.kdbx")
+        res = ["/usr/bin/dmenu", "-nb", "#222222", "-nf", "#222222", "-i", "-l",
+               "10", "-fn", "Inconsolata-12", "-nb", "#909090", "-nf",
+               "#999999", "-b", "-p", "Password", "-l", "20"]
+        self.assertTrue(KM.menu.dmenu_cmd(20, "Password") == res)
+
     def test_get_password_conf(self):
         """Test proper reading of password config names with spaces
 

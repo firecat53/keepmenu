@@ -8,6 +8,8 @@ you for database and keyfile locations and save them in a default config file.
 OR Copy config.ini.example to ~/.config/keepmenu/config.ini and use it as a
 reference for additional options.
 
+Alternatively you can specify the file path to your config.ini using the -c/--config flag.
+
 #### Config.ini values
 
 | Section                   | Key                          | Default                                 | Notes                                                        |

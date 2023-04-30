@@ -280,6 +280,8 @@ class DmenuRunner(Process):
 
     def __init__(self, server, **kwargs):
         Process.__init__(self)
+        cfile = kwargs.get('config')
+        keepmenu.reload_config(None if cfile is None else expanduser(cfile))
         self.server = server
         self.database, self.open_databases = get_database(**kwargs)
         if self.database:
