@@ -34,8 +34,10 @@ MAX_LEN = 24
 CONF = configparser.ConfigParser()
 
 
-def reload_config():  # pylint: disable=too-many-statements,too-many-branches
-    """Reload config file. Primarly for use with tests.
+def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-many-branches
+    """Reload config file. Primarly for use with tests and the --config flag.
+
+    Args: conf_file - os.path
 
     """
     # pragma pylint: disable=global-statement,global-variable-not-assigned
@@ -48,12 +50,13 @@ def reload_config():  # pylint: disable=too-many-statements,too-many-branches
         SEQUENCE
     # pragma pylint: enable=global-variable-undefined,global-variable-not-assigned
     CONF = configparser.ConfigParser()
-    if not exists(CONF_FILE):
+    conf_file = conf_file if conf_file is not None else CONF_FILE
+    if not exists(conf_file):
         try:
-            os.mkdir(os.path.dirname(CONF_FILE))
+            os.mkdir(os.path.dirname(conf_file))
         except OSError:
             pass
-        with open(CONF_FILE, 'w', encoding=ENC) as conf_file:
+        with open(conf_file, 'w', encoding=ENC) as cfile:
             CONF.add_section('dmenu')
             CONF.set('dmenu', 'dmenu_command', 'dmenu')
             CONF.add_section('dmenu_passphrase')
@@ -64,9 +67,9 @@ def reload_config():  # pylint: disable=too-many-statements,too-many-branches
             CONF.set('database', 'keyfile_1', '')
             CONF.set('database', 'pw_cache_period_min', str(CACHE_PERIOD_DEFAULT_MIN))
             CONF.set('database', 'autotype_default', SEQUENCE)
-            CONF.write(conf_file)
+            CONF.write(cfile)
     try:
-        CONF.read(CONF_FILE)
+        CONF.read(conf_file)
     except configparser.ParsingError as err:
         dmenu_err(f"Config file error: {err}")
         sys.exit()
@@ -105,8 +108,5 @@ def reload_config():  # pylint: disable=too-many-statements,too-many-branches
                 dmenu_err("wtype not installed.\n"
                           "Please install or remove that option from config.ini")
                 sys.exit()
-
-
-reload_config()
 
 # vim: set et ts=4 sw=4 :

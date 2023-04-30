@@ -12,15 +12,17 @@
 
 ## CLI Options
 
-`keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-d DATABASE] [-k KEY_FILE]`
 
 --help, -h Output a usage message and exit.
 
 -a AUTOTYPE, --autotype AUTOTYPE Override autotype sequence in config.ini
 
+-c CONF_FILE, --config CONF_FILE File path to a config file
+
 -d DATABASE, --database DATABASE File path to a database to open, skipping the database selection menu
 
--k KEYFILE, --keyfile KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
+-k KEY_FILE, --keyfile KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
 
 ## Features
 

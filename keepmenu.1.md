@@ -12,7 +12,7 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing of Keepa
 
 # SYNOPSIS
 
-**keepmenu** [**--database** file] [**--keyfile** file] [**--autotype** pattern] [**--totp**]
+**keepmenu** [**--autotype** pattern] [**--config** file] [**--database** file] [**--keyfile** file] [**--totp**]
 
 # DESCRIPTION
 
@@ -22,11 +22,13 @@ Passhole, but is more dmenu and less command line focused.
 
 # OPTIONS
 
+**-a**, **--autotype**  Autotype sequence from https://keepass.info/help/base/autotype.html#autoseq . Overrides global default from config.ini for current database.
+
+**-c**, **--config**   Path to config file
+
 **-d**, **--database** Path to Keepass database
 
 **-k**, **--keyfile**  Path to keyfile
-
-**-a**, **--autotype**  Autotype sequence from https://keepass.info/help/base/autotype.html#autoseq . Overrides global default from config.ini for current database.
 
 **-t**, **--totp**  TOTP mode
 
@@ -34,6 +36,7 @@ Passhole, but is more dmenu and less command line focused.
 
     keepmenu
     keepmenu -t
+    keepmenu -c /etc/keepmenu/config.ini
     keepmenu -d ~/docs/totp_passwords.kdbx -a '{TOTP}{ENTER}'
     keepmenu -d ~/passwords.kdbx -k ~/passwords.keyfile -a '{S:security question}{ENTER}'
 
@@ -44,6 +47,8 @@ you for database and keyfile locations and save them in a default config file.
 
 OR Copy config.ini.example to ~/.config/keepmenu/config.ini and use it as a
 reference for additional options.
+
+Alternatively you can specify the file path to your config.ini using the -c/--config flag.
 
 ## config.ini options and defaults
 

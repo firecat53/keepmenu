@@ -60,7 +60,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Usage
 
-`keepmenu [-h] [-a AUTOTYPE] [-d DATABASE] [-k KEY_FILE] [-t]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-d DATABASE] [-k KEY_FILE] [-t]`
 
 - Run `keepmenu` or bind to keystroke combination.
 - Enter database path on first run.
@@ -75,6 +75,7 @@ To run tests in a venv: `make test`
 ## Development
 
 - To install keepmenu in a venv: `make`
+
 - Build man page from Markdown source: `make man`
 - Using `hatch`:
     - `hatch shell`: provies venv with editable installation.

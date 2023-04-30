@@ -153,6 +153,14 @@ def main():
     )
 
     parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        required=False,
+        help="File path to a config file",
+    )
+
+    parser.add_argument(
         "-d",
         "--database",
         type=str,

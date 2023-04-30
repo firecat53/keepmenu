@@ -23,9 +23,9 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing
 of Keepass databases.
 .SH SYNOPSIS
 .PP
-\f[B]keepmenu\f[R] [\f[B]\[en]database\f[R] file]
-[\f[B]\[en]keyfile\f[R] file] [\f[B]\[en]autotype\f[R] pattern]
-[\f[B]\[en]totp\f[R]]
+\f[B]keepmenu\f[R] [\f[B]\[en]autotype\f[R] pattern]
+[\f[B]\[en]config\f[R] file] [\f[B]\[en]database\f[R] file]
+[\f[B]\[en]keyfile\f[R] file] [\f[B]\[en]totp\f[R]]
 .SH DESCRIPTION
 .PP
 \f[B]Keepmenu\f[R] is a fast and minimal application to facilitate
@@ -34,13 +34,15 @@ It is inspired in part by Passhole, but is more dmenu and less command
 line focused.
 .SH OPTIONS
 .PP
-\f[B]-d\f[R], \f[B]\[en]database\f[R] Path to Keepass database
-.PP
-\f[B]-k\f[R], \f[B]\[en]keyfile\f[R] Path to keyfile
-.PP
 \f[B]-a\f[R], \f[B]\[en]autotype\f[R] Autotype sequence from
 https://keepass.info/help/base/autotype.html#autoseq .
 Overrides global default from config.ini for current database.
+.PP
+\f[B]-c\f[R], \f[B]\[en]config\f[R] Path to config file
+.PP
+\f[B]-d\f[R], \f[B]\[en]database\f[R] Path to Keepass database
+.PP
+\f[B]-k\f[R], \f[B]\[en]keyfile\f[R] Path to keyfile
 .PP
 \f[B]-t\f[R], \f[B]\[en]totp\f[R] TOTP mode
 .SH EXAMPLES
@@ -49,6 +51,7 @@ Overrides global default from config.ini for current database.
 \f[C]
 keepmenu
 keepmenu -t
+keepmenu -c /etc/keepmenu/config.ini
 keepmenu -d \[ti]/docs/totp_passwords.kdbx -a \[aq]{TOTP}{ENTER}\[aq]
 keepmenu -d \[ti]/passwords.kdbx -k \[ti]/passwords.keyfile -a \[aq]{S:security question}{ENTER}\[aq]
 \f[R]
@@ -61,6 +64,9 @@ config file.
 .PP
 OR Copy config.ini.example to \[ti]/.config/keepmenu/config.ini and use
 it as a reference for additional options.
+.PP
+Alternatively you can specify the file path to your config.ini using the
+-c/\[en]config flag.
 .SS config.ini options and defaults
 .PP
 .TS
