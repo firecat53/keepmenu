@@ -83,7 +83,7 @@ def get_databases():
         except KeyError:
             autotype = None
         try:
-            cmd = args_dict[f'password_cmd_{idx}']
+            cmd = expanduser(args_dict[f'password_cmd_{idx}'])
             res = subprocess.run(shlex.split(cmd),
                                  capture_output=True,
                                  check=False,
