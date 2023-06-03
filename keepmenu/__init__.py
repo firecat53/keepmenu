@@ -26,7 +26,6 @@ CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
 SECRET_VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 
 ENV = os.environ.copy()
-ENV['LC_ALL'] = 'C'
 ENC = locale.getpreferredencoding()
 CACHE_PERIOD_DEFAULT_MIN = 360
 CACHE_PERIOD_MIN = CACHE_PERIOD_DEFAULT_MIN
