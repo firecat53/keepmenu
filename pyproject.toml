@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "keepmenu"
+dynamic = ["version"]
+description = "Dmenu frontend for Keepass databases"
+readme = "README.md"
+license = "GPL-3.0"
+authors = [
+    { name = "Scott Hansen", email = "tech@firecat53.net" },
+]
+keywords = [
+    "dmenu",
+    "keepass",
+    "keepassxc",
+    "rofi",
+    "wofi",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: X11 Applications",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "pykeepass>=4.0.0",
+    "pynput",
+]
+
+[project.scripts]
+keepmenu = "keepmenu.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/firecat53/keepmenu"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "keepmenu/_version.py"
+
+[tool.hatch.build.targets.wheel.shared-data]
+LICENSE = "share/doc/keepmenu/LICENSE"
+"README.md" = "share/doc/keepmenu/README.md"
+"config.ini.example" = "share/doc/keepmenu/config.ini.example"
+docs = "share/doc/keepmenu/docs"
+"keepmenu.1" = "share/man/man1/keepmenu.1"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/keepmenu",
+]

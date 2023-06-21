@@ -4,5 +4,6 @@
 *.egg-info/
 build/
 dist/
+keepmenu/_version.py
 tests/.test.kdbx.lock
 venv/
