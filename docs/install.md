@@ -19,11 +19,11 @@
 
 `$ sudo pacman -S python-pip dmenu`
 
-#### Fedora 36
+#### Fedora 38
 
 `$ sudo dnf install python3-devel dmenu`
 
-#### Ubuntu 21.10
+#### Ubuntu 22.10
 
 Ensure Universe repository is enabled.
 
@@ -58,7 +58,7 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
     $ pip install --user . OR
     $ pip install --user -e . (for editable install)
 
-### Available in [Archlinux AUR][1]
+### Available in [Archlinux AUR][1] and in Nix packages
 
 
 ## Wayland Notes

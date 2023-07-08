@@ -74,9 +74,14 @@ To run tests in a venv: `make test`
 
 ## Development
 
-- To install keepmen in a venv: `make`
-
+- To install keepmenu in a venv: `make`
 - Build man page from Markdown source: `make man`
+- Using `hatch`:
+    - `hatch shell`: provies venv with editable installation.
+    - `hatch build` && `hatch publish`: build and publish to Pypi.
+- Using `nix`:
+    - `nix develop path:.`: Provides development shell with all dependencies.
+      Edit and run similar to `pip install -e .` or `hatch shell`.
 
 [1]: https://github.com/pschmitt/pykeepass "Pykeepass"
 [2]: https://davedavenport.github.io/rofi/ "Rofi"
