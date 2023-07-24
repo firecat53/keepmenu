@@ -97,7 +97,6 @@ class TestFunctions(unittest.TestCase):
         rmtree(self.tmpdir)
 
     def test_config_option(self):
-        self.tmpdir = tempfile.mkdtemp()
         # First test default config
         KM.reload_config(os.path.join(self.tmpdir, "config.ini"))
         self.assertTrue(KM.menu.dmenu_cmd(10, "Entries") == ["dmenu", "-p", "Entries", "-l", "10"])
@@ -309,6 +308,7 @@ class TestFunctions(unittest.TestCase):
         db_name = os.path.join(self.tmpdir, "test.kdbx")
         copyfile("tests/test.kdbx", db_name)
         copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        KM.reload_config()
         with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.set('database', 'password_1', "password")
