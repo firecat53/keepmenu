@@ -177,6 +177,20 @@ class TestFunctions(unittest.TestCase):
                         KM.CONF.get("database", "pw_cache_period_min") ==
                         str(KM.CACHE_PERIOD_DEFAULT_MIN))
 
+    def test_create_database(self):
+        """Test database create
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        keyfile = os.path.join(self.tmpdir, "keyfile")
+        with open(keyfile, 'wb') as fout:
+            fout.write(os.urandom(1024))
+        kpo = KM.keepmenu.create_db(db_name, keyfile, 'password')
+        self.assertIsInstance(kpo, PyKeePass)
+        self.assertEqual(kpo.filename, db_name)
+        self.assertEqual(kpo.keyfile, keyfile)
+        self.assertEqual(kpo.password, "password")
+
     def test_dmenu_cmd(self):
         """Test proper reading of dmenu command string from config.ini
 

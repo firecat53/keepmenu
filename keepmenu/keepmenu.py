@@ -6,8 +6,7 @@ from datetime import datetime, timedelta
 import errno
 import functools
 from multiprocessing import Process
-import os
-from os.path import expanduser, realpath
+from os.path import expanduser, isfile, realpath
 import shlex
 import subprocess
 import sys
@@ -15,7 +14,7 @@ from threading import Timer
 
 import construct
 import keepmenu
-from keepmenu.edit import add_entry, edit_entry, manage_groups
+from keepmenu.edit import add_entry, create_db, edit_entry, manage_groups
 from keepmenu.menu import dmenu_err, dmenu_select
 from keepmenu.type import type_entry, type_text
 from keepmenu.view import view_all_entries, view_entry
@@ -161,9 +160,15 @@ def get_database(open_databases=None, **kwargs):
     else:
         dbs = dbs_cfg
     if len(dbs) > 1:
-        inp = "\n".join(i.dbase for i in dbs)
-        sel = dmenu_select(len(dbs), "Select Database", inp=inp)
+        inp = "\n".join(i.dbase for i in dbs) + "\nCreate Database"
+        sel = dmenu_select(len(dbs) + 1, "Select Database", inp=inp)
         dbs = [i for i in dbs if i.dbase == sel]
+        if sel == "Create Database":
+            kpo = create_db()
+            db_ = DataBase(dbase=kpo.filename,
+                           kfile=kpo.keyfile,
+                           pword=kpo.password)
+            dbs.append(db_)
         if not sel or not dbs:
             return None, open_databases
     if dbs[0].pword is None:
@@ -188,15 +193,27 @@ def get_database(open_databases=None, **kwargs):
 
 
 def get_initial_db():
-    """Ask for and set initial database name and keyfile if not entered in config file
+    """Ask for and set initial database name and keyfile if not entered in
+    config file. Create new database if desired.
 
     """
     db_name = dmenu_select(0, "Enter path to existing "
-                              "Keepass database. ~/ for $HOME is ok")
+                              "Keepass database or to create new database. "
+                              "~/ for $HOME is ok")
     if not db_name:
         dmenu_err("No database entered. Try again.")
         return False
-    keyfile_name = dmenu_select(0, "Enter path to keyfile. ~/ for $HOME is ok")
+    if not isfile(expanduser(db_name)):
+        create = dmenu_select(0, f"Create new database {db_name} (y/n)?")
+        if create.lower() == "y":
+            kpo = create_db(db_name)
+            keyfile_name = kpo.keyfile
+        else:
+            dmenu_err("Database not created. Try again.")
+            return False
+    else:
+        keyfile_name = dmenu_select(0, "Enter path to keyfile (optional). ~/ for $HOME is ok")
+
     with open(keepmenu.CONF_FILE, 'w', encoding=keepmenu.ENC) as conf_file:
         keepmenu.CONF.set('database', 'database_1', db_name)
         if keyfile_name:
@@ -223,9 +240,9 @@ def get_entries(dbo):
             return None
         try:
             if err.errno == errno.ENOENT:
-                if not os.path.isfile(dbo.dbase):
+                if not isfile(dbo.dbase):
                     dmenu_err("Database does not exist. Check path and filename.")
-                elif not os.path.isfile(dbo.kfile):
+                elif not isfile(dbo.kfile):
                     dmenu_err("Keyfile does not exist. Check path and filename.")
         except AttributeError:
             pass
@@ -236,12 +253,13 @@ def get_entries(dbo):
     return kpo
 
 
-def get_passphrase():
+def get_passphrase(check=False):
     """Get a database password from dmenu or pinentry
 
     Returns: string
 
     """
+    msg = "Enter Password" if check is False else "Verify password"
     pinentry = keepmenu.CONF.get("dmenu", "pinentry", fallback=None)
     if pinentry:
         password = ""
@@ -249,13 +267,13 @@ def get_passphrase():
                              capture_output=True,
                              check=False,
                              encoding=keepmenu.ENC,
-                             input='setdesc Enter database password\ngetpin\n')
+                             input=f'setdesc {msg}\ngetpin\n')
         if res.stdout:
             pin = res.stdout.split("\n")[2]
             if pin.startswith("D "):
                 password = pin.split("D ")[1]
     else:
-        password = dmenu_select(0, "Password")
+        password = dmenu_select(0, f"{msg}")
     return None or password
 
 
@@ -377,7 +395,7 @@ class DmenuRunner(Process):
             'Add entry': self.menu_add_entry,
             'Manage groups': self.menu_manage_groups,
             'Reload database': self.menu_reload_database,
-            'Open another database': self.menu_open_another_database,
+            'Open/create another database': self.menu_open_another_database,
             'Kill Keepmenu daemon': self.menu_kill_daemon,
         }
         if self.prev_entry is None:
@@ -460,6 +478,7 @@ class DmenuRunner(Process):
             self.database.kpo = get_entries(self.database)
             self.prev_entry = entry
 
+
     def menu_manage_groups(self):
         """Process menu entry - manage groups
 
@@ -480,7 +499,7 @@ class DmenuRunner(Process):
         self.dmenu_run()
 
     def menu_open_another_database(self, **kwargs):
-        """Process menu entry - Open different database
+        """Process menu entry - Open/create different database
 
         Args: kwargs - possibly 'database', 'keyfile', 'autotype', 'totp'
 

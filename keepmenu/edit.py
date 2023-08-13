@@ -528,3 +528,32 @@ def rename_group(kpo):
     group.name = name
     kpo.save()
     return group
+
+
+def create_db(db_name="", keyfile="", password=""):
+    """Create new keepass database
+
+    Args: db_name - complete path to database file
+          keyfile - complete path to keyfile
+          password
+    Returns: False if not added
+             New Keepass object if successful
+
+    """
+    if not db_name:
+        db_name = dmenu_select(1, "Database Name (including path)")
+        if not db_name:
+            return False
+    if not keyfile:
+        keyfile = dmenu_select(1, "Keyfile (optional, including path)")
+    if not password:
+        password = keepmenu.keepmenu.get_passphrase()
+        password_check = keepmenu.keepmenu.get_passphrase(check=True)
+        if password != password_check:
+            dmenu_err("Passwords do not match, database not created")
+            return False
+    from pykeepass import create_database  # pylint: disable=import-outside-toplevel
+    kpo = create_database(filename=os.path.expanduser(db_name),
+                          password=password,
+                          keyfile=os.path.expanduser(keyfile))
+    return kpo
