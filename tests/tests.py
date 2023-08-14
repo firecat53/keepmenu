@@ -49,7 +49,7 @@ class TestServer(unittest.TestCase):
         """Ensure client raises an error with no server running
 
         """
-        self.assertRaises(socket.error, KM.__main__.client)
+        self.assertRaises(socket.error, KM.__main__.client, port=1, auth='abcd'.encode(KM.ENC))
 
     def test_server(self):
         """Ensure BaseManager server starts
@@ -69,7 +69,7 @@ class TestServer(unittest.TestCase):
         mgr = BaseManager(address=('127.0.0.1', port), authkey=key)
         mgr.get_server()
         mgr.start()  # pylint: disable=consider-using-with
-        self.assertIsInstance(KM.__main__.client(), BaseManager)
+        self.assertIsInstance(KM.__main__.client(port, key), BaseManager)
         mgr.shutdown()
 
     def test_pipe_from_client_to_server(self):
