@@ -12,6 +12,7 @@ import random
 import socket
 import string
 from subprocess import call
+import sys
 
 import keepmenu
 from keepmenu.keepmenu import DmenuRunner
@@ -27,6 +28,12 @@ def find_free_port():
         sock.bind(('127.0.0.1', 0))  # pylint:disable=no-member
         return sock.getsockname()[1]  # pylint:disable=no-member
 
+def port_in_use(port):
+    """Return Boolean
+
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
 
 def get_auth():
     """Generate and save port and authkey to ~/.cache/.keepmenu-auth
@@ -63,18 +70,18 @@ def random_str():
     return ''.join(random.choice(letters) for i in range(15))
 
 
-def client():
+def client(port, auth):
     """Define client connection to server BaseManager
 
     Returns: BaseManager object
     """
-    port, auth = get_auth()
     mgr = BaseManager(address=('', port), authkey=auth)
     mgr.register('set_event')
     mgr.register('get_pipe')
     mgr.register('read_args_from_pipe')
     mgr.register('totp_mode')
     mgr.connect()
+
     return mgr
 
 
@@ -96,7 +103,10 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
 
     def run(self):
         _ = self.server()
-        self.kill_flag.wait()
+        try:
+            self.kill_flag.wait()
+        except KeyboardInterrupt:
+            self.kill_flag.set()
 
     def _get_pipe(self):
         return self._child_conn
@@ -132,9 +142,13 @@ def run(**kwargs):
     dmenu.daemon = True
     server.start()
     dmenu.start()
-    server.join()
-    if exists(expanduser(keepmenu.AUTH_FILE)):
-        os.remove(expanduser(keepmenu.AUTH_FILE))
+    try:
+        server.join()
+    except KeyboardInterrupt:
+        sys.exit()
+    finally:
+        if exists(expanduser(keepmenu.AUTH_FILE)):
+            os.remove(expanduser(keepmenu.AUTH_FILE))
 
 
 def main():
@@ -186,8 +200,11 @@ def main():
 
     args = vars(parser.parse_args())
 
+    port, auth = get_auth()
+    if port_in_use(port) is False:
+        run(**args)
     try:
-        manager = client()
+        manager = client(port, auth)
         conn = manager.get_pipe()  # pylint: disable=no-member
         if args.get('totp'):
             manager.totp_mode()  # pylint: disable=no-member
@@ -196,7 +213,9 @@ def main():
             manager.read_args_from_pipe()  # pylint: disable=no-member
         manager.set_event()  # pylint: disable=no-member
     except ConnectionRefusedError:
-        run(**args)
+        # Don't print the ConnectionRefusedError if any other exceptions are
+        # raised.
+        pass
 
 
 if __name__ == '__main__':
