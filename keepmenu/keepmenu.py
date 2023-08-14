@@ -360,13 +360,6 @@ class DmenuRunner(Process):
 
         Args: self.database.kpo - Keepass object
 
-        Note: I had to reload the kpo object after every save to prevent being
-        affected by the gibberish password bug in pykeepass:
-        https://github.com/pschmitt/pykeepass/issues/43
-
-        Once this is fixed, the extra calls to self.database.kpo = get_entries... can be
-        deleted
-
         """
         try:
             self.cache_timer.cancel()
@@ -465,7 +458,6 @@ class DmenuRunner(Process):
         while edit is True:
             edit = edit_entry(self.database.kpo, entry)
         self.database.kpo.save()
-        self.database.kpo = get_entries(self.database)
         self.prev_entry = entry if edit != "del" else None
 
     def menu_add_entry(self):
@@ -475,7 +467,6 @@ class DmenuRunner(Process):
         entry = add_entry(self.database.kpo)
         if entry:
             self.database.kpo.save()
-            self.database.kpo = get_entries(self.database)
             self.prev_entry = entry
 
 
@@ -486,13 +477,11 @@ class DmenuRunner(Process):
         group = manage_groups(self.database.kpo)
         if group:
             self.database.kpo.save()
-            self.database.kpo = get_entries(self.database)
 
     def menu_reload_database(self):
         """Process menu entry - Reload database
 
         """
-        self.database.kpo = get_entries(self.database)
         if not self.database.kpo:
             return
         self.expiring = get_expiring_entries(self.database.kpo.entries)
@@ -510,7 +499,6 @@ class DmenuRunner(Process):
             self.database, self.open_databases = prev_db, prev_open
             return
         if not self.database.kpo:
-            self.database.kpo = get_entries(self.database)
             if self.database.kpo is None:
                 self.database, self.open_databases = prev_db, prev_open
                 return
