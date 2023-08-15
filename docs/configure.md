@@ -101,9 +101,14 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
 
 1. Add your database(s) and keyfile(s)
 2. Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
-3. Set the dmenu_command to `rofi` if you are using that instead
-4. If using Rofi, pass desired theme via `dmenu_command = rofi -theme
-   <theme>.rasi`. Dmenu theme options are also passed in `dmenu_command`
+3. Set the dmenu_command to the desired application, including configuration
+   options.
+   - *Note:* If using wofi, the `--height` paramater will not work properly. You
+     will have to set `--lines` instead, as keepmenu attempts to set a dynamic
+     height based on number of lines of options.
+   - If using Rofi, pass desired theme via `dmenu_command = rofi -theme
+     <theme>.rasi`.
+   - Dmenu theme options are also passed in `dmenu_command`
 5. Adjust the `autotype_default`, if desired. Allowed codes are the [Keepass 2.x
    codes][1] except for repetitions and most command codes. `{DELAY x}`
    (in milliseconds) is supported. Individual autotype sequences can be edited
