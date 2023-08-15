@@ -113,8 +113,9 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
    codes][1] except for repetitions and most command codes. `{DELAY x}`
    (in milliseconds) is supported. Individual autotype sequences can be edited
    or disabled inside Keepmenu.
-6. Set `type_library = xdotool` or `type_library = wtype` (Wayland) if you
-   need support for non-U.S. English keyboard layouts and/or characters.
+6. If you need support on Wayland for non-U.S. English keyboard layouts and/or
+   characters, you might need to experiment with the various typing options to
+   which works for your use case.
 
     * When using xdotool, call `setxkbmap` to set your keyboard type somewhere
       in your window manager or desktop environment initialization. For example:

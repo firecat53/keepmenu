@@ -28,7 +28,7 @@ For full installation documention see the [installation docs][docs/install.md].
 2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
 3. Dmenu, Rofi, Wofi, Yofi or Bemenu
 4. (optional) Pinentry
-5. (optional) xdotool (for X), ydotool or wtype(for Wayland).
+5. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] (X or Wayland).
 
 ## Features
 
@@ -40,8 +40,6 @@ For full installation documention see the [installation docs][docs/install.md].
 - Use a custom [Keepass 2.x style auto-type sequence][6].
 - Type, view or edit any field.
 - Open the URL in the default web browser.
-- Non U.S. English keyboard languages and layouts supported via xdotool or
-  wtype(for Wayland).
 - Edit notes using terminal or gui editor.
 - Add and Delete entries.
 - Add, delete, rename and move groups.
@@ -93,3 +91,6 @@ To run tests in a venv: `make test`
 [7]: https://github.com/Cloudef/bemenu "Bemenu"
 [8]: https://hg.sr.ht/~scoopta/wofi "Wofi"
 [9]: https://github.com/l4l/yofi "Yofi"
+[10]: https://github.com/ReimuNotMoe/ydotool/ "Ydotool"
+[11]: https://github.com/atx/wtype "Wtype"
+[12]: https://git.sr.ht/~geb/dotool "Dotool"

@@ -87,26 +87,13 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     if CONF.has_option('database', 'autotype_default'):
         SEQUENCE = CONF.get("database", "autotype_default")
     if CONF.has_option("database", "type_library"):
-        if CONF.get("database", "type_library") == "xdotool":
-            try:
-                run(['xdotool', 'version'], check=False, stdout=DEVNULL)
-            except OSError:
-                dmenu_err("Xdotool not installed.\n"
-                          "Please install or remove that option from config.ini")
-                sys.exit()
-        elif CONF.get("database", "type_library") == "ydotool":
-            try:
-                run(['ydotool'], check=False, stdout=DEVNULL)
-            except OSError:
-                dmenu_err("Ydotool not installed.\n"
-                          "Please install or remove that option from config.ini")
-                sys.exit()
-        elif CONF.get("database", "type_library") == "wtype":
-            try:
-                run(['wtype'], check=False, stdout=DEVNULL, stderr=DEVNULL)
-            except OSError:
-                dmenu_err("wtype not installed.\n"
-                          "Please install or remove that option from config.ini")
-                sys.exit()
+        for typ in ["xdotool", "ydotool", "wtype", "dotool"]:
+            if CONF.get("database", "type_library") == typ:
+                try:
+                    _ = run([typ, "--version"], check=False, stdout=DEVNULL, stderr=DEVNULL)
+                except OSError:
+                    dmenu_err(f"{typ} not installed.\n"
+                              "Please install or remove that option from config.ini")
+                    sys.exit()
 
 # vim: set et ts=4 sw=4 :

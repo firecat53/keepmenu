@@ -1,10 +1,10 @@
-"""Methods for typing entries with pynput, xdotool, ydotool, wtype
+"""Methods for typing entries with pynput, xdotool, ydotool, wtype, dotool
 
 """
 # flake8: noqa
 # pylint: disable=import-outside-toplevel
 import re
-from subprocess import call
+from subprocess import call, PIPE, run
 import time
 
 import keepmenu
@@ -110,18 +110,14 @@ def type_entry(entry, db_autotype=None):
         sequence = entry.autotype_sequence
     tokens = tokenize_autotype(sequence)
 
-    library = 'pynput'
-    if keepmenu.CONF.has_option('database', 'type_library'):
-        library = keepmenu.CONF.get('database', 'type_library')
-    if library == 'xdotool':
-        type_entry_xdotool(entry, tokens)
-    elif library == 'ydotool':
-        type_entry_ydotool(entry, tokens)
-    elif library == 'wtype':
-        type_entry_wtype(entry, tokens)
-    else:
-        type_entry_pynput(entry, tokens)
-
+    library = "pynput"
+    libraries = {'pynput': type_entry_pynput,
+                 'xdotool': type_entry_xdotool,
+                 'ydotool': type_entry_ydotool,
+                 'wtype': type_entry_wtype,
+                 'dotool': type_entry_dotool}
+    library = keepmenu.CONF.get('database', 'type_library', fallback='pynput')
+    libraries.get(library, type_entry_pynput)(entry, tokens)
 
 PLACEHOLDER_AUTOTYPE_TOKENS = {
     "{TITLE}"   : lambda e: e.deref('title'),
@@ -307,6 +303,37 @@ def type_entry_wtype(entry, tokens):
         else:
             call(['wtype', '--', token])
 
+
+def type_entry_dotool(entry, tokens):
+    """Auto-type entry entry using dotool
+
+    """
+    enter_idx = True
+    from .tokens_dotool import AUTOTYPE_TOKENS
+    for token, special in tokens:
+        if special:
+            cmd = token_command(token)
+            if callable(cmd):
+                to_type = cmd(entry)  # pylint: disable=not-callable
+                if to_type is not None:
+                    _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {to_type}")
+            elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
+                to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
+                if to_type:
+                    _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {to_type}")
+            elif token in STRING_AUTOTYPE_TOKENS:
+                to_type = STRING_AUTOTYPE_TOKENS[token]
+                _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {to_type}")
+            elif token in AUTOTYPE_TOKENS:
+                to_type = " ".join(AUTOTYPE_TOKENS[token])
+                _ = run(['dotool'], encoding=keepmenu.ENC, input=to_type)
+            else:
+                dmenu_err(f"Unsupported auto-type token (dotool): \"{token}\"")
+                return
+        else:
+            _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {token}")
+
+
 def type_text(data):
     """Type the given text data
 
@@ -320,6 +347,8 @@ def type_text(data):
         call(['ydotool', 'type', '-e', '0', '--', data])
     elif library == 'wtype':
         call(['wtype', '--', data])
+    elif library == 'dotool':
+        _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {data}")
     else:
         try:
             from pynput import keyboard
