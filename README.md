@@ -27,14 +27,15 @@ For full installation documention see the [installation docs][docs/install.md].
 1. Python 3.7+
 2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
 3. Dmenu, Rofi, Wofi, Yofi or Bemenu
-4. (optional) Pinentry
-5. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] (X or Wayland).
+4. xsel or wl-copy
+5. (optional) Pinentry
+6. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] (X or Wayland).
 
 ## Features
 
 - Supports .kdbx databases, not .kdb.
-- Auto-type username and/or password on selection. No clipboard copy/paste
-  involved.
+- Auto-type username and/or password on selection. Select to clipboard if
+  desired (clears clipboard after 30s).
 - Background process allows selectable time-out for locking the database.
 - Multiple databases can be unlocked and switched on the fly.
 - Use a custom [Keepass 2.x style auto-type sequence][6].
@@ -58,7 +59,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Usage
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-d DATABASE] [-k KEY_FILE] [-t]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t]`
 
 - Run `keepmenu` or bind to keystroke combination.
 - Enter database path on first run.

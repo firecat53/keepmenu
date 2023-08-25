@@ -299,6 +299,7 @@ class DmenuRunner(Process):
     def __init__(self, server, **kwargs):
         Process.__init__(self)
         cfile = kwargs.get('config')
+        keepmenu.CLIPBOARD = kwargs.get('clipboard', False)
         keepmenu.reload_config(None if cfile is None else expanduser(cfile))
         self.server = server
         self.database, self.open_databases = get_database(**kwargs)
@@ -328,6 +329,7 @@ class DmenuRunner(Process):
                 pass
             elif self.server.args_flag.is_set():
                 dargs = self.server.get_args()
+                keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
                 self.menu_open_another_database(**dargs)
                 self.server.args_flag.clear()
 
@@ -378,6 +380,7 @@ class DmenuRunner(Process):
             i for i in self.database.kpo.entries if not
             any(j in "/".join(i.path[:-1]) for j in hid_groups)
         ]
+        clip = "[Clipboard]/Type" if keepmenu.CLIPBOARD is True else "Clipboard/[Type]"
         options = {
             'View/Type Individual entries':
                 functools.partial(self.menu_view_type_individual_entries, hid_groups),
@@ -389,6 +392,7 @@ class DmenuRunner(Process):
             'Manage groups': self.menu_manage_groups,
             'Reload database': self.menu_reload_database,
             'Open/create another database': self.menu_open_another_database,
+            clip: self.menu_clipboard,
             'Kill Keepmenu daemon': self.menu_kill_daemon,
         }
         if self.prev_entry is None:
@@ -504,6 +508,12 @@ class DmenuRunner(Process):
                 return
         self.expiring = get_expiring_entries(self.database.kpo.entries)
         self.dmenu_run(self.database.totp)
+
+    def menu_clipboard(self):
+        """Process menu entry - Toggle clipboard entry
+
+        """
+        keepmenu.CLIPBOARD = not keepmenu.CLIPBOARD
 
     def menu_kill_daemon(self):
         """Process menu entry - Kill keepmenu daemon

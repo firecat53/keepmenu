@@ -32,6 +32,7 @@ CACHE_PERIOD_MIN = CACHE_PERIOD_DEFAULT_MIN
 SEQUENCE = "{USERNAME}{TAB}{PASSWORD}{ENTER}"
 MAX_LEN = 24
 CONF = configparser.ConfigParser()
+CLIPBOARD = False
 
 
 def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-many-branches
@@ -43,6 +44,7 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     # pragma pylint: disable=global-statement,global-variable-not-assigned
     global CACHE_PERIOD_MIN, \
         CACHE_PERIOD_DEFAULT_MIN, \
+        CLIPBOARD_CMD, \
         CONF, \
         MAX_LEN, \
         ENV, \
@@ -95,5 +97,9 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
                     dmenu_err(f"{typ} not installed.\n"
                               "Please install or remove that option from config.ini")
                     sys.exit()
+    if os.environ.get('WAYLAND_DISPLAY'):
+        CLIPBOARD_CMD = 'wl-copy'
+    else:
+        CLIPBOARD_CMD = 'xsel'
 
 # vim: set et ts=4 sw=4 :

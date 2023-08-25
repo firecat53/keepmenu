@@ -5,6 +5,7 @@
 # pylint: disable=import-outside-toplevel
 import re
 from subprocess import call, PIPE, run
+from threading import Timer
 import time
 
 import keepmenu
@@ -98,7 +99,12 @@ def type_entry(entry, db_autotype=None):
 
     """
     sequence = keepmenu.SEQUENCE
-
+    if keepmenu.CLIPBOARD is True:
+        if hasattr(entry, 'password'):
+            type_clipboard(entry.password)
+        else:
+            dmenu_err("Clipboard is active. 'View/Type Individual entries' and select field to copy")
+        return
     if hasattr(entry, 'autotype_enabled') and entry.autotype_enabled is False:
         dmenu_err("Autotype disabled for this entry")
         return
@@ -338,6 +344,9 @@ def type_text(data):
     """Type the given text data
 
     """
+    if keepmenu.CLIPBOARD is True:
+        type_clipboard(data)
+        return
     library = 'pynput'
     if keepmenu.CONF.has_option('database', 'type_library'):
         library = keepmenu.CONF.get('database', 'type_library')
@@ -360,3 +369,15 @@ def type_text(data):
         except kbd.InvalidCharacterException:
             dmenu_err("Unable to type string...bad character.\n"
                       "Try setting `type_library = xdotool` in config.ini")
+
+
+def type_clipboard(text):
+    """Copy text to clipboard and clear clipboard after 30 seconds
+
+    Args: text - str
+
+    """
+    text = text or ""  # Handle None type
+    run([keepmenu.CLIPBOARD_CMD], input=text.encode(keepmenu.ENC))
+    clear = Timer(30, lambda: run([keepmenu.CLIPBOARD_CMD, "--clear"]))
+    clear.start()

@@ -12,7 +12,7 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing of Keepa
 
 # SYNOPSIS
 
-**keepmenu** [**--autotype** pattern] [**--config** file] [**--database** file] [**--keyfile** file] [**--totp**]
+**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--totp**]
 
 # DESCRIPTION
 
@@ -25,6 +25,8 @@ Passhole, but is more dmenu and less command line focused.
 **-a**, **--autotype**  Autotype sequence from https://keepass.info/help/base/autotype.html#autoseq . Overrides global default from config.ini for current database.
 
 **-c**, **--config**   Path to config file
+
+**-C**, **--clipboard** Select to clipboard
 
 **-d**, **--database** Path to Keepass database
 
