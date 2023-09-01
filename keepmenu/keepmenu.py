@@ -2,6 +2,7 @@
 
 """
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import errno
 import functools
@@ -21,7 +22,8 @@ from keepmenu.view import view_all_entries, view_entry
 from keepmenu.totp import gen_otp, get_otp_url
 
 
-class DataBase():  # pylint: disable=too-few-public-methods
+@dataclass
+class DataBase:
     """Define a database class for clearer reference to variables
 
         dbase - string, filename
@@ -33,25 +35,17 @@ class DataBase():  # pylint: disable=too-few-public-methods
         is_active - bool, is this the currently active database
 
     """
-    def __init__(self, dbase=None, kfile=None, pword=None, atype=None, totp=False, kpo=None):
-        # pylint: disable=too-many-arguments
-        self.dbase = expanduser('' if dbase is None else dbase)
-        self.dbase = realpath(self.dbase) if self.dbase else ''
-        self.kfile = expanduser('' if kfile is None else kfile)
-        self.kfile = realpath(self.kfile) if self.kfile else ''
-        self.pword = pword
-        self.atype = atype
-        self.totp = totp
-        self.kpo = kpo
-        self.is_active = False
+    dbase: str = ""
+    kfile: str = ""
+    pword: str = None
+    atype: str = None
+    totp: bool = False
+    is_active: bool = False
+    kpo: str = None  # Placeholder for pykeepass object
 
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+    def __post_init__(self):
+        self.dbase = realpath(expanduser(self.dbase)) if self.dbase else ""
+        self.kfile = realpath(expanduser(self.kfile)) if self.kfile else ""
 
 
 def get_databases():
