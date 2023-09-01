@@ -486,6 +486,7 @@ class DmenuRunner(Process):
         """Process menu entry - Reload database
 
         """
+        self.database.kpo = get_entries(self.database)
         if not self.database.kpo:
             return
         self.expiring = get_expiring_entries(self.database.kpo.entries)
@@ -503,6 +504,7 @@ class DmenuRunner(Process):
             self.database, self.open_databases = prev_db, prev_open
             return
         if not self.database.kpo:
+            self.database.kpo = get_entries(self.database)
             if self.database.kpo is None:
                 self.database, self.open_databases = prev_db, prev_open
                 return
