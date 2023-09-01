@@ -516,6 +516,7 @@ class DmenuRunner(Process):
 
         """
         keepmenu.CLIPBOARD = not keepmenu.CLIPBOARD
+        self.dmenu_run()
 
     def menu_kill_daemon(self):
         """Process menu entry - Kill keepmenu daemon
