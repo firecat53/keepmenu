@@ -261,7 +261,7 @@ def get_passphrase(check=False):
                              capture_output=True,
                              check=False,
                              encoding=keepmenu.ENC,
-                             input=f'setdesc {msg}\ngetpin\n')
+                             input=f'SETDESC {msg}\nGETPIN\n')
         if res.stdout:
             pin = res.stdout.split("\n")[2]
             if pin.startswith("D "):
