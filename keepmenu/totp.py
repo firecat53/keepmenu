@@ -9,9 +9,17 @@ from urllib import parse
 
 
 TOTP_PUBLIC_FIELDS = ('TOTP Settings', 'TimeOtp-Length', 'TimeOtp-Period', 'TimeOtp-Algorithm')
-TOTP_SECRET_FIELDS = ('otp', 'TOTP Seed',
-                      'TimeOtp-Secret', 'TimeOtp-Secret-Hex', 'TimeOtp-Secret-Base32', 'TimeOtp-Secret-Base64',
-                      'HmacOtp-Secret', 'HmacOtp-Secret-Hex', 'HmacOtp-Secret-Base32', 'HmacOtp-Secret-Base64', 'HmacOtp-Counter')
+TOTP_SECRET_FIELDS = ('otp',
+                      'TOTP Seed',
+                      'TimeOtp-Secret',
+                      'TimeOtp-Secret-Hex',
+                      'TimeOtp-Secret-Base32',
+                      'TimeOtp-Secret-Base64',
+                      'HmacOtp-Secret',
+                      'HmacOtp-Secret-Hex',
+                      'HmacOtp-Secret-Base32',
+                      'HmacOtp-Secret-Base64',
+                      'HmacOtp-Counter')
 TOTP_FIELDS = TOTP_PUBLIC_FIELDS + TOTP_SECRET_FIELDS
 
 

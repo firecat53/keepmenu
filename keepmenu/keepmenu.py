@@ -395,9 +395,9 @@ class DmenuRunner(Process):
             del options['Edit expiring/expired passwords (0)']
 
         if totp_mode:
-           sel = self.menu_view_type_individual_entries(hid_groups, totp_only=True)
+            sel = self.menu_view_type_individual_entries(hid_groups, totp_only=True)
         else:
-           sel = view_all_entries(list(options), filtered_entries, self.database.dbase)
+            sel = view_all_entries(list(options), filtered_entries, self.database.dbase)
 
         if not sel:
             return

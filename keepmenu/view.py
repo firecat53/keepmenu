@@ -26,7 +26,7 @@ def view_all_entries(options, kp_entries, dbname):
                                                   na=num_align)
                          for j, i in enumerate(kp_entries)])
     if options:
-        options_s = ("\n".join(options) + "\n")
+        options_s = "\n".join(options) + "\n"
         entries_s = options_s + kps
     else:
         entries_s = kps

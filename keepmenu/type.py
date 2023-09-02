@@ -5,7 +5,7 @@
 # pylint: disable=import-outside-toplevel
 import re
 from shlex import split
-from subprocess import call, PIPE, run
+from subprocess import call, run
 from threading import Timer
 import time
 
@@ -315,7 +315,6 @@ def type_entry_dotool(entry, tokens):
     """Auto-type entry entry using dotool
 
     """
-    enter_idx = True
     from .tokens_dotool import AUTOTYPE_TOKENS
     for token, special in tokens:
         if special:
@@ -323,22 +322,22 @@ def type_entry_dotool(entry, tokens):
             if callable(cmd):
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
-                    _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {to_type}")
+                    _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {to_type}")
+                    _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {to_type}")
+                _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
             elif token in AUTOTYPE_TOKENS:
                 to_type = " ".join(AUTOTYPE_TOKENS[token])
-                _ = run(['dotool'], encoding=keepmenu.ENC, input=to_type)
+                _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=to_type)
             else:
                 dmenu_err(f"Unsupported auto-type token (dotool): \"{token}\"")
                 return
         else:
-            _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {token}")
+            _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {token}")
 
 
 def type_text(data):
@@ -358,7 +357,7 @@ def type_text(data):
     elif library == 'wtype':
         call(['wtype', '--', data])
     elif library == 'dotool':
-        _ = run(['dotool'], encoding=keepmenu.ENC, input=f"type {data}")
+        _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {data}")
     else:
         try:
             from pynput import keyboard
@@ -379,6 +378,6 @@ def type_clipboard(text):
 
     """
     text = text or ""  # Handle None type
-    run(split(keepmenu.CLIPBOARD_CMD), input=text.encode(keepmenu.ENC))
+    run(split(keepmenu.CLIPBOARD_CMD), check=True, input=text.encode(keepmenu.ENC))
     clear = Timer(30, lambda: run(split(keepmenu.CLIPBOARD_CMD), check=False, input=""))
     clear.start()
