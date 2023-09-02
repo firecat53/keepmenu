@@ -33,6 +33,7 @@ SEQUENCE = "{USERNAME}{TAB}{PASSWORD}{ENTER}"
 MAX_LEN = 24
 CONF = configparser.ConfigParser()
 CLIPBOARD = False
+CLIPBOARD_CMD = "true"
 
 
 def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-many-branches
@@ -98,8 +99,18 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
                               "Please install or remove that option from config.ini")
                     sys.exit()
     if os.environ.get('WAYLAND_DISPLAY'):
-        CLIPBOARD_CMD = 'wl-copy'
+        clips = ['wl-copy']
     else:
-        CLIPBOARD_CMD = 'xsel'
+        clips = ["xsel -b", "xclip -selection clip"]
+    for clip in clips:
+        try:
+            _ = run(shlex.split(clip), check=False, stdout=DEVNULL, stderr=DEVNULL, input="")
+            CLIPBOARD_CMD = clip
+            break
+        except OSError:
+            continue
+    if CLIPBOARD_CMD == "true":
+        dmenu_err(f"{' or '.join([shlex.split(i)[0] for i in clips])} needed for clipboard support")
+
 
 # vim: set et ts=4 sw=4 :

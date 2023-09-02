@@ -4,6 +4,7 @@
 # flake8: noqa
 # pylint: disable=import-outside-toplevel
 import re
+from shlex import split
 from subprocess import call, PIPE, run
 from threading import Timer
 import time
@@ -378,6 +379,6 @@ def type_clipboard(text):
 
     """
     text = text or ""  # Handle None type
-    run([keepmenu.CLIPBOARD_CMD], input=text.encode(keepmenu.ENC))
-    clear = Timer(30, lambda: run([keepmenu.CLIPBOARD_CMD, "--clear"]))
+    run(split(keepmenu.CLIPBOARD_CMD), input=text.encode(keepmenu.ENC))
+    clear = Timer(30, lambda: run(split(keepmenu.CLIPBOARD_CMD), check=False, input=""))
     clear.start()
