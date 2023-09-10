@@ -1,6 +1,7 @@
 """Methods for editing entries and groups
 
 """
+from datetime import datetime
 import os
 import random
 from secrets import choice
@@ -71,8 +72,8 @@ def edit_entry(kpo, kp_entry):
               str("TOTP: ******") if get_otp_url(kp_entry) else "TOTP: None",
               str(f"Url: {kp_entry.url}"),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
-              str(f"Expiry time: {kp_entry.expiry_time}")
-              if kp_entry.expires is True else "Expiry date: None"]
+              str(f"Expiry time: {kp_entry.expiry_time.strftime('%Y-%m-%d %H:%M')}")
+              if kp_entry.expires is True else "Expiry time: None"]
 
     attrs = kp_entry.custom_properties
     for attr in attrs:
@@ -159,6 +160,10 @@ def edit_entry(kpo, kp_entry):
             return True
         sel = not at_enab == 'False'
 
+    if field == 'expiry_time':
+        edit_expiry(kp_entry)
+        return True
+
     if (field not in ('password', 'notes', 'path', 'autotype_enabled')) or pw_choice:
         sel = dmenu_select(1, f"{field.capitalize()}", inp=edit)
         if not sel:
@@ -173,6 +178,46 @@ def edit_entry(kpo, kp_entry):
 
     setattr(kp_entry, field, sel)
     return True
+
+
+def edit_expiry(kp_entry):
+    """Edit expiration date
+
+    Args: kp_entry - selected Entry object
+
+    Input can be date and time, date or time
+
+    """
+    sel = dmenu_select(1,
+                       "Expiration Date (yyyy-mm-dd hh:mm OR "
+                       "yyyy-mm-dd OR HH:MM OR "
+                       "'None' to unset)",
+                       inp=kp_entry.expiry_time.strftime("%Y-%m-%d %H:%M") if
+                           kp_entry.expires is True else "")
+    if not sel:
+        return True
+    if sel.lower() == "none":
+        setattr(kp_entry, "expires", False)
+        return True
+    dtime = exp_date(sel)
+    if dtime:
+        setattr(kp_entry, "expires", True)
+        setattr(kp_entry, "expiry_time", dtime)
+    return True
+
+
+def exp_date(dtime):
+    """Convert string to datetime
+
+    """
+    formats = ["%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"]
+    for fmt in formats:
+        try:
+            return datetime.strptime(dtime, fmt)
+        except ValueError:
+            continue
+    dmenu_err("Invalid format. No changes made")
+    return None
 
 
 def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branches

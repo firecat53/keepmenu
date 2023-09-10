@@ -272,13 +272,13 @@ def get_passphrase(check=False):
 
 
 def get_expiring_entries(entries):
-    """Return a list of expired entries (if they can expire)
+    """Return a list of expired entries or that will expire in the next 3 days (if they can expire)
 
     """
     expiring = []
     for entry in entries:
         if entry.expires is True and \
-                entry.expiry_time.timestamp() < (datetime.now() + timedelta(3)).timestamp():
+                entry.expiry_time.timestamp() < (datetime.now() + timedelta(days=3)).timestamp():
             expiring.append(entry)
     return expiring
 
@@ -456,6 +456,7 @@ class DmenuRunner(Process):
         while edit is True:
             edit = edit_entry(self.database.kpo, entry)
         self.database.kpo.save()
+        self.expiring = get_expiring_entries(self.database.kpo.entries)
         self.prev_entry = entry if edit != "del" else None
 
     def menu_add_entry(self):
