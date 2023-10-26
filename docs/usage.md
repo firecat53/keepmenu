@@ -4,7 +4,7 @@
 
 ## Basic
 
-- [Configure](docs/configure.md) config.ini as desired.
+- [Configure](configure.md) config.ini as desired.
 - Run `keepmenu` or bind to keystroke combination.
 - Enter database/keyfile paths on first run if not already configured in config.ini.
 - Start typing to match entries, `Enter` to type with default autotype sequence
