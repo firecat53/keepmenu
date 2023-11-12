@@ -114,8 +114,7 @@ some special characters.
 (2) Gnome `modal` dialogs for SSH/GPG key entries are unusable with any password
 manager that performs autotyping. You have to copy the password to the clipboard
 before you need it and paste into the field because the dialog does not allow
-you to navigate away once it's open. Copying to clipboard is not currently
-possible in Keepmenu, although I intend to add support at some point.
+you to navigate away once it's open.
 
 (3) Supposedly you can change the keyboard language of the ydotool virtual
 device in the Sway config to enable support for characters on that keyboard but
