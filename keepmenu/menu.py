@@ -21,7 +21,8 @@ def dmenu_cmd(num_lines, prompt):
                 "dmenu": ["-p", str(prompt), "-l", str(num_lines)],
                 "rofi": ["-dmenu", "-p", str(prompt), "-l", str(num_lines)],
                 "wofi": ["--dmenu", "-p", str(prompt), "-L", str(num_lines + 1)],
-                "yofi": ["-p", str(prompt), "dialog"]}
+                "yofi": ["-p", str(prompt), "dialog"],
+                "fuzzel": ["-p", str(prompt) + " ", "-l", str(num_lines)]}
     command = shlex.split(keepmenu.CONF.get('dmenu', 'dmenu_command', fallback='dmenu'))
     command.extend(commands.get(basename(command[0]), []))
     pwprompts = ("Password", "password", "client_secret", "Verify password", "Enter Password")
@@ -31,7 +32,8 @@ def dmenu_cmd(num_lines, prompt):
                         "rofi": ['-password'],
                         "bemenu": ['-x'],
                         "wofi": ['-P'],
-                        "yofi": ['--password']}
+                        "yofi": ['--password'],
+                        "fuzzel": ['--password']}
         command[1:1] = pass_prompts.get(basename(command[0]), [])
     return command
 
