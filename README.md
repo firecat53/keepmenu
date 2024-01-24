@@ -4,7 +4,7 @@
 ![PyPI](https://img.shields.io/pypi/v/keepmenu)
 ![GitHub contributors](https://img.shields.io/github/contributors/firecat53/keepmenu)
 
-Fully featured Dmenu/[Rofi][2]/[Bemenu][7]/[Wofi][8]/[Yofi][9] frontend for
+Fully featured [Bemenu][7]/Dmenu/[Fuzzel][13]/[Rofi][2]//[Wofi][8]/[Yofi][9] frontend for
 autotype and managing of Keepass databases.
 
 Inspired in part by [Passhole][3], but more dmenu and less command line focused.
@@ -26,7 +26,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 1. Python 3.7+
 2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
-3. Dmenu, Rofi, Wofi, Yofi or Bemenu
+3. Bemenu, Dmenu, Fuzzel, Rofi, Wofi, or Yofi
 4. xsel or wl-copy
 5. (optional) Pinentry
 6. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] (X or Wayland).
@@ -95,3 +95,4 @@ To run tests in a venv: `make test`
 [10]: https://github.com/ReimuNotMoe/ydotool/ "Ydotool"
 [11]: https://github.com/atx/wtype "Wtype"
 [12]: https://git.sr.ht/~geb/dotool "Dotool"
+[13]: https://codeberg.org/dnkl/fuzzel "Fuzzel"
