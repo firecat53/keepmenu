@@ -19,6 +19,7 @@ def dmenu_cmd(num_lines, prompt):
     """
     commands = {"bemenu": ["-p", str(prompt), "-l", str(num_lines)],
                 "dmenu": ["-p", str(prompt), "-l", str(num_lines)],
+                "wmenu": ["-p", str(prompt), "-l", str(num_lines)],
                 "rofi": ["-dmenu", "-p", str(prompt), "-l", str(num_lines)],
                 "wofi": ["--dmenu", "-p", str(prompt), "-L", str(num_lines + 1)],
                 "yofi": ["-p", str(prompt), "dialog"],
@@ -29,34 +30,37 @@ def dmenu_cmd(num_lines, prompt):
     obscure = keepmenu.CONF.getboolean('dmenu_passphrase', 'obscure', fallback=True)
     if any(i == prompt for i in pwprompts) and obscure is True:
         pass_prompts = {"dmenu": dmenu_pass(basename(command[0])),
+                        "wmenu": dmenu_pass(basename(command[0])),
                         "rofi": ['-password'],
                         "bemenu": ['-x', 'indicator', '*'],
                         "wofi": ['-P'],
                         "yofi": ['--password'],
                         "fuzzel": ['--password']}
-        command[1:1] = pass_prompts.get(basename(command[0]), [])
+        command.extend(pass_prompts.get(basename(command[0]), []))
     return command
 
 
 def dmenu_pass(command):
     """Check if dmenu passphrase patch is applied and return the correct command
-    line arg list
+    line arg list for wmenu or dmenu
 
     Args: command - string
     Returns: list or None
 
     """
-    if command != 'dmenu':
+    if command not in ('dmenu', 'wmenu'):
         return None
     try:
         # Check for dmenu password patch
-        dm_patch = b'P' in run(["dmenu", "-h"],
+        dm_patch = b'P' in run([command, "-h"],
                                capture_output=True,
                                check=False).stderr
     except FileNotFoundError:
         dm_patch = False
     color = keepmenu.CONF.get('dmenu_passphrase', 'obscure_color', fallback="#222222")
-    return ["-P"] if dm_patch else ["-nb", color, "-nf", color]
+    dargs = { "dmenu":  ["-nb", color, "-nf", color],
+              "wmenu":  ["-n", color, "-N", color] }
+    return ["-P"] if dm_patch else dargs[command]
 
 
 def dmenu_select(num_lines, prompt="Entries", inp=""):
