@@ -30,7 +30,7 @@ def dmenu_cmd(num_lines, prompt):
     if any(i == prompt for i in pwprompts) and obscure is True:
         pass_prompts = {"dmenu": dmenu_pass(basename(command[0])),
                         "rofi": ['-password'],
-                        "bemenu": ['-x'],
+                        "bemenu": ['-x', 'indicator', '*'],
                         "wofi": ['-P'],
                         "yofi": ['--password'],
                         "fuzzel": ['--password']}
