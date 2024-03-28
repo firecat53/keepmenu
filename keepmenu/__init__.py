@@ -99,7 +99,7 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
                               "Please install or remove that option from config.ini")
                     sys.exit()
     if os.environ.get('WAYLAND_DISPLAY'):
-        clips = ['wl-copy']
+        clips = ['wl-copy -o']
     else:
         clips = ["xsel -b", "xclip -selection clip"]
     for clip in clips:

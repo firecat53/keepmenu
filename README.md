@@ -35,7 +35,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 - Supports .kdbx databases, not .kdb.
 - Auto-type username and/or password on selection. Select to clipboard if
-  desired (clears clipboard after 30s).
+  desired (clears clipboard after 30s on X11 or after 1 paste on Wayland).
 - Background process allows selectable time-out for locking the database.
 - Multiple databases can be unlocked and switched on the fly.
 - Use a custom [Keepass 2.x style auto-type sequence][6].
