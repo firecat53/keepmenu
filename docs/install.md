@@ -7,7 +7,7 @@
 1. Python 3.7+.
 2. [Pykeepass][1] >= 4.0.0 and [pynput][2]. Install via pip or your
    distribution's package manager, if available.
-3. Bemenu, Dmenu, Wmenu, Fuzzel, Rofi, Wofi, or Yofi.
+3. Bemenu, Dmenu, Wmenu, Fuzzel, Rofi, Tofi, Wofi, or Yofi.
 4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
    in the config file.
 5. (optional) xdotool (for X) or ydotool (>=1.0.0, for Wayland), wtype (for
@@ -100,6 +100,7 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
 | Fuzzel         | No  | Yes                         | Yes                  | No               |                 |
 | Rofi           | Yes | Yes                         | No                   | No               |                 |
 | Bemenu         | Yes | Yes                         | Yes                  | No               |                 |
+| Tofi           | No  | Yes                         | Yes                  | No               |                 |
 | Wofi           | No  | Yes                         | Yes                  | Yes              |                 |
 | Yofi           | No  | Yes                         | Yes                  | Yes              |                 |
 | *Typing Tools* |     |                             |                      |                  |                 |
