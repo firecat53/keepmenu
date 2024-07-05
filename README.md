@@ -4,7 +4,7 @@
 ![PyPI](https://img.shields.io/pypi/v/keepmenu)
 ![GitHub contributors](https://img.shields.io/github/contributors/firecat53/keepmenu)
 
-Fully featured [Bemenu][7]/Dmenu/[Wmenu][14]/[Fuzzel][13]/[Rofi][2]/[Tofi][]/[Wofi][8]/[Yofi][9] frontend for
+Fully featured [Bemenu][7]/Dmenu/[Wmenu][14]/[Fuzzel][13]/[Rofi][2]/[Tofi][15]/[Wofi][8]/[Yofi][9] frontend for
 autotype and managing of Keepass databases.
 
 Inspired in part by [Passhole][3], but more dmenu and less command line focused.
