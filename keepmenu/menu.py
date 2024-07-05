@@ -21,7 +21,9 @@ def dmenu_cmd(num_lines, prompt):
                 "dmenu": ["-p", str(prompt), "-l", str(num_lines)],
                 "wmenu": ["-p", str(prompt), "-l", str(num_lines)],
                 "rofi": ["-dmenu", "-p", str(prompt), "-l", str(num_lines)],
-                "tofi": ["--prompt-text={}: ".format(str(prompt)), "--num-results={}".format(str(num_lines))],
+                "tofi": ["--require-match=false",
+                         f"--prompt-text={str(prompt)}: ",
+                         f"--num-results={str(num_lines)}"],
                 "wofi": ["--dmenu", "-p", str(prompt), "-L", str(num_lines + 1)],
                 "yofi": ["-p", str(prompt), "dialog"],
                 "fuzzel": ["-p", str(prompt) + " ", "-l", str(num_lines)]}
@@ -34,7 +36,7 @@ def dmenu_cmd(num_lines, prompt):
                         "wmenu": dmenu_pass(basename(command[0])),
                         "rofi": ['-password'],
                         "bemenu": ['-x', 'indicator', '*'],
-                        "tofi": ["--hide-input=true", "--require-match=false", "--hidden-character=*"],
+                        "tofi": ["--hide-input=true", "--hidden-character=*"],
                         "wofi": ['-P'],
                         "yofi": ['--password'],
                         "fuzzel": ['--password']}
