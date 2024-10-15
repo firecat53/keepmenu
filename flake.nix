@@ -12,24 +12,12 @@
     systems = ["x86_64-linux" "i686-linux" "aarch64-linux"];
     forAllSystems = f:
       nixpkgs.lib.genAttrs systems (system:
-        f rec {
+        f {
           pkgs = nixpkgs.legacyPackages.${system};
-          commonPackages = builtins.attrValues {
-            inherit
-              (pkgs.python3Packages)
-              python
-              pykeepass
-              pynput
-              ;
-          };
         });
   in {
-    devShells = forAllSystems ({
-      pkgs,
-      commonPackages,
-    }: {
+    devShells = forAllSystems ({pkgs}: {
       default = pkgs.mkShell {
-        packages = commonPackages;
         buildInputs = with pkgs; [
           pandoc
           python3Packages.venvShellHook
@@ -37,21 +25,19 @@
         ];
         venvDir = "./.venv";
         C_INCLUDE_PATH = "${pkgs.linuxHeaders}/include";
-        HATCH_ENV_TYPE_VIRTUAL_UV_PATH="${pkgs.uv}/bin/uv"; # use Nix uv instead of hatch downloaded binary
-        PYTHONPATH="$PYTHONPATH:$PWD";
+        HATCH_ENV_TYPE_VIRTUAL_UV_PATH = "${pkgs.uv}/bin/uv"; # use Nix uv instead of hatch downloaded binary
+        PYTHONPATH = "$PYTHONPATH:$PWD";
         shellHook = ''
           venvShellHook
           alias keepmenu="python -m keepmenu"
         '';
         postVenvCreation = ''
-          pip install hatch
+          uv pip install hatch
+          uv pip install -e .
         '';
       };
     });
-    packages = forAllSystems ({
-      pkgs,
-      commonPackages,
-    }: {
+    packages = forAllSystems ({pkgs}: {
       default = pkgs.python3Packages.buildPythonApplication {
         name = "keepmenu";
         pname = "keepmenu";
@@ -68,7 +54,14 @@
             hatch-vcs
             ;
         };
-        propagatedBuildInputs = commonPackages;
+        propagatedBuildInputs = builtins.attrValues {
+          inherit
+            (pkgs.python3Packages)
+            python
+            pykeepass
+            pynput
+            ;
+        };
         meta = {
           description = "Dmenu/Rofi/Wofi frontend for Keepass databases";
           homepage = "https://github.com/firecat53/keepmenu";
