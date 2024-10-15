@@ -1,10 +1,12 @@
 .coverage
+.envrc
+.direnv/
+.venv/
+*.egg-info/
 *.pyc
 *.un~
-*.egg-info/
 build/
 dist/
 keepmenu/_version.py
 result/
 tests/.test.kdbx.lock
-venv/

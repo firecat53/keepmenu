@@ -29,10 +29,22 @@
       commonPackages,
     }: {
       default = pkgs.mkShell {
-        packages = commonPackages ++ [pkgs.pandoc];
+        packages = commonPackages;
+        buildInputs = with pkgs; [
+          pandoc
+          python3Packages.venvShellHook
+          uv
+        ];
+        venvDir = "./.venv";
+        C_INCLUDE_PATH = "${pkgs.linuxHeaders}/include";
+        HATCH_ENV_TYPE_VIRTUAL_UV_PATH="${pkgs.uv}/bin/uv"; # use Nix uv instead of hatch downloaded binary
+        PYTHONPATH="$PYTHONPATH:$PWD";
         shellHook = ''
+          venvShellHook
           alias keepmenu="python -m keepmenu"
-          export PYTHONPATH="$PYTHONPATH:$PWD"
+        '';
+        postVenvCreation = ''
+          pip install hatch
         '';
       };
     });
