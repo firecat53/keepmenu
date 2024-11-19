@@ -49,6 +49,9 @@ Homepage = "https://github.com/firecat53/keepmenu"
 source = "vcs"
 fallback-version = "0.0.0"
 
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
 [tool.hatch.build.hooks.vcs]
 version-file = "keepmenu/_version.py"
 
