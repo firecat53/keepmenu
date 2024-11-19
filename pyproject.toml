@@ -31,6 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Utilities",
 ]
 dependencies = [
@@ -47,6 +48,9 @@ Homepage = "https://github.com/firecat53/keepmenu"
 [tool.hatch.version]
 source = "vcs"
 fallback-version = "0.0.0"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "keepmenu/_version.py"
