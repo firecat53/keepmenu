@@ -81,6 +81,14 @@ To run tests in a venv: `make test`
 - Using `nix`:
     - `nix develop`: Provides development shell/venv with all dependencies.
     - `make test` and `hatch build/publish` work as usual.
+- GitHub Action will upload to TestPyPi on each push to `main`. To create a
+  GitHub and PyPi release, create a new tag (formatting below) and push tags.
+
+        <tag name on first line>
+
+        * Release note 1
+        * Release note 2
+        * ...
 
 [1]: https://github.com/pschmitt/pykeepass "Pykeepass"
 [2]: https://davedavenport.github.io/rofi/ "Rofi"
