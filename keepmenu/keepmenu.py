@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import errno
 import functools
+from getpass import getpass
 from multiprocessing import Process
 from os.path import expanduser, isfile, realpath
 import shlex
@@ -95,11 +96,13 @@ def get_databases():
     return dbs
 
 
-def get_database(open_databases=None, **kwargs):
+def get_database(open_databases=None, cli=False, no_prompt=False, **kwargs):
     # pylint: disable=too-many-statements,too-many-branches
     """Read databases/keyfile/autotype from config, CLI, or ask for user input.
 
     Args: open_databases - list [DataBase1, DataBase2,...]
+          cli - bool, if True, prompt for password on the CLI
+          no_prompt - bool, Do not prompt for database password
           kwargs - possibly 'database', 'keyfile'
     Returns: DataBase obj or None on error selecting database or password
              open_databases - list [DataBase1, DataBase2,...]
@@ -113,9 +116,11 @@ def get_database(open_databases=None, **kwargs):
     clidb = DataBase(dbase=kwargs.get('database'),
                      kfile=kwargs.get('keyfile'),
                      atype=kwargs.get('autotype'),
-                     totp=kwargs.get('totp', False))
-    if not dbs_cfg and not clidb.dbase and not open_databases:
-        # First run  database opening
+                     totp=kwargs.get('totp', False),
+                     pword=kwargs.get('password'))  
+    
+    if not dbs_cfg and not clidb.dbase and not open_databases and not cli:
+        # First run database opening
         res = get_initial_db()
         if res is True:
             db_, open_databases = get_database()
@@ -153,7 +158,7 @@ def get_database(open_databases=None, **kwargs):
                 dbs.append(copy(db_))
     else:
         dbs = dbs_cfg
-    if len(dbs) > 1:
+    if len(dbs) > 1 and not cli:
         inp = "\n".join(i.dbase for i in dbs) + "\nCreate Database"
         sel = dmenu_select(len(dbs) + 1, "Select Database", inp=inp)
         dbs = [i for i in dbs if i.dbase == sel]
@@ -167,13 +172,17 @@ def get_database(open_databases=None, **kwargs):
             return None, open_databases
     if not isfile(dbs[0].dbase):
         dmenu_err("Database does not exist. Check path and filename.")
+    elif cli and len(dbs) > 1:
+        print("Specify database with -d", file=sys.stderr)
         return None, open_databases
     if dbs[0].pword is None:
-        dbs[0].pword = get_passphrase()
+        if no_prompt:
+            return None, open_databases
+        dbs[0].pword = get_passphrase(cli=cli)
         if dbs[0].pword is None:
             return None, open_databases
     if dbs[0].kpo is None:
-        dbs[0].kpo = get_entries(dbs[0])
+        dbs[0].kpo = get_entries(dbs[0], cli_mode=cli)
     for db_ in open_databases.values():
         db_.is_active = False
     if dbs[0].dbase not in open_databases:
@@ -221,10 +230,11 @@ def get_initial_db():
     return True
 
 
-def get_entries(dbo):
+def get_entries(dbo, cli_mode=False):
     """Open keepass database and return the PyKeePass object
 
         Args: dbo: DataBase object
+              cli_mode: bool, if True, print errors to stderr instead of showing GUI
         Returns: PyKeePass object or None
 
     """
@@ -235,32 +245,46 @@ def get_entries(dbo):
         kpo = PyKeePass(dbo.dbase, dbo.pword, keyfile=dbo.kfile)
     except (FileNotFoundError, construct.core.ChecksumError) as err:
         if str(err.args[0]).startswith("wrong checksum"):
-            dmenu_err("Invalid Password or keyfile")
+            if cli_mode:
+                print("Error: Invalid Password or keyfile", file=sys.stderr)
+            else:
+                dmenu_err("Invalid Password or keyfile")
             return None
         try:
             if err.errno == errno.ENOENT:
                 if not isfile(dbo.dbase):
-                    dmenu_err("Database does not exist. Check path and filename.")
+                    if cli_mode:
+                        print("Error: Database does not exist. Check path and filename.", file=sys.stderr)
+                    else:
+                        dmenu_err("Database does not exist. Check path and filename.")
                 elif not isfile(dbo.kfile):
-                    dmenu_err("Keyfile does not exist. Check path and filename.")
+                    if cli_mode:
+                        print("Error: Keyfile does not exist. Check path and filename.", file=sys.stderr)
+                    else:
+                        dmenu_err("Keyfile does not exist. Check path and filename.")
         except AttributeError:
             pass
         return None
     except Exception as err:  # pylint: disable=broad-except
-        dmenu_err(f"Error: {err}")
+        if cli_mode:
+            print(f"Error: {err}", file=sys.stderr)
+        else:
+            dmenu_err(f"Error: {err}")
         return None
     return kpo
 
 
-def get_passphrase(check=False):
-    """Get a database password from dmenu or pinentry
+def get_passphrase(check=False, cli=False):
+    """Get a database password from dmenu, pinentry or on the CLI
 
     Returns: string
 
     """
     msg = "Enter Password" if check is False else "Verify password"
     pinentry = keepmenu.CONF.get("dmenu", "pinentry", fallback=None)
-    if pinentry:
+    if cli is True:
+        password = getpass()
+    elif pinentry:
         password = ""
         res = subprocess.run(pinentry,
                              capture_output=True,
@@ -295,13 +319,15 @@ class DmenuRunner(Process):
           kpo - Keepass object
     """
 
-    def __init__(self, server, **kwargs):
+    def __init__(self, server, shared_state=None, **kwargs):
         Process.__init__(self)
         cfile = kwargs.get('config')
         keepmenu.CLIPBOARD = kwargs.get('clipboard', False)
         keepmenu.reload_config(None if cfile is None else expanduser(cfile))
         self.server = server
+        self.shared_state = shared_state
         self.database, self.open_databases = get_database(**kwargs)
+        self._update_server_db_state()
         if not self.database or not self.database.kpo:
             self.server.kill_flag.set()
             sys.exit()
@@ -317,7 +343,30 @@ class DmenuRunner(Process):
         self.cache_timer.daemon = True
         self.cache_timer.start()
 
+    def _update_server_db_state(self):
+        # publish open DBs (only those with valid kpo)
+        if self.shared_state is not None:
+            valid_open_dbs = [path for path, db in self.open_databases.items() if db.kpo is not None]
+            self.shared_state.open_database_paths = valid_open_dbs
+        # publish which DBs have a password or password_cmd in config
+        paths = set()
+        try:
+            dargs = dict(keepmenu.CONF.items('database'))
+        except Exception:
+            dargs = {}
+        # find all database_N entries
+        db_keys = [k for k in dargs if k.startswith('database_')]
+        for k in db_keys:
+            idx = k.rsplit('_', 1)[-1]
+            db_path = realpath(expanduser(dargs[k]))
+            if f'password_{idx}' in dargs or f'password_cmd_{idx}' in dargs:
+                paths.add(db_path)
+        if self.shared_state is not None:
+            self.shared_state.config_passwordable_paths = list(paths)
+
     def run(self):
+        # Update server state after fork to ensure shared state is properly initialized
+        self._update_server_db_state()
         try:
             while True:
                 self.server.start_flag.wait()
@@ -330,7 +379,6 @@ class DmenuRunner(Process):
                     keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
                     self.menu_open_another_database(**dargs)
                     self.server.args_flag.clear()
-
                     if self.server.totp_flag.is_set():
                         self.server.totp_flag.clear()
                 else:
@@ -499,14 +547,21 @@ class DmenuRunner(Process):
         Args: kwargs - possibly 'database', 'keyfile', 'autotype', 'totp'
 
         """
+        if kwargs.get("show"):
+            self.show_password(**kwargs)
+            return
         prev_db = copy(self.database)
         self.database, self.open_databases = get_database(self.open_databases, **kwargs)
         if self.database is None or self.database.kpo is None:
             self.database = copy(prev_db)
             _ = self.open_databases.popitem()
-            self.open_databases[self.database.dbase].is_active = True
+            if self.database.dbase in self.open_databases:
+                self.open_databases[self.database.dbase].is_active = True
             return
         self.expiring = get_expiring_entries(self.database.kpo.entries)
+        if self.shared_state is not None:
+            self.shared_state.current_database_path = self.database.dbase
+        self._update_server_db_state()
         self.dmenu_run(self.database.totp)
 
     def menu_clipboard(self):
@@ -525,5 +580,66 @@ class DmenuRunner(Process):
         except (EOFError, IOError):
             return
 
+    def show_password(self, **kwargs):
+        """Handle show password requests from CLI
+
+        Args: kwargs - possibly 'database', 'keyfile', 'show', etc.
+        """
+        from keepmenu.run_once import run_once
+        rbase = kwargs.get("database", "")
+
+        # If no database specified, use current database
+        if not rbase:
+            kwargs_copy = kwargs.copy()
+            kwargs_copy['clipboard'] = False
+            kwargs_copy['return_errors'] = True
+            result = run_once(db=self.database, **kwargs_copy)
+            self.server._parent_conn.send(result or "")
+            return
+
+        # Database specified - handle as temporary search
+        requested_db_path = realpath(expanduser(rbase))
+        target_db = None
+
+        # Look for the database in already open databases
+        for db in self.open_databases.values():
+            if db.dbase == requested_db_path:
+                target_db = db
+                break
+
+        # If found but failed to open previously (kpo is None), remove it and retry
+        if target_db is not None and target_db.kpo is None:
+            del self.open_databases[requested_db_path]
+            target_db = None
+
+        # If not found in open databases, try to open it temporarily
+        if target_db is None:
+            # Do NOT prompt in the daemon; rely on provided password or config
+            prev_active = next((db.dbase for db in self.open_databases.values() if db.is_active), None)
+            kwargs.pop('no_prompt', None)
+            temp_db, new_open = get_database(self.open_databases, no_prompt=True, **kwargs)
+            if temp_db and temp_db.kpo:
+                self.open_databases = new_open
+                target_db = temp_db
+                # keep GUI focus as-is
+                if prev_active:
+                    for db in self.open_databases.values():
+                        db.is_active = (db.dbase == prev_active)
+                self._update_server_db_state()
+            else:
+                error_msg = f"ERROR: Database {rbase} is not open and password is not available in config."
+                self.server._parent_conn.send(error_msg)
+                return
+
+        # Perform search on target database if found
+        if target_db and target_db.kpo:
+            kwargs_copy = kwargs.copy()
+            kwargs_copy['clipboard'] = False
+            kwargs_copy['return_errors'] = True
+            result = run_once(db=target_db, **kwargs_copy)
+            self.server._parent_conn.send(result or "")
+        else:
+            error_msg = f"ERROR: Database {rbase} is not open and password is not available in config."
+            self.server._parent_conn.send(error_msg)
 
 # vim: set et ts=4 sw=4 :

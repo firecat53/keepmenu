@@ -9,7 +9,7 @@ of Keepass databases.
 \f[B]keepmenu\f[R] [\f[B]\[en]autotype\f[R] pattern]
 [\f[B]\[en]config\f[R] file] [\f[B]\[en]clipboard\f[R]]
 [\f[B]\[en]database\f[R] file] [\f[B]\[en]keyfile\f[R] file]
-[\f[B]\[en]totp\f[R]]
+[\f[B]\[en]no\-prompt\f[R]] [\f[B]\[en]totp\f[R]]
 .SH DESCRIPTION
 \f[B]Keepmenu\f[R] is a fast and minimal application to facilitate
 password entry and manage most aspects of Keepass .kdbx databases.
@@ -28,6 +28,11 @@ Overrides global default from config.ini for current database.
 .PP
 \f[B]\-k\f[R], \f[B]\[en]keyfile\f[R] Path to keyfile
 .PP
+\f[B]\-n\f[R], \f[B]\[en]no\-prompt\f[R] Do not prompt for database
+password
+.PP
+\f[B]\-s\f[R], \f[B]\[en]show\f[R] Search term(s)
+.PP
 \f[B]\-t\f[R], \f[B]\[en]totp\f[R] TOTP mode
 .SH EXAMPLES
 .IP
@@ -37,6 +42,7 @@ keepmenu \-t
 keepmenu \-c /etc/keepmenu/config.ini
 keepmenu \-d \[ti]/docs/totp_passwords.kdbx \-a \[aq]{TOTP}{ENTER}\[aq]
 keepmenu \-d \[ti]/passwords.kdbx \-k \[ti]/passwords.keyfile \-a \[aq]{S:security question}{ENTER}\[aq]
+keepmenu \-s \[dq]production/ssh db\[dq] \-d \[ti]/passwords.kdbx
 .EE
 .SH CONFIGURATION
 If you start keepmenu for the first time without a config file, it will

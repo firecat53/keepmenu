@@ -6,6 +6,7 @@ import configparser
 from contextlib import closing
 import multiprocessing
 from multiprocessing import Event, Process, Pipe
+from getpass import getpass
 from multiprocessing.managers import BaseManager
 import os
 from os.path import exists, expanduser
@@ -87,6 +88,10 @@ def client(port, auth):
     mgr.register('get_pipe')
     mgr.register('read_args_from_pipe')
     mgr.register('totp_mode')
+    mgr.register('get_current_database_path')
+    mgr.register('get_open_database_paths')
+    mgr.register('get_config_passwordable_paths')
+    mgr.register('receive_show_result')
     mgr.connect()
 
     return mgr
@@ -96,7 +101,7 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
     """Run BaseManager server to listen for dmenu calling events
 
     """
-    def __init__(self):
+    def __init__(self, shared_state=None):
         Process.__init__(self)
         self.port, self.authkey = get_auth()
         self.start_flag = Event()
@@ -106,7 +111,11 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
         self.totp_flag = Event()
         self.start_flag.set()
         self.args = None
-        self._parent_conn, self._child_conn = Pipe(duplex=False)
+        self.current_database_path = None
+        self._parent_conn, self._child_conn = Pipe(duplex=True)
+        self.shared_state = shared_state
+        self.open_database_paths = set()
+        self.config_passwordable_paths = set()
 
     def run(self):
         _ = self.server()
@@ -116,6 +125,7 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
             self.kill_flag.set()
 
     def _get_pipe(self):
+        # Pass arguments from client to server
         return self._child_conn
 
     def get_args(self):
@@ -124,16 +134,44 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
         """
         return self._parent_conn.recv()
 
+    def receive_show_result(self, timeout=30):
+        """Receive the show result from the daemon through the pipe.
+
+        Args:
+            timeout: Maximum seconds to wait for result
+
+        Returns:
+            The result string or None if timeout/error
+        """
+        if self._child_conn.poll(timeout):
+            return self._child_conn.recv()
+        return None
+
     def server(self):
         """Set up BaseManager server
 
         """
         mgr = BaseManager(address=('127.0.0.1', self.port),
                           authkey=self.authkey)
+        def _get_open_paths():
+            if self.shared_state:
+                return list(self.shared_state.open_database_paths)
+            return []
+
+        def _get_config_paths():
+            if self.shared_state:
+                return list(self.shared_state.config_passwordable_paths)
+            return []
+
         mgr.register('set_event', callable=self.start_flag.set)
         mgr.register('get_pipe', callable=self._get_pipe)
         mgr.register('read_args_from_pipe', callable=self.args_flag.set)
         mgr.register('totp_mode', callable=self.totp_flag.set)
+        mgr.register('get_current_database_path',
+                     callable=lambda: self.shared_state.current_database_path if self.shared_state else None)
+        mgr.register('get_open_database_paths', callable=_get_open_paths)
+        mgr.register('get_config_passwordable_paths', callable=_get_config_paths)
+        mgr.register('receive_show_result', callable=self.receive_show_result)
         mgr.start()  # pylint: disable=consider-using-with
         return mgr
 
@@ -142,12 +180,22 @@ def run(**kwargs):
     """Start the background Manager and Dmenu runner processes.
 
     """
+    # Create shared state manager for cross-process communication
+    state_manager = multiprocessing.Manager()
+    shared_state = state_manager.Namespace()
+    shared_state.open_database_paths = []
+    shared_state.config_passwordable_paths = []
+    shared_state.current_database_path = None
+
     server = None
     try:
-        server = Server()
+        server = Server(shared_state=shared_state)
         if kwargs.get('totp'):
             server.totp_flag.set()
-        dmenu = DmenuRunner(server, **kwargs)
+        dmenu = DmenuRunner(server, shared_state=shared_state, **kwargs)
+        # Set the initial database path registered for the server callable
+        if dmenu.database and dmenu.database.dbase:
+            shared_state.current_database_path = dmenu.database.dbase
         dmenu.daemon = True
         server.start()
         dmenu.start()
@@ -159,6 +207,7 @@ def run(**kwargs):
             server.terminate()
         if exists(expanduser(keepmenu.AUTH_FILE)):
             os.remove(expanduser(keepmenu.AUTH_FILE))
+    return dmenu
 
 
 def main():
@@ -217,20 +266,70 @@ def main():
         help="TOTP mode",
     )
 
+    parser.add_argument(
+            "-s",
+            "--show",
+            type=str,
+            required=False,
+            help="Return password of matched entry",
+    )
+
+    parser.add_argument(
+            "-n",
+            "--no-prompt",
+            action="store_true",
+            default = False,
+            required=False,
+            help="Do not prompt for database password",
+    )
+
     args = vars(parser.parse_args())
 
     port, auth = get_auth()
-    if port_in_use(port) is False:
+    if port_in_use(port) is False and not args["show"]:
         run(**args)
+    elif port_in_use(port) is False and args["show"]:
+        # If no server is running, just run directly in one-shot mode
+        from keepmenu.run_once import run_once
+        password = run_once(**args)
+        if password:
+            print(password)
+        return
     try:
         manager = client(port, auth)
         conn = manager.get_pipe()  # pylint: disable=no-member
+        if args["show"] and args.get("database"):
+            req_path = os.path.realpath(os.path.expanduser(args["database"]))
+            try:
+                open_paths_result = manager.get_open_database_paths()
+                # AutoProxy objects need _getvalue() to get the actual list
+                open_paths = set(open_paths_result._getvalue() if hasattr(open_paths_result, '_getvalue') else open_paths_result)
+                cfg_pw_paths_result = manager.get_config_passwordable_paths()
+                cfg_pw_paths = set(cfg_pw_paths_result._getvalue() if hasattr(cfg_pw_paths_result, '_getvalue') else cfg_pw_paths_result)
+            except Exception:
+                open_paths, cfg_pw_paths = set(), set()
+
+            if (req_path not in open_paths) and (req_path not in cfg_pw_paths) and not args.get("no_prompt"):
+                # Prompt in client context
+                args["password"] = getpass()
+
         if args.get('totp'):
             manager.totp_mode()  # pylint: disable=no-member
         if any(args.values()):
             conn.send(args)
             manager.read_args_from_pipe()  # pylint: disable=no-member
         manager.set_event()  # pylint: disable=no-member
+        if args["show"]:
+            # Wait for daemon to process and send back result through pipe
+            result = manager.receive_show_result()  # pylint: disable=no-member
+            # AutoProxy objects need _getvalue() to get the actual string
+            if hasattr(result, '_getvalue'):
+                result = result._getvalue()
+            if result:
+                if result.startswith("ERROR:"):
+                    print(result[7:], file=sys.stderr)  # Strip "ERROR: " prefix
+                else:
+                    print(result)
     except ConnectionRefusedError:
         # Don't print the ConnectionRefusedError if any other exceptions are
         # raised.

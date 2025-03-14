@@ -12,7 +12,7 @@
 
 ## CLI Options
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-n] [-s SEARCH]`
 
 --help, -h Output a usage message and exit.
 
@@ -25,6 +25,10 @@
 -d DATABASE, --database DATABASE File path to a database to open, skipping the database selection menu
 
 -k KEY_FILE, --keyfile KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
+
+-n, --no-prompt Do not prompt for database password
+
+-s SEARCH, --show Output password of matching SEARCH entry to stdout (or to clipboard with -C)
 
 ## Features
 
@@ -53,6 +57,12 @@
     - `Enter` to open the URL in the default web browser from the View/Type
       menu. If you want to type the URL instead of opening, set `type_url =
       True` in config.ini.
+* *Run Once (`--show`)*
+    - Search and output the password for a single entry to stdout. Pass `-d` to
+      use a specific database. Pass `-n` to supress password prompting if
+      desired. With `-n`, passwords/keyfiles must be provided either through
+      already open databases (daemon running), command line options or config
+      file options (e.g. password_cmd_1).
 - *Edit*
     - Edit entry title, username, URL, attributes, and password (manually typed or auto-generate)
     - Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)

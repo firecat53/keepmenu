@@ -412,4 +412,5 @@ def type_clipboard(text):
     text = text or ""  # Handle None type
     run(split(keepmenu.CLIPBOARD_CMD), check=True, input=text.encode(keepmenu.ENC))
     clear = Timer(30, lambda: run(split(keepmenu.CLIPBOARD_CMD), check=False, input=""))
+    clear.daemon = True
     clear.start()

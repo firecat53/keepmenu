@@ -12,7 +12,7 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing of Keepa
 
 # SYNOPSIS
 
-**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--totp**]
+**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--no-prompt**] [**--totp**]
 
 # DESCRIPTION
 
@@ -32,6 +32,10 @@ Passhole, but is more dmenu and less command line focused.
 
 **-k**, **--keyfile**  Path to keyfile
 
+**-n**, **--no-prompt**  Do not prompt for database password
+
+**-s**, **--show** Search term(s)
+
 **-t**, **--totp**  TOTP mode
 
 # EXAMPLES
@@ -41,6 +45,7 @@ Passhole, but is more dmenu and less command line focused.
     keepmenu -c /etc/keepmenu/config.ini
     keepmenu -d ~/docs/totp_passwords.kdbx -a '{TOTP}{ENTER}'
     keepmenu -d ~/passwords.kdbx -k ~/passwords.keyfile -a '{S:security question}{ENTER}'
+    keepmenu -s "production/ssh db" -d ~/passwords.kdbx
 
 # CONFIGURATION
 

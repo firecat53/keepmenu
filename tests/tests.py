@@ -14,6 +14,7 @@ from pykeepass import PyKeePass
 
 import keepmenu as KM
 from keepmenu import __main__  # noqa: F401
+from keepmenu import run_once
 
 SECRET1 = 'ZYTYYE5FOAGW5ML7LRWUL4WTZLNJAMZS'
 SECRET2 = 'PW4YAYYZVDE5RK2AOLKUATNZIKAFQLZO'
@@ -628,6 +629,105 @@ class TestFunctions(unittest.TestCase):
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_entry)), "626854")
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "59008166")
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_multi_entry)), "093610")
+
+
+    def test_show_password_single_match(self):
+        """Test --show functionality with a single matching entry
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'password_1', 'password')
+            KM.CONF.write(conf_file)
+        KM.reload_config()
+
+        # Test with exact title match
+        result = run_once.run_once(database=db_name, show='like the € sign')
+        self.assertEqual(result, '6MOpeaQ3A{eQB7BWVZ&-!')
+
+        # Test with partial match using username search
+        result = run_once.run_once(database=db_name, show='fred60')
+        self.assertEqual(result, 'MkBHbBCozc')
+
+    def test_show_password_multiple_matches(self):
+        """Test --show functionality with multiple matching entries returns error
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'password_1', 'password')
+            KM.CONF.write(conf_file)
+        KM.reload_config()
+
+        # Test with search term that matches multiple entries
+        # "Test" appears in multiple entry titles
+        with mock.patch('sys.stderr'):
+            result = run_once.run_once(database=db_name, show='Test')
+        self.assertIsNone(result)
+
+    def test_show_password_no_match(self):
+        """Test --show functionality with no matching entries
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'password_1', 'password')
+            KM.CONF.write(conf_file)
+        KM.reload_config()
+
+        # Test with search term that matches nothing
+        with mock.patch('sys.stderr'):
+            result = run_once.run_once(database=db_name, show='nonexistent_xyz_123')
+        self.assertIsNone(result)
+
+    def test_show_password_with_path(self):
+        """Test --show functionality with group path in search
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'password_1', 'password')
+            KM.CONF.write(conf_file)
+        KM.reload_config()
+
+        # Test with group path to disambiguate - Scotty/Backblaze B2 is unique
+        result = run_once.run_once(database=db_name, show='Scotty/Backblaze B2')
+        self.assertTrue(result.startswith('hikW'))
+
+    def test_show_password_return_errors(self):
+        """Test --show functionality with return_errors=True returns error strings
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'password_1', 'password')
+            KM.CONF.write(conf_file)
+        KM.reload_config()
+
+        # Test that return_errors=True returns error string instead of None
+        result = run_once.run_once(database=db_name, show='nonexistent_xyz', return_errors=True)
+        self.assertIsNotNone(result)
+        self.assertTrue(result.startswith('ERROR:'))
+
+        # Test multiple matches with return_errors
+        result = run_once.run_once(database=db_name, show='Test', return_errors=True)
+        self.assertIsNotNone(result)
+        self.assertTrue(result.startswith('ERROR:'))
 
 
 if __name__ == "__main__":

@@ -52,6 +52,7 @@ For full installation documention see the [installation docs][docs/install.md].
 - Display and manage expired passwords.
 - Add, edit and type TOTP codes.
 - Add, edit, type and delete custom attributes.
+- Run once mode to copy or print password to stdout
 
 ## License
 
@@ -59,7 +60,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Usage
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t] [-s SEARCH]`
 
 - Run `keepmenu` or bind to keystroke combination.
 - Enter database path on first run.
