@@ -133,7 +133,7 @@ def get_otp_url(kp_entry):
     """
     otp_url = ""
     if hasattr(kp_entry, "otp"):
-        otp_url = kp_entry.deref("otp")
+        otp_url = kp_entry.deref("otp") or ""
     else:
         otp_url = kp_entry.get_custom_property("otp")
     if otp_url:

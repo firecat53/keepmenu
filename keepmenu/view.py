@@ -21,8 +21,8 @@ def view_all_entries(options, kp_entries, dbname):
     kps = str("\n").join([kp_entry_pattern.format(j,
                                                   os.path.join("/".join(i.path[:-1]),
                                                                i.deref('title') or ""),
-                                                  i.deref('username'),
-                                                  i.deref('url'),
+                                                  i.deref('username') or "",
+                                                  i.deref('url') or "",
                                                   na=num_align)
                          for j, i in enumerate(kp_entries)])
     if options:
@@ -74,11 +74,11 @@ def view_entry(kp_entry):
 
     sel = dmenu_select(len(fields), inp="\n".join(fields))
     if sel == "Notes: <Enter to view>":
-        sel = view_notes(kp_entry.deref('notes'))
+        sel = view_notes(kp_entry.deref('notes') or "")
     elif sel == "Notes: None":
         sel = ""
     elif sel == '**********':
-        sel = kp_entry.deref('password')
+        sel = kp_entry.deref('password') or ""
     elif sel == "TOTP: ******":
         sel = gen_otp(get_otp_url(kp_entry))
     elif sel == fields[4] and not keepmenu.CONF.getboolean("database", "type_url", fallback=False):

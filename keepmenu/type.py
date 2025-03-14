@@ -127,11 +127,11 @@ def type_entry(entry, db_autotype=None):
     libraries.get(library, type_entry_pynput)(entry, tokens)
 
 PLACEHOLDER_AUTOTYPE_TOKENS = {
-    "{TITLE}"   : lambda e: e.deref('title'),
-    "{USERNAME}": lambda e: e.deref('username'),
-    "{URL}"     : lambda e: e.deref('url'),
-    "{PASSWORD}": lambda e: e.deref('password'),
-    "{NOTES}"   : lambda e: e.deref('notes'),
+    "{TITLE}"   : lambda e: e.deref('title') or "",
+    "{USERNAME}": lambda e: e.deref('username') or "",
+    "{URL}"     : lambda e: e.deref('url') or "",
+    "{PASSWORD}": lambda e: e.deref('password') or "",
+    "{NOTES}"   : lambda e: e.deref('notes') or "",
     "{TOTP}"    : lambda e: gen_otp(get_otp_url(e)),
     "{TIMEOTP}" : lambda e: gen_otp(get_otp_url(e)),
 }
