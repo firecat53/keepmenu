@@ -498,6 +498,8 @@ class DmenuRunner(Process):
         if self.database is None:
             self.database, self.open_databases = prev_db, prev_open
             return
+        if self.database.dbase == prev_db.dbase:
+            self.database.kpo = prev_db.kpo
         if not self.database.kpo:
             self.database.kpo = get_entries(self.database)
             if self.database.kpo is None:
