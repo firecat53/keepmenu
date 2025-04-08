@@ -1,7 +1,7 @@
 """Read and copy Keepass database entries using dmenu style launchers
 
 """
-from copy import deepcopy
+from copy import copy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import errno
@@ -126,13 +126,13 @@ def get_database(open_databases=None, **kwargs):
         # Prefer db, autotype, totp passed via cli
         db_ = [i for i in open_databases.values() if i.dbase == clidb.dbase]
         if db_:
-            dbs = [deepcopy(db_[0])]
+            dbs = [copy(db_[0])]
             if clidb.atype:
                 dbs[0].atype = clidb.atype
             if clidb.totp:
                 dbs[0].totp = clidb.totp
         else:
-            dbs = [deepcopy(clidb)]
+            dbs = [copy(clidb)]
             # Use existing keyfile if available
             if not dbs[0].kfile and dbs[0].dbase in dbs_cfg_n:
                 dbs[0].kfile = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].kfile
@@ -142,15 +142,15 @@ def get_database(open_databases=None, **kwargs):
     elif (clidb.atype or clidb.totp) and open_databases:
         # If only autotype or totp is passed, use current db
         db_ = [i for i in open_databases.values() if i.is_active is True][0]
-        dbs = [deepcopy(db_)]
+        dbs = [copy(db_)]
         dbs[0].atype = clidb.atype
         dbs[0].totp = clidb.totp
     elif open_databases:
         # if there are dbs already open, make a list of those + dbs from config.ini
-        dbs = [deepcopy(i) for i in open_databases.values()]
+        dbs = [copy(i) for i in open_databases.values()]
         for db_ in dbs_cfg:
             if db_.dbase not in open_databases:
-                dbs.append(deepcopy(db_))
+                dbs.append(copy(db_))
     else:
         dbs = dbs_cfg
     if len(dbs) > 1:
@@ -169,10 +169,12 @@ def get_database(open_databases=None, **kwargs):
         dbs[0].pword = get_passphrase()
         if dbs[0].pword is None:
             return None, open_databases
+    if dbs[0].kpo is None:
+        dbs[0].kpo = get_entries(dbs[0])
     for db_ in open_databases.values():
         db_.is_active = False
     if dbs[0].dbase not in open_databases:
-        open_databases[dbs[0].dbase] = deepcopy(dbs[0])
+        open_databases[dbs[0].dbase] = copy(dbs[0])
     if dbs[0].dbase in dbs_cfg_n:
         db_cfg_atype = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].atype
         open_databases[dbs[0].dbase].atype = db_cfg_atype
@@ -297,8 +299,8 @@ class DmenuRunner(Process):
         keepmenu.reload_config(None if cfile is None else expanduser(cfile))
         self.server = server
         self.database, self.open_databases = get_database(**kwargs)
-        if self.database:
-            self.database.kpo = get_entries(self.database)
+        #if self.database:
+        #    self.database.kpo = get_entries(self.database)
         if not self.database or not self.database.kpo:
             self.server.kill_flag.set()
             sys.exit()
@@ -493,12 +495,13 @@ class DmenuRunner(Process):
         Args: kwargs - possibly 'database', 'keyfile', 'autotype', 'totp'
 
         """
-        prev_db, prev_open = self.database, deepcopy(self.open_databases)
+        prev_db, prev_open = self.database, copy(self.open_databases)
         self.database, self.open_databases = get_database(self.open_databases, **kwargs)
         if self.database is None:
             self.database, self.open_databases = prev_db, prev_open
             return
         if not self.database.kpo:
+            print("get_entries")
             self.database.kpo = get_entries(self.database)
             if self.database.kpo is None:
                 self.database, self.open_databases = prev_db, prev_open

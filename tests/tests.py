@@ -268,6 +268,7 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'database_1', db_name)
             KM.CONF.write(conf_file)
         database, _ = KM.keepmenu.get_database()
+        database.kpo = None # Can't compare kpo objects
         self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name, pword='password'))
         kpo = KM.keepmenu.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
@@ -277,6 +278,7 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'password_cmd_1', 'echo password')
             KM.CONF.write(conf_file)
         database, _ = KM.keepmenu.get_database()
+        database.kpo = None # Can't compare kpo objects
         self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name, pword='password'))
         kpo = KM.keepmenu.get_entries(database)
         self.assertIsInstance(kpo, PyKeePass)
@@ -284,16 +286,17 @@ class TestFunctions(unittest.TestCase):
             KM.CONF.set('database', 'autotype_default_1', '{TOTP}{ENTER}')
             KM.CONF.write(conf_file)
         database, _ = KM.keepmenu.get_database()
+        database.kpo = None # Can't compare kpo objects
         self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name,
                                                          pword='password',
                                                          atype='{TOTP}{ENTER}'))
 
         database, _ = KM.keepmenu.get_database(database=db_name)
+        self.assertIsInstance(database.kpo, PyKeePass)
+        database.kpo = None # Can't compare DataBase objects with another object in them
         self.assertTrue(database == KM.keepmenu.DataBase(dbase=db_name,
                                                          pword='password',
                                                          atype='{TOTP}{ENTER}'))
-        kpo = KM.keepmenu.get_entries(database)
-        self.assertIsInstance(kpo, PyKeePass)
 
     def test_resolve_references(self):
         """Test keepass references can be resolved to values
