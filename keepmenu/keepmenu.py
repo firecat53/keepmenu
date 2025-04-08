@@ -299,8 +299,6 @@ class DmenuRunner(Process):
         keepmenu.reload_config(None if cfile is None else expanduser(cfile))
         self.server = server
         self.database, self.open_databases = get_database(**kwargs)
-        #if self.database:
-        #    self.database.kpo = get_entries(self.database)
         if not self.database or not self.database.kpo:
             self.server.kill_flag.set()
             sys.exit()
@@ -495,17 +493,13 @@ class DmenuRunner(Process):
         Args: kwargs - possibly 'database', 'keyfile', 'autotype', 'totp'
 
         """
-        prev_db, prev_open = self.database, copy(self.open_databases)
+        prev_db = copy(self.database)
         self.database, self.open_databases = get_database(self.open_databases, **kwargs)
-        if self.database is None:
-            self.database, self.open_databases = prev_db, prev_open
+        if self.database is None or self.database.kpo is None:
+            self.database = copy(prev_db)
+            _ = self.open_databases.popitem()
+            self.open_databases[self.database.dbase].is_active = True
             return
-        if not self.database.kpo:
-            print("get_entries")
-            self.database.kpo = get_entries(self.database)
-            if self.database.kpo is None:
-                self.database, self.open_databases = prev_db, prev_open
-                return
         self.expiring = get_expiring_entries(self.database.kpo.entries)
         self.dmenu_run(self.database.totp)
 
