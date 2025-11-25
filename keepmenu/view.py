@@ -20,9 +20,9 @@ def view_all_entries(options, kp_entries, dbname):
     # Have to number each entry to capture duplicates correctly
     kps = str("\n").join([kp_entry_pattern.format(j,
                                                   os.path.join("/".join(i.path[:-1]),
-                                                               i.deref('title') or ""),
-                                                  i.deref('username') or "",
-                                                  i.deref('url') or "",
+                                                               keepmenu.safe_deref(i, 'title')),
+                                                  keepmenu.safe_deref(i, 'username'),
+                                                  keepmenu.safe_deref(i, 'url'),
                                                   na=num_align)
                          for j, i in enumerate(kp_entries)])
     if options:
@@ -50,13 +50,13 @@ def view_entry(kp_entry):
     Returns: dmenu selection
 
     """
-    fields = [os.path.join("/".join(kp_entry.path[:-1]), kp_entry.deref('title') or "")
+    fields = [os.path.join("/".join(kp_entry.path[:-1]), keepmenu.safe_deref(kp_entry, 'title'))
               or "Title: None",
-              kp_entry.deref('username') or "Username: None",
-              '**********' if kp_entry.deref('password') else "Password: None",
+              keepmenu.safe_deref(kp_entry, 'username') or "Username: None",
+              '**********' if keepmenu.safe_deref(kp_entry, 'password') else "Password: None",
               "TOTP: ******" if get_otp_url(kp_entry) else "TOTP: None",
-              kp_entry.deref('url') or "URL: None",
-              "Notes: <Enter to view>" if kp_entry.deref('notes') else "Notes: None",
+              keepmenu.safe_deref(kp_entry, 'url') or "URL: None",
+              "Notes: <Enter to view>" if keepmenu.safe_deref(kp_entry, 'notes') else "Notes: None",
               str(f"Expire time: {kp_entry.expiry_time}")
               if kp_entry.expires is True else "Expiry date: None"]
 
@@ -74,11 +74,11 @@ def view_entry(kp_entry):
 
     sel = dmenu_select(len(fields), inp="\n".join(fields))
     if sel == "Notes: <Enter to view>":
-        sel = view_notes(kp_entry.deref('notes') or "")
+        sel = view_notes(keepmenu.safe_deref(kp_entry, 'notes'))
     elif sel == "Notes: None":
         sel = ""
     elif sel == '**********':
-        sel = kp_entry.deref('password') or ""
+        sel = keepmenu.safe_deref(kp_entry, 'password')
     elif sel == "TOTP: ******":
         sel = gen_otp(get_otp_url(kp_entry))
     elif sel == fields[4] and not keepmenu.CONF.getboolean("database", "type_url", fallback=False):

@@ -12,6 +12,7 @@ from os.path import exists, expanduser
 
 from keepmenu.menu import dmenu_err
 
+
 # Setup logging for debugging. Usage: logger.info(...)
 # import logging
 # logger = logging.getLogger(__name__)
@@ -112,5 +113,26 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     if CLIPBOARD_CMD == "true":
         dmenu_err(f"{' or '.join([shlex.split(i)[0] for i in clips])} needed for clipboard support")
 
+
+def safe_deref(entry, field):
+    """Safely dereference an entry field, handling cases where referenced fields are None.
+
+    When an entry has a field reference (e.g., {REF:U@I:target}) and the target field
+    is None/empty, pykeepass's deref raises a TypeError. This wrapper catches that
+    error and returns an empty string.
+
+    Args:
+        entry: KeePass entry object
+        field: Field name to dereference (e.g., 'username', 'password', 'title')
+
+    Returns:
+        str: Dereferenced field value or empty string if None or error
+
+    """
+    try:
+        return entry.deref(field) or ""
+    except TypeError:
+        # Handle case where referenced field is None
+        return ""
 
 # vim: set et ts=4 sw=4 :

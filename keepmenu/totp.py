@@ -7,6 +7,8 @@ import struct
 import time
 from urllib import parse
 
+from keepmenu import safe_deref
+
 
 TOTP_PUBLIC_FIELDS = ('TOTP Settings', 'TimeOtp-Length', 'TimeOtp-Period', 'TimeOtp-Algorithm')
 TOTP_SECRET_FIELDS = ('otp',
@@ -133,7 +135,7 @@ def get_otp_url(kp_entry):
     """
     otp_url = ""
     if hasattr(kp_entry, "otp"):
-        otp_url = kp_entry.deref("otp") or ""
+        otp_url = safe_deref(kp_entry, "otp")
     else:
         otp_url = kp_entry.get_custom_property("otp")
     if otp_url:
