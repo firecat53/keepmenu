@@ -4,6 +4,7 @@
 import argparse
 import configparser
 from contextlib import closing
+import multiprocessing
 from multiprocessing import Event, Process, Pipe
 from multiprocessing.managers import BaseManager
 import os
@@ -16,6 +17,10 @@ import sys
 
 import keepmenu
 from keepmenu.keepmenu import DmenuRunner
+
+# Python 3.14 changes the default to 'forkserver' on Linux.
+# Set to 'fork' for backward compatibility.
+multiprocessing.set_start_method('fork')
 
 
 def find_free_port():
