@@ -6,6 +6,7 @@ import configparser
 import locale
 import os
 import shlex
+import shutil
 from subprocess import run, DEVNULL
 import sys
 from os.path import exists, expanduser
@@ -99,6 +100,11 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
                     dmenu_err(f"{typ} not installed.\n"
                               "Please install or remove that option from config.ini")
                     sys.exit()
+        if CONF.get("database", "type_library") == "dotoolc":
+            if shutil.which("dotoolc") is None:
+                dmenu_err("dotoolc not installed.\n"
+                          "Please install or remove that option from config.ini")
+                sys.exit()
     if os.environ.get('WAYLAND_DISPLAY'):
         clips = ['wl-copy -o']
     else:

@@ -29,7 +29,7 @@ For full installation documention see the [installation docs][docs/install.md].
 3. Bemenu, Dmenu, Wmenu, Fuzzel, Rofi, Tofi, Wofi, or Yofi
 4. xsel or wl-copy
 5. (optional) Pinentry
-6. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] (X or Wayland).
+6. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] or dotoolc (X or Wayland).
 
 ## Features
 

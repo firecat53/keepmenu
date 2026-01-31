@@ -122,7 +122,8 @@ def type_entry(entry, db_autotype=None):
                  'xdotool': type_entry_xdotool,
                  'ydotool': type_entry_ydotool,
                  'wtype': type_entry_wtype,
-                 'dotool': type_entry_dotool}
+                 'dotool': type_entry_dotool,
+                 'dotoolc': type_entry_dotoolc}
     library = keepmenu.CONF.get('database', 'type_library', fallback='pynput')
     libraries.get(library, type_entry_pynput)(entry, tokens)
 
@@ -340,6 +341,35 @@ def type_entry_dotool(entry, tokens):
             _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {token}")
 
 
+def type_entry_dotoolc(entry, tokens):
+    """Auto-type entry entry using dotoolc (client for dotoold daemon)
+
+    """
+    from .tokens_dotool import AUTOTYPE_TOKENS
+    for token, special in tokens:
+        if special:
+            cmd = token_command(token)
+            if callable(cmd):
+                to_type = cmd(entry)  # pylint: disable=not-callable
+                if to_type is not None:
+                    _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+            elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
+                to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
+                if to_type:
+                    _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+            elif token in STRING_AUTOTYPE_TOKENS:
+                to_type = STRING_AUTOTYPE_TOKENS[token]
+                _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+            elif token in AUTOTYPE_TOKENS:
+                to_type = " ".join(AUTOTYPE_TOKENS[token])
+                _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=to_type)
+            else:
+                dmenu_err(f"Unsupported auto-type token (dotoolc): \"{token}\"")
+                return
+        else:
+            _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {token}")
+
+
 def type_text(data):
     """Type the given text data
 
@@ -358,6 +388,8 @@ def type_text(data):
         call(['wtype', '--', data])
     elif library == 'dotool':
         _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {data}")
+    elif library == 'dotoolc':
+        _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {data}")
     else:
         try:
             from pynput import keyboard

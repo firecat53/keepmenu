@@ -28,7 +28,7 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
 |                           | `editor`                     | `vim`                                   |                                                              |
 |                           | `terminal`                   | `xterm`                                 |                                                              |
 |                           | `gui_editor`                 | None                                    |                                                              |
-|                           | `type_library`               | `pynput`                                | xdotool, ydotool, wtype  or pynput                           |
+|                           | `type_library`               | `pynput`                                | xdotool, ydotool, wtype, dotool, dotoolc or pynput           |
 |                           | `hide_groups`                | None                                    | See below for formatting of multiple groups                  |
 |                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`      | [Keepass autotype sequences][1]                              |
 |                           | `type_url`                   | `False`                                 |                                                              |
