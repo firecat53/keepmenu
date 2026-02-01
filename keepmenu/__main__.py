@@ -140,18 +140,21 @@ def run(**kwargs):
     """Start the background Manager and Dmenu runner processes.
 
     """
-    server = Server()
-    if kwargs.get('totp'):
-        server.totp_flag.set()
-    dmenu = DmenuRunner(server, **kwargs)
-    dmenu.daemon = True
-    server.start()
-    dmenu.start()
+    server = None
     try:
+        server = Server()
+        if kwargs.get('totp'):
+            server.totp_flag.set()
+        dmenu = DmenuRunner(server, **kwargs)
+        dmenu.daemon = True
+        server.start()
+        dmenu.start()
         server.join()
     except KeyboardInterrupt:
-        sys.exit()
+        pass
     finally:
+        if server is not None and server.is_alive():
+            server.terminate()
         if exists(expanduser(keepmenu.AUTH_FILE)):
             os.remove(expanduser(keepmenu.AUTH_FILE))
 

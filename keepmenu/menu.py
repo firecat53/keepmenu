@@ -3,6 +3,7 @@
 """
 from os.path import basename
 import shlex
+import sys
 from subprocess import run
 
 import keepmenu
@@ -78,12 +79,21 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
 
     """
     cmd = dmenu_cmd(num_lines, prompt)
-    res = run(cmd,
-              capture_output=True,
-              check=False,
-              encoding=keepmenu.ENC,
-              env=keepmenu.ENV,
-              input=inp)
+    try:
+        res = run(cmd,
+                  capture_output=True,
+                  check=False,
+                  encoding=keepmenu.ENC,
+                  env=keepmenu.ENV,
+                  input=inp)
+    except FileNotFoundError:
+        print(f"dmenu command not found: {cmd[0]}", file=sys.stderr)
+        sys.exit(1)
+    if res.returncode != 0 and res.stderr:
+        print(f"dmenu command error: {res.stderr.strip()}", file=sys.stderr)
+        # Don't exit on display errors (expected in headless environments)
+        if "display" not in res.stderr.lower():
+            sys.exit(1)
     return res.stdout.rstrip('\n') if res.stdout is not None else None
 
 

@@ -315,28 +315,31 @@ class DmenuRunner(Process):
         self.cache_timer.start()
 
     def run(self):
-        while True:
-            self.server.start_flag.wait()
-            if self.server.kill_flag.is_set():
-                break
-            if not self.database or not self.database.kpo:
-                pass
-            elif self.server.args_flag.is_set():
-                dargs = self.server.get_args()
-                keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
-                self.menu_open_another_database(**dargs)
-                self.server.args_flag.clear()
+        try:
+            while True:
+                self.server.start_flag.wait()
+                if self.server.kill_flag.is_set():
+                    break
+                if not self.database or not self.database.kpo:
+                    pass
+                elif self.server.args_flag.is_set():
+                    dargs = self.server.get_args()
+                    keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
+                    self.menu_open_another_database(**dargs)
+                    self.server.args_flag.clear()
 
-                if self.server.totp_flag.is_set():
+                    if self.server.totp_flag.is_set():
+                        self.server.totp_flag.clear()
+                else:
+                    self.dmenu_run(self.server.totp_flag.is_set())
                     self.server.totp_flag.clear()
-            else:
-                self.dmenu_run(self.server.totp_flag.is_set())
-                self.server.totp_flag.clear()
-            if self.server.cache_time_expired.is_set():
-                self.server.kill_flag.set()
-            if self.server.kill_flag.is_set():
-                break
-            self.server.start_flag.clear()
+                if self.server.cache_time_expired.is_set():
+                    self.server.kill_flag.set()
+                if self.server.kill_flag.is_set():
+                    break
+                self.server.start_flag.clear()
+        except (SystemExit, KeyboardInterrupt):
+            self.server.kill_flag.set()
 
     def cache_time(self):
         """Kill keepmenu daemon when cache timer expires
