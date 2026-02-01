@@ -165,6 +165,9 @@ def get_database(open_databases=None, **kwargs):
             dbs.append(db_)
         if not sel or not dbs:
             return None, open_databases
+    if not isfile(dbs[0].dbase):
+        dmenu_err("Database does not exist. Check path and filename.")
+        return None, open_databases
     if dbs[0].pword is None:
         dbs[0].pword = get_passphrase()
         if dbs[0].pword is None:
