@@ -41,7 +41,10 @@ def port_in_use(port):
         return s.connect_ex(('127.0.0.1', port)) == 0
 
 def get_auth():
-    """Generate and save port and authkey to ~/.cache/.keepmenu-auth
+    """Generate and save port and authkey to runtime directory.
+
+    Uses $XDG_RUNTIME_DIR/keepmenu/ if available (tmpfs-backed, auto-cleanup),
+    otherwise falls back to ~/.cache/.
 
     Returns: int port, bytestring authkey
 

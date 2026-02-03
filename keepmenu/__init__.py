@@ -8,7 +8,7 @@ import os
 import shlex
 from subprocess import run, DEVNULL
 import sys
-from os.path import exists, expanduser
+from os.path import exists, expanduser, join
 
 from keepmenu.menu import dmenu_err
 
@@ -22,7 +22,29 @@ from keepmenu.menu import dmenu_err
 # file_handler.setFormatter(formatter)
 # logger.addHandler(file_handler)
 
-AUTH_FILE = expanduser("~/.cache/.keepmenu-auth")
+
+def get_runtime_dir():
+    """Get the runtime directory for auth file storage.
+
+    Prefers $XDG_RUNTIME_DIR/keepmenu/ for security (tmpfs-backed, auto-cleanup
+    on logout, proper permissions enforced by systemd). Falls back to ~/.cache/
+    if XDG_RUNTIME_DIR is not available.
+
+    Returns: str path to runtime directory
+
+    """
+    xdg_runtime = os.environ.get('XDG_RUNTIME_DIR')
+    if xdg_runtime and exists(xdg_runtime):
+        runtime_dir = join(xdg_runtime, 'keepmenu')
+    else:
+        runtime_dir = expanduser("~/.cache")
+    # Ensure directory exists with secure permissions
+    if not exists(runtime_dir):
+        os.makedirs(runtime_dir, mode=0o700)
+    return runtime_dir
+
+
+AUTH_FILE = join(get_runtime_dir(), ".keepmenu-auth")
 CONF_FILE = expanduser("~/.config/keepmenu/config.ini")
 SECRET_VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 
