@@ -13,7 +13,6 @@ import random
 import socket
 import string
 from subprocess import call
-import sys
 
 import keepmenu
 from keepmenu.keepmenu import DmenuRunner
@@ -41,7 +40,10 @@ def port_in_use(port):
         return s.connect_ex(('127.0.0.1', port)) == 0
 
 def get_auth():
-    """Generate and save port and authkey to ~/.cache/.keepmenu-auth
+    """Generate and save port and authkey to runtime directory.
+
+    Uses $XDG_RUNTIME_DIR/keepmenu/ if available,
+    Otherwise falls back to $TMPDIR/keepmenu-<uid>/.
 
     Returns: int port, bytestring authkey
 

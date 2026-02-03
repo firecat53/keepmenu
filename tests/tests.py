@@ -19,6 +19,78 @@ SECRET1 = 'ZYTYYE5FOAGW5ML7LRWUL4WTZLNJAMZS'
 SECRET2 = 'PW4YAYYZVDE5RK2AOLKUATNZIKAFQLZO'
 
 
+class TestRuntimeDir(unittest.TestCase):
+    """Test get_runtime_dir() function for auth file location
+
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        # Save original environment and tempfile cache
+        self.orig_xdg_runtime = os.environ.get('XDG_RUNTIME_DIR')
+        self.orig_tmpdir = os.environ.get('TMPDIR')
+        self.orig_tempfile_tempdir = tempfile.tempdir
+
+    def tearDown(self):
+        rmtree(self.tmpdir)
+        # Restore original environment
+        if self.orig_xdg_runtime is not None:
+            os.environ['XDG_RUNTIME_DIR'] = self.orig_xdg_runtime
+        elif 'XDG_RUNTIME_DIR' in os.environ:
+            del os.environ['XDG_RUNTIME_DIR']
+        if self.orig_tmpdir is not None:
+            os.environ['TMPDIR'] = self.orig_tmpdir
+        elif 'TMPDIR' in os.environ:
+            del os.environ['TMPDIR']
+        # Restore tempfile cache
+        tempfile.tempdir = self.orig_tempfile_tempdir
+
+    def test_xdg_runtime_dir_used_when_set(self):
+        """Test that $XDG_RUNTIME_DIR/keepmenu/ is used when available
+        """
+        xdg_runtime = os.path.join(self.tmpdir, 'runtime')
+        os.makedirs(xdg_runtime, mode=0o700)
+        os.environ['XDG_RUNTIME_DIR'] = xdg_runtime
+
+        runtime_dir = KM.get_runtime_dir()
+
+        self.assertEqual(runtime_dir, os.path.join(xdg_runtime, 'keepmenu'))
+        self.assertTrue(os.path.exists(runtime_dir))
+        self.assertEqual(os.stat(runtime_dir).st_mode & 0o777, 0o700)
+
+    def test_tmpdir_fallback_when_xdg_runtime_unset(self):
+        """Test fallback to $TMPDIR/keepmenu-<uid>/ when XDG_RUNTIME_DIR not set
+        """
+        if 'XDG_RUNTIME_DIR' in os.environ:
+            del os.environ['XDG_RUNTIME_DIR']
+        custom_tmpdir = os.path.join(self.tmpdir, 'tmp')
+        os.makedirs(custom_tmpdir, mode=0o777)
+        os.environ['TMPDIR'] = custom_tmpdir
+        # Reset tempfile cache so it picks up new TMPDIR
+        tempfile.tempdir = None
+
+        runtime_dir = KM.get_runtime_dir()
+
+        expected = os.path.join(custom_tmpdir, f'keepmenu-{os.getuid()}')
+        self.assertEqual(runtime_dir, expected)
+        self.assertTrue(os.path.exists(runtime_dir))
+        self.assertEqual(os.stat(runtime_dir).st_mode & 0o777, 0o700)
+
+    def test_tmpdir_fallback_when_xdg_runtime_dir_not_exists(self):
+        """Test fallback when XDG_RUNTIME_DIR is set but doesn't exist
+        """
+        os.environ['XDG_RUNTIME_DIR'] = '/nonexistent/path'
+        custom_tmpdir = os.path.join(self.tmpdir, 'tmp')
+        os.makedirs(custom_tmpdir, mode=0o777)
+        os.environ['TMPDIR'] = custom_tmpdir
+        # Reset tempfile cache so it picks up new TMPDIR
+        tempfile.tempdir = None
+
+        runtime_dir = KM.get_runtime_dir()
+
+        expected = os.path.join(custom_tmpdir, f'keepmenu-{os.getuid()}')
+        self.assertEqual(runtime_dir, expected)
+
+
 class TestServer(unittest.TestCase):
     """Test various BaseManager server functions
 
