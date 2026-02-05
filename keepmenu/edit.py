@@ -536,6 +536,9 @@ def delete_group(kpo):
     group = select_group(kpo, prompt="Delete Group:")
     if not group:
         return False
+    if group.is_root_group:
+        dmenu_err("Cannot delete root group")
+        return False
     inp = "NO\nYes - confirm delete\n"
     delete = dmenu_select(2, "Confirm delete", inp=inp)
     if delete != "Yes - confirm delete":
