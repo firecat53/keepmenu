@@ -25,9 +25,10 @@ class TestRuntimeDir(unittest.TestCase):
     """
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
-        # Save original environment
+        # Save original environment and tempfile cache
         self.orig_xdg_runtime = os.environ.get('XDG_RUNTIME_DIR')
         self.orig_tmpdir = os.environ.get('TMPDIR')
+        self.orig_tempfile_tempdir = tempfile.tempdir
 
     def tearDown(self):
         rmtree(self.tmpdir)
@@ -40,6 +41,8 @@ class TestRuntimeDir(unittest.TestCase):
             os.environ['TMPDIR'] = self.orig_tmpdir
         elif 'TMPDIR' in os.environ:
             del os.environ['TMPDIR']
+        # Restore tempfile cache
+        tempfile.tempdir = self.orig_tempfile_tempdir
 
     def test_xdg_runtime_dir_used_when_set(self):
         """Test that $XDG_RUNTIME_DIR/keepmenu/ is used when available
@@ -62,6 +65,8 @@ class TestRuntimeDir(unittest.TestCase):
         custom_tmpdir = os.path.join(self.tmpdir, 'tmp')
         os.makedirs(custom_tmpdir, mode=0o777)
         os.environ['TMPDIR'] = custom_tmpdir
+        # Reset tempfile cache so it picks up new TMPDIR
+        tempfile.tempdir = None
 
         runtime_dir = KM.get_runtime_dir()
 
@@ -77,6 +82,8 @@ class TestRuntimeDir(unittest.TestCase):
         custom_tmpdir = os.path.join(self.tmpdir, 'tmp')
         os.makedirs(custom_tmpdir, mode=0o777)
         os.environ['TMPDIR'] = custom_tmpdir
+        # Reset tempfile cache so it picks up new TMPDIR
+        tempfile.tempdir = None
 
         runtime_dir = KM.get_runtime_dir()
 
