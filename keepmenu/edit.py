@@ -446,17 +446,21 @@ def get_password_chars():
     return {k: presets[k] for k in char_sel.split('\n')} if char_sel else False
 
 
-def select_group(kpo, prompt="Groups"):
+def select_group(kpo, prompt="Groups", exclude_group=None):
     """Select which group for an entry
 
     Args: kpo - Keepass object
-          options - list of menu options for groups
+          prompt - dmenu prompt
+          exclude_group - Group to exclude (along with its descendants)
 
     Returns: False for no entry
-             group - string
+             group - Group object
 
     """
     groups = kpo.groups
+    if exclude_group is not None:
+        exclude_path = exclude_group.path
+        groups = [g for g in groups if g.path[:len(exclude_path)] != exclude_path]
     num_align = len(str(len(groups)))
     pattern = str("{:>{na}} - {}")
     inp = str("\n").join([pattern.format(j, "/".join(i.path), na=num_align)
@@ -551,7 +555,7 @@ def move_group(kpo):
     group = select_group(kpo, prompt="Select group to move")
     if not group:
         return False
-    destgroup = select_group(kpo, prompt="Select destination group")
+    destgroup = select_group(kpo, prompt="Select destination group", exclude_group=group)
     if not destgroup:
         return False
     group = kpo.move_group(group, destgroup)
