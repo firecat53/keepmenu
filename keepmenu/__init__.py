@@ -8,6 +8,7 @@ import os
 import shlex
 from subprocess import run, DEVNULL
 import sys
+import tempfile
 from os.path import exists, expanduser, join
 
 from keepmenu.menu import dmenu_err
@@ -27,8 +28,8 @@ def get_runtime_dir():
     """Get the runtime directory for auth file storage.
 
     Prefers $XDG_RUNTIME_DIR/keepmenu/ for security (tmpfs-backed, auto-cleanup
-    on logout, proper permissions enforced by systemd). Falls back to ~/.cache/
-    if XDG_RUNTIME_DIR is not available.
+    on logout, proper permissions enforced by systemd). Falls back to
+    $TMPDIR/keepmenu-<uid>/ which is also typically tmpfs and cleared on reboot.
 
     Returns: str path to runtime directory
 
@@ -37,7 +38,7 @@ def get_runtime_dir():
     if xdg_runtime and exists(xdg_runtime):
         runtime_dir = join(xdg_runtime, 'keepmenu')
     else:
-        runtime_dir = expanduser("~/.cache")
+        runtime_dir = join(tempfile.gettempdir(), f'keepmenu-{os.getuid()}')
     # Ensure directory exists with secure permissions
     if not exists(runtime_dir):
         os.makedirs(runtime_dir, mode=0o700)

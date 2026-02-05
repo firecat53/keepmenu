@@ -44,7 +44,7 @@ def get_auth():
     """Generate and save port and authkey to runtime directory.
 
     Uses $XDG_RUNTIME_DIR/keepmenu/ if available (tmpfs-backed, auto-cleanup),
-    otherwise falls back to ~/.cache/.
+    otherwise falls back to $TMPDIR/keepmenu-<uid>/.
 
     Returns: int port, bytestring authkey
 
