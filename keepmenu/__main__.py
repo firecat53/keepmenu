@@ -14,6 +14,7 @@ import random
 import socket
 import string
 from subprocess import call
+import sys
 
 import keepmenu
 from keepmenu.keepmenu import DmenuRunner
@@ -294,7 +295,8 @@ def main():
         password = run_once(**args)
         if password:
             print(password)
-        return
+            return
+        sys.exit(1)
     try:
         manager = client(port, auth)
         conn = manager.get_pipe()  # pylint: disable=no-member
@@ -328,6 +330,7 @@ def main():
             if result:
                 if result.startswith("ERROR:"):
                     print(result[7:], file=sys.stderr)  # Strip "ERROR: " prefix
+                    sys.exit(1)
                 else:
                     print(result)
     except ConnectionRefusedError:
