@@ -1,7 +1,7 @@
 """Methods for editing entries and groups
 
 """
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import random
 from secrets import choice
@@ -15,6 +15,14 @@ import keepmenu
 from keepmenu.menu import dmenu_select, dmenu_err
 from keepmenu.totp import gen_otp, get_otp_url, TOTP_FIELDS
 from keepmenu.type import type_text
+
+
+def format_expiry(expiry_time):
+    """Format expiry time for display (UTC to local, date-only if midnight)"""
+    local_time = expiry_time.astimezone()
+    if local_time.hour == 0 and local_time.minute == 0:
+        return local_time.strftime("%Y-%m-%d")
+    return local_time.strftime("%Y-%m-%d %H:%M")
 
 
 def add_entry(kpo):
@@ -72,7 +80,7 @@ def edit_entry(kpo, kp_entry):
               str("TOTP: ******") if get_otp_url(kp_entry) else "TOTP: None",
               str(f"Url: {kp_entry.url}"),
               "Notes: <Enter to Edit>" if kp_entry.notes else "Notes: None",
-              str(f"Expiry time: {kp_entry.expiry_time.strftime('%Y-%m-%d %H:%M')}")
+              str(f"Expiry time: {format_expiry(kp_entry.expiry_time)}")
               if kp_entry.expires is True else "Expiry time: None"]
 
     attrs = kp_entry.custom_properties
@@ -192,7 +200,7 @@ def edit_expiry(kp_entry):
                        "Expiration Date (yyyy-mm-dd hh:mm OR "
                        "yyyy-mm-dd OR HH:MM OR "
                        "'None' to unset)",
-                       inp=kp_entry.expiry_time.strftime("%Y-%m-%d %H:%M") if
+                       inp=format_expiry(kp_entry.expiry_time) if
                            kp_entry.expires is True else "")
     if not sel:
         return True
@@ -207,13 +215,13 @@ def edit_expiry(kp_entry):
 
 
 def exp_date(dtime):
-    """Convert string to datetime
+    """Convert string to datetime (local time input, returns UTC)
 
     """
     formats = ["%Y-%m-%d %H:%M", "%Y-%m-%d", "%H:%M"]
     for fmt in formats:
         try:
-            return datetime.strptime(dtime, fmt)
+            return datetime.strptime(dtime, fmt).astimezone(timezone.utc)
         except ValueError:
             continue
     dmenu_err("Invalid format. No changes made")
