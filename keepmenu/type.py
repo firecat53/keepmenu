@@ -254,6 +254,18 @@ def type_entry_xdotool(entry, tokens):
             call(['xdotool', 'type', '--', token])
 
 
+def _ydotool_type(to_type):
+    """Type a string using ydotool with optional --key-delay
+
+    """
+    cmd = ['ydotool', 'type', '-e', '0']
+    key_delay = keepmenu.CONF.get('database', 'ydotool_key_delay', fallback=None)
+    if key_delay is not None:
+        cmd.extend(['--key-delay', key_delay])
+    cmd.extend(['--', to_type])
+    call(cmd)
+
+
 def type_entry_ydotool(entry, tokens):
     """Auto-type entry entry using ydotool
 
@@ -265,14 +277,14 @@ def type_entry_ydotool(entry, tokens):
             if callable(cmd):
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
-                    call(['ydotool', 'type', '-e', '0', '--', to_type])
+                    _ydotool_type(to_type)
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    call(['ydotool', 'type', '-e', '0', '--', to_type])
+                    _ydotool_type(to_type)
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                call(['ydotool', 'type', '-e', '0', '--', to_type])
+                _ydotool_type(to_type)
             elif token in AUTOTYPE_TOKENS:
                 cmd = ['ydotool'] + AUTOTYPE_TOKENS[token]
                 call(cmd)
@@ -280,7 +292,7 @@ def type_entry_ydotool(entry, tokens):
                 dmenu_err(f"Unsupported auto-type token (ydotool): \"{token}\"")
                 return
         else:
-            call(['ydotool', 'type', '-e', '0', '--', token])
+            _ydotool_type(token)
 
 
 def type_entry_wtype(entry, tokens):
@@ -383,7 +395,7 @@ def type_text(data):
     if library == 'xdotool':
         call(['xdotool', 'type', '--', data])
     elif library == 'ydotool':
-        call(['ydotool', 'type', '-e', '0', '--', data])
+        _ydotool_type(data)
     elif library == 'wtype':
         call(['wtype', '--', data])
     elif library == 'dotool':

@@ -30,6 +30,7 @@
 # terminal = <xterm, urxvt> <options if necessary>. 'xterm' by default
 # gui_editor = <path/to/editor> <options>  e.g. gui_editor = gvim -f
 # type_library = pynput (default), xdotool (for alternate keyboard layout support), ydotool (for Wayland), wtype (also for Wayland), dotool, or dotoolc (dotool client for dotoold daemon)
+# ydotool_key_delay = <milliseconds>  delay between keystrokes for ydotool (default: ydotool's built-in default)
 # hide_groups = Recycle Bin  <Note formatting for adding multiple groups>
 #               Group 2
 #               Group 3
