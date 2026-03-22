@@ -29,6 +29,7 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
 |                           | `terminal`                   | `xterm`                                 |                                                              |
 |                           | `gui_editor`                 | None                                    |                                                              |
 |                           | `type_library`               | `pynput`                                | xdotool, ydotool, wtype, dotool, dotoolc or pynput           |
+|                           | `key_delay`                  | None                                    | Delay between keystrokes in ms. Works with all type_library options |
 |                           | `hide_groups`                | None                                    | See below for formatting of multiple groups                  |
 |                           | `autotype_default`           | `{USERNAME}{TAB}{PASSWORD}{ENTER}`      | [Keepass autotype sequences][1]                              |
 |                           | `type_url`                   | `False`                                 |                                                              |
@@ -111,8 +112,10 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
    - Dmenu theme options are also passed in `dmenu_command`
 5. Adjust the `autotype_default`, if desired. Allowed codes are the [Keepass 2.x
    codes][1] except for repetitions and most command codes. `{DELAY x}`
-   (in milliseconds) is supported. Individual autotype sequences can be edited
-   or disabled inside Keepmenu.
+   (in milliseconds) is supported for one-time pauses. `{DELAY=x}` (in milliseconds)
+   sets the inter-keystroke delay for the remainder of the autotype sequence, and
+   `{DELAY=0}` resets to the configured default. Individual autotype sequences can
+   be edited or disabled inside Keepmenu.
 6. If you need support on Wayland for non-U.S. English keyboard layouts and/or
    characters, you might need to experiment with the various typing options to
    which works for your use case.

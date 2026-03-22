@@ -51,6 +51,8 @@
     - Use a custom [Keepass 2.x style auto-type sequence][1] if you have one defined
       (except for character repetition and the 'special commands'). Set it per entry
       or set a global default. Disable autotype for an entry, if desired.
+      `{DELAY x}` (in milliseconds) pauses for a one-time delay, and `{DELAY=x}`
+      sets the inter-keystroke delay for the remainder of the sequence.
     - Auto-type custom attributes by hitting `Enter` on the desired attribute or
       by using the `{S:<ATTR_NAME>}` action code in your auto-type sequence.
     - Select any single field and have it typed into the active window. Notes fields

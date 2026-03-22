@@ -14,6 +14,20 @@ from keepmenu.menu import dmenu_err
 from keepmenu.totp import gen_otp, get_otp_url
 
 
+# Module-level variable to track the current delay override from {DELAY=x} token
+_current_delay = None
+
+
+def _get_key_delay():
+    """Get key_delay from config in milliseconds, or None"""
+    return keepmenu.CONF.get('database', 'key_delay', fallback=None)
+
+
+def _effective_delay():
+    """Return the effective key delay: {SPEED} override > config > None"""
+    return _current_delay if _current_delay is not None else _get_key_delay()
+
+
 def tokenize_autotype(autotype):
     """Process the autotype sequence
 
@@ -72,6 +86,18 @@ def token_command(token):
             return True
         return False
 
+    def _check_delay_equals():
+        match = re.match(r'{DELAY=(\d+)}', token)
+        if match:
+            delay_eq = int(match.group(1))
+            nonlocal cmd
+            def set_delay(_, s=delay_eq):
+                global _current_delay
+                _current_delay = str(s) if s > 0 else None
+            cmd = set_delay
+            return True
+        return False
+
     def _check_additional_attribute():
         match = re.match(r'{S:(.*)}', token)
         if match:
@@ -82,6 +108,9 @@ def token_command(token):
         return False
 
     if _check_delay():  # {DELAY x}
+        return cmd
+
+    if _check_delay_equals():  # {DELAY=x}
         return cmd
 
     if _check_additional_attribute():  # {S:<attr>}
@@ -99,6 +128,8 @@ def type_entry(entry, db_autotype=None):
           db_autotype - the database specific autotype that overrides 'autotype_default'
 
     """
+    global _current_delay
+    _current_delay = None
     sequence = keepmenu.SEQUENCE
     if keepmenu.CLIPBOARD is True:
         if hasattr(entry, 'password'):
@@ -159,6 +190,19 @@ STRING_AUTOTYPE_TOKENS = {
     "{}}"         : '}',
 }
 
+
+def _pynput_type(kbd, to_type):
+    """Type a string using pynput with optional delay between characters"""
+    delay = _effective_delay()
+    if delay is not None:
+        delay_sec = int(delay) / 1000
+        for char in to_type:
+            kbd.type(char)
+            time.sleep(delay_sec)
+    else:
+        kbd.type(to_type)
+
+
 def type_entry_pynput(entry, tokens):  # pylint: disable=too-many-branches
     """Use pynput to auto-type the selected entry
 
@@ -177,7 +221,7 @@ def type_entry_pynput(entry, tokens):  # pylint: disable=too-many-branches
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
                     try:
-                        kbd.type(to_type)
+                        _pynput_type(kbd, to_type)
                     except kbd.InvalidCharacterException:
                         dmenu_err("Unable to type string...bad character.\n"
                                   "Try setting `type_library = xdotool` in config.ini")
@@ -185,7 +229,7 @@ def type_entry_pynput(entry, tokens):  # pylint: disable=too-many-branches
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
                     try:
-                        kbd.type(to_type)
+                        _pynput_type(kbd, to_type)
                     except kbd.InvalidCharacterException:
                         dmenu_err("Unable to type string...bad character.\n"
                                   "Try setting `type_library = xdotool` in config.ini")
@@ -193,7 +237,7 @@ def type_entry_pynput(entry, tokens):  # pylint: disable=too-many-branches
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
                 try:
-                    kbd.type(to_type)
+                    _pynput_type(kbd, to_type)
                 except kbd.InvalidCharacterException:
                     dmenu_err("Unable to type string...bad character.\n"
                               "Try setting `type_library = xdotool` in config.ini")
@@ -211,11 +255,21 @@ def type_entry_pynput(entry, tokens):  # pylint: disable=too-many-branches
                 return
         else:
             try:
-                kbd.type(token)
+                _pynput_type(kbd, token)
             except kbd.InvalidCharacterException:
                 dmenu_err("Unable to type string...bad character.\n"
                           "Try setting `type_library = xdotool` in config.ini")
                 return
+
+
+def _xdotool_type(to_type):
+    """Type a string using xdotool with optional --delay"""
+    cmd = ['xdotool', 'type']
+    delay = _effective_delay()
+    if delay is not None:
+        cmd.extend(['--delay', delay])
+    cmd.extend(['--', to_type])
+    call(cmd)
 
 
 def type_entry_xdotool(entry, tokens):
@@ -230,14 +284,14 @@ def type_entry_xdotool(entry, tokens):
             if callable(cmd):
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
-                    call(['xdotool', 'type', '--', to_type])
+                    _xdotool_type(to_type)
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    call(['xdotool', 'type', '--', to_type])
+                    _xdotool_type(to_type)
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                call(['xdotool', 'type', '--', to_type])
+                _xdotool_type(to_type)
             elif token in AUTOTYPE_TOKENS:
                 cmd = ['xdotool'] + AUTOTYPE_TOKENS[token]
                 call(cmd)
@@ -251,7 +305,17 @@ def type_entry_xdotool(entry, tokens):
                 dmenu_err(f"Unsupported auto-type token (xdotool): \"{token}\"")
                 return
         else:
-            call(['xdotool', 'type', '--', token])
+            _xdotool_type(token)
+
+
+def _ydotool_type(to_type):
+    """Type a string using ydotool with optional --key-delay"""
+    cmd = ['ydotool', 'type', '-e', '0']
+    delay = _effective_delay()
+    if delay is not None:
+        cmd.extend(['--key-delay', delay])
+    cmd.extend(['--', to_type])
+    call(cmd)
 
 
 def type_entry_ydotool(entry, tokens):
@@ -265,14 +329,14 @@ def type_entry_ydotool(entry, tokens):
             if callable(cmd):
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
-                    call(['ydotool', 'type', '-e', '0', '--', to_type])
+                    _ydotool_type(to_type)
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    call(['ydotool', 'type', '-e', '0', '--', to_type])
+                    _ydotool_type(to_type)
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                call(['ydotool', 'type', '-e', '0', '--', to_type])
+                _ydotool_type(to_type)
             elif token in AUTOTYPE_TOKENS:
                 cmd = ['ydotool'] + AUTOTYPE_TOKENS[token]
                 call(cmd)
@@ -280,7 +344,17 @@ def type_entry_ydotool(entry, tokens):
                 dmenu_err(f"Unsupported auto-type token (ydotool): \"{token}\"")
                 return
         else:
-            call(['ydotool', 'type', '-e', '0', '--', token])
+            _ydotool_type(token)
+
+
+def _wtype_type(to_type):
+    """Type a string using wtype with optional -d delay"""
+    cmd = ['wtype']
+    delay = _effective_delay()
+    if delay is not None:
+        cmd.extend(['-d', delay])
+    cmd.extend(['--', to_type])
+    call(cmd)
 
 
 def type_entry_wtype(entry, tokens):
@@ -294,14 +368,14 @@ def type_entry_wtype(entry, tokens):
             if callable(cmd):
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
-                    call(['wtype', '--', to_type])
+                    _wtype_type(to_type)
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    call(['wtype', '--', to_type])
+                    _wtype_type(to_type)
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                call(['wtype', '--', to_type])
+                _wtype_type(to_type)
             elif token in AUTOTYPE_TOKENS:
                 cmd = ['wtype', '-k', AUTOTYPE_TOKENS[token]]
                 call(cmd)
@@ -309,7 +383,18 @@ def type_entry_wtype(entry, tokens):
                 dmenu_err(f"Unsupported auto-type token (wtype): \"{token}\"")
                 return
         else:
-            call(['wtype', '--', token])
+            _wtype_type(token)
+
+
+def _dotool_type(to_type, client=False):
+    """Type a string using dotool/dotoolc with optional typedelay"""
+    tool = 'dotoolc' if client else 'dotool'
+    delay = _effective_delay()
+    input_str = ""
+    if delay is not None:
+        input_str = f"typedelay {delay}\n"
+    input_str += f"type {to_type}"
+    _ = run([tool], check=True, encoding=keepmenu.ENC, input=input_str)
 
 
 def type_entry_dotool(entry, tokens):
@@ -323,14 +408,14 @@ def type_entry_dotool(entry, tokens):
             if callable(cmd):
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
-                    _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+                    _dotool_type(to_type)
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+                    _dotool_type(to_type)
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+                _dotool_type(to_type)
             elif token in AUTOTYPE_TOKENS:
                 to_type = " ".join(AUTOTYPE_TOKENS[token])
                 _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=to_type)
@@ -338,7 +423,7 @@ def type_entry_dotool(entry, tokens):
                 dmenu_err(f"Unsupported auto-type token (dotool): \"{token}\"")
                 return
         else:
-            _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {token}")
+            _dotool_type(token)
 
 
 def type_entry_dotoolc(entry, tokens):
@@ -352,14 +437,14 @@ def type_entry_dotoolc(entry, tokens):
             if callable(cmd):
                 to_type = cmd(entry)  # pylint: disable=not-callable
                 if to_type is not None:
-                    _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+                    _dotool_type(to_type, client=True)
             elif token in PLACEHOLDER_AUTOTYPE_TOKENS:
                 to_type = PLACEHOLDER_AUTOTYPE_TOKENS[token](entry)
                 if to_type:
-                    _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+                    _dotool_type(to_type, client=True)
             elif token in STRING_AUTOTYPE_TOKENS:
                 to_type = STRING_AUTOTYPE_TOKENS[token]
-                _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {to_type}")
+                _dotool_type(to_type, client=True)
             elif token in AUTOTYPE_TOKENS:
                 to_type = " ".join(AUTOTYPE_TOKENS[token])
                 _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=to_type)
@@ -367,7 +452,7 @@ def type_entry_dotoolc(entry, tokens):
                 dmenu_err(f"Unsupported auto-type token (dotoolc): \"{token}\"")
                 return
         else:
-            _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {token}")
+            _dotool_type(token, client=True)
 
 
 def type_text(data):
@@ -381,15 +466,15 @@ def type_text(data):
     if keepmenu.CONF.has_option('database', 'type_library'):
         library = keepmenu.CONF.get('database', 'type_library')
     if library == 'xdotool':
-        call(['xdotool', 'type', '--', data])
+        _xdotool_type(data)
     elif library == 'ydotool':
-        call(['ydotool', 'type', '-e', '0', '--', data])
+        _ydotool_type(data)
     elif library == 'wtype':
-        call(['wtype', '--', data])
+        _wtype_type(data)
     elif library == 'dotool':
-        _ = run(['dotool'], check=True, encoding=keepmenu.ENC, input=f"type {data}")
+        _dotool_type(data)
     elif library == 'dotoolc':
-        _ = run(['dotoolc'], check=True, encoding=keepmenu.ENC, input=f"type {data}")
+        _dotool_type(data, client=True)
     else:
         try:
             from pynput import keyboard
@@ -397,7 +482,7 @@ def type_text(data):
             return
         kbd = keyboard.Controller()
         try:
-            kbd.type(data)
+            _pynput_type(kbd, data)
         except kbd.InvalidCharacterException:
             dmenu_err("Unable to type string...bad character.\n"
                       "Try setting `type_library = xdotool` in config.ini")
