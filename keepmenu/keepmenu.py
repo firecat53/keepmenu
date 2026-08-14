@@ -96,13 +96,15 @@ def get_databases():
     return dbs
 
 
-def get_database(open_databases=None, cli=False, no_prompt=False, **kwargs):
+def get_database(open_databases=None, cli=False, no_prompt=False, select=False, **kwargs):
     # pylint: disable=too-many-statements,too-many-branches
     """Read databases/keyfile/autotype from config, CLI, or ask for user input.
 
     Args: open_databases - list [DataBase1, DataBase2,...]
           cli - bool, if True, prompt for password on the CLI
           no_prompt - bool, Do not prompt for database password
+          select - bool, always show the database selection menu, even if
+                   there is only one database to choose from
           kwargs - possibly 'database', 'keyfile'
     Returns: DataBase obj or None on error selecting database or password
              open_databases - list [DataBase1, DataBase2,...]
@@ -158,12 +160,14 @@ def get_database(open_databases=None, cli=False, no_prompt=False, **kwargs):
                 dbs.append(copy(db_))
     else:
         dbs = dbs_cfg
-    if len(dbs) > 1 and not cli:
+    if (len(dbs) > 1 or select) and not cli:
         inp = "\n".join(i.dbase for i in dbs) + "\nCreate Database"
         sel = dmenu_select(len(dbs) + 1, "Select Database", inp=inp)
         dbs = [i for i in dbs if i.dbase == sel]
         if sel == "Create Database":
             kpo = create_db()
+            if not kpo:
+                return None, open_databases
             db_ = DataBase(dbase=kpo.filename,
                            kfile=kpo.keyfile,
                            pword=kpo.password)
@@ -439,7 +443,8 @@ class DmenuRunner(Process):
             'Add entry': self.menu_add_entry,
             'Manage groups': self.menu_manage_groups,
             'Reload database': self.menu_reload_database,
-            'Open/create another database': self.menu_open_another_database,
+            'Open/create another database':
+                functools.partial(self.menu_open_another_database, select=True),
             clip: self.menu_clipboard,
             'Kill Keepmenu daemon': self.menu_kill_daemon,
         }
@@ -466,9 +471,10 @@ class DmenuRunner(Process):
             type_entry(entry, self.database.atype)
             self.prev_entry = entry
         # Reset database autotype and totp in between runs
-        cur_db = [i for i in self.open_databases.values() if i.is_active is True][0]
-        self.database.atype = cur_db.atype
-        self.database.totp = cur_db.totp
+        cur_db = self.open_databases.get(self.database.dbase)
+        if cur_db is not None:
+            self.database.atype = cur_db.atype
+            self.database.totp = cur_db.totp
 
     def menu_view_type_individual_entries(self, hid_groups, totp_only=False):
         """Process menu entry - View/Type individual entries
@@ -541,17 +547,22 @@ class DmenuRunner(Process):
         self.expiring = get_expiring_entries(self.database.kpo.entries)
         self.dmenu_run()
 
-    def menu_open_another_database(self, **kwargs):
+    def menu_open_another_database(self, select=False, **kwargs):
         """Process menu entry - Open/create different database
 
-        Args: kwargs - possibly 'database', 'keyfile', 'autotype', 'totp'
+        Args: select - bool, True when called from the menu, so the database
+                       selection menu is shown even if only one database is
+                       available to choose from
+              kwargs - possibly 'database', 'keyfile', 'autotype', 'totp'
 
         """
         if kwargs.get("show"):
             self.show_password(**kwargs)
             return
         prev_db = copy(self.database)
-        self.database, self.open_databases = get_database(self.open_databases, **kwargs)
+        self.database, self.open_databases = get_database(self.open_databases,
+                                                          select=select,
+                                                          **kwargs)
         if self.database is None or self.database.kpo is None:
             self.database = copy(prev_db)
             _ = self.open_databases.popitem()
