@@ -60,7 +60,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Usage
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t] [-s SEARCH]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t] [-n] [-s SEARCH] [-V]`
 
 - Run `keepmenu` or bind to keystroke combination.
 - Enter database path on first run.
@@ -76,6 +76,8 @@ To run tests in a venv: `make test`
 
 - To install keepmenu in a venv: `make`
 - Build man page from Markdown source: `make man`
+- The version is hardcoded in `keepmenu/__init__.py` (`make version` or
+  `keepmenu -V`). Anything else needing a version number reads from there.
 - Using `hatch`:
     - `hatch shell`: provides venv with editable installation.
     - `hatch build` && `hatch publish`: build and publish to Pypi.
@@ -83,13 +85,20 @@ To run tests in a venv: `make test`
     - `nix develop`: Provides development shell/venv with all dependencies.
     - `make test` and `hatch build/publish` work as usual.
 - GitHub Action will upload to TestPyPi on each push to `main`. To create a
-  GitHub and PyPi release, create a new tag (formatting below) and push tags.
+  GitHub and PyPi release, run `make release VERSION=x.y.z`. It bumps
+  `__version__`, updates and rebuilds the man page, commits, and opens an
+  editor for the annotated tag. The tag subject is prefilled with the version;
+  add the release notes below it, as only the body becomes the release:
 
-        <tag name on first line>
+        <tag name on first line, prefilled>
 
         * Release note 1
         * Release note 2
         * ...
+
+  Then push the commit and tag: `git push origin main --follow-tags`. The
+  GitHub Action fails the build if a pushed tag does not match `__version__`,
+  so nothing mismatched can reach PyPi.
 
 [1]: https://github.com/pschmitt/pykeepass "Pykeepass"
 [2]: https://davedavenport.github.io/rofi/ "Rofi"

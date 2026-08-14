@@ -284,6 +284,14 @@ def main():
             help="Do not prompt for database password",
     )
 
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"keepmenu {keepmenu.__version__}",
+        help="Show version and exit",
+    )
+
     args = vars(parser.parse_args())
 
     port, auth = get_auth()

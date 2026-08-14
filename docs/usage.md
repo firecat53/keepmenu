@@ -12,7 +12,7 @@
 
 ## CLI Options
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-n] [-s SEARCH]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-n] [-s SEARCH] [-V]`
 
 --help, -h Output a usage message and exit.
 
@@ -29,6 +29,8 @@
 -n, --no-prompt Do not prompt for database password
 
 -s SEARCH, --show Output password of matching SEARCH entry to stdout (or to clipboard with -C)
+
+-V, --version Show version and exit
 
 ## Features
 

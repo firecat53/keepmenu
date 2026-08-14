@@ -7,6 +7,5 @@
 *.un~
 build/
 dist/
-keepmenu/_version.py
 result/
 tests/.test.kdbx.lock

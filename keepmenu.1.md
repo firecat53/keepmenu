@@ -2,8 +2,8 @@
 title: Keepmenu
 section: 1
 header: User Manual
-footer: Keepmenu 1.4.2
-date: 05 July 2024
+footer: Keepmenu 1.5.1
+date: 13 August 2026
 ---
 
 # NAME
@@ -12,7 +12,7 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing of Keepa
 
 # SYNOPSIS
 
-**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--no-prompt**] [**--totp**]
+**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--no-prompt**] [**--totp**] [**--version**]
 
 # DESCRIPTION
 
@@ -30,6 +30,8 @@ Passhole, but is more dmenu and less command line focused.
 
 **-d**, **--database** Path to Keepass database
 
+**-h**, **--help** Print help and exit
+
 **-k**, **--keyfile**  Path to keyfile
 
 **-n**, **--no-prompt**  Do not prompt for database password
@@ -37,6 +39,8 @@ Passhole, but is more dmenu and less command line focused.
 **-s**, **--show** Search term(s)
 
 **-t**, **--totp**  TOTP mode
+
+**-V**, **--version**  Show version and exit
 
 # EXAMPLES
 
