@@ -87,8 +87,8 @@ To run tests in a venv: `make test`
 - GitHub Action will upload to TestPyPi on each push to `main`. To create a
   GitHub and PyPi release, run `make release VERSION=x.y.z`. It bumps
   `__version__`, updates and rebuilds the man page, commits, and opens an
-  editor for the annotated tag. The tag subject is prefilled with the version;
-  add the release notes below it, as only the body becomes the release:
+  editor for the annotated tag, prefilled with the version as the subject and
+  one bullet per commit since the last tag.
 
         <tag name on first line, prefilled>
 

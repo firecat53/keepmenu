@@ -28,8 +28,7 @@ version:
 	@grep -Po '^__version__ = "\K[^"]+' keepmenu/__init__.py
 
 # Bump __version__, refresh the man page footer/date, commit, and create an
-# annotated tag. The tag body becomes the GitHub release notes, so this opens
-# $EDITOR for you to write them.
+# annotated tag. $EDITOR prefilled with version and commits since the last tag.
 # Usage: make release VERSION=1.5.2
 release:
 	@test -n "$(VERSION)" || { echo "Usage: make release VERSION=x.y.z"; exit 1; }
@@ -49,9 +48,24 @@ release:
 		{ echo "Failed to set version"; exit 1; }
 	git commit -m "Bump version to $(VERSION)" \
 		keepmenu/__init__.py keepmenu.1.md keepmenu.1
-	# Prefill the subject with the version. CI builds the release notes
-	# from the tag *body*, so anything on the first line would be dropped.
-	git tag -a -e -m "$(VERSION)" $(VERSION)
+	# Open the tag message prefilled with the version as the subject and one
+	# bullet per commit since the last tag.
+	@notes=$$(mktemp); \
+	prev=$$(git describe --tags --abbrev=0 2>/dev/null); \
+	{ echo "$(VERSION)"; echo; \
+	  git log --no-merges --invert-grep \
+		--grep='^Bump version to ' --format='* %s' \
+		$${prev:+$$prev..}HEAD; } > $$notes; \
+	git tag -a -e -F $$notes $(VERSION); status=$$?; \
+	rm -f $$notes; \
+	test $$status -eq 0 || exit $$status; \
+	test -n "$$(git for-each-ref --format='%(contents:body)' \
+		refs/tags/$(VERSION))" || { \
+		git tag -d $(VERSION) >/dev/null; \
+		echo "Tag message body is empty, so the release notes would be too."; \
+		echo "Tag not created. The version bump commit is still there;"; \
+		echo "undo it with: git reset --hard HEAD^"; \
+		exit 1; }
 	@echo
 	@echo "Tagged $(VERSION). Push with:"
 	@echo "    git push origin $$(git rev-parse --abbrev-ref HEAD) --follow-tags"
