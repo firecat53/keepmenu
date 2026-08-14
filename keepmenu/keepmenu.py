@@ -564,8 +564,10 @@ class DmenuRunner(Process):
                                                           select=select,
                                                           **kwargs)
         if self.database is None or self.database.kpo is None:
+            # Handle cancelled or failed to open db.
             self.database = copy(prev_db)
-            _ = self.open_databases.popitem()
+            for dbase in [i for i, db in self.open_databases.items() if db.kpo is None]:
+                del self.open_databases[dbase]
             if self.database.dbase in self.open_databases:
                 self.open_databases[self.database.dbase].is_active = True
             return
