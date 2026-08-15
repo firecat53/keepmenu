@@ -5,7 +5,7 @@
 # pylint: disable=import-outside-toplevel
 import re
 from shlex import split
-from subprocess import call, run
+from subprocess import call, run, CalledProcessError
 from threading import Timer
 import time
 
@@ -16,6 +16,11 @@ from keepmenu.totp import gen_otp, get_otp_url
 
 # Module-level variable to track the current delay override from {DELAY=x} token
 _current_delay = None
+
+PYNPUT_MISSING = ("pynput is not installed.\n"
+                  "Install it with `pip install keepmenu[autotype]` or set "
+                  "`type_library` in config.ini to a supported type_library "
+                  "(see docs).")
 
 
 def _get_key_delay():
@@ -133,7 +138,8 @@ def type_entry(entry, db_autotype=None):
     sequence = keepmenu.SEQUENCE
     if keepmenu.CLIPBOARD is True:
         if hasattr(entry, 'password'):
-            type_clipboard(entry.password)
+            if not type_clipboard(entry.password):
+                dmenu_err(keepmenu.clipboard_missing_msg())
         else:
             dmenu_err("Clipboard is active. 'View/Type Individual entries' and select field to copy")
         return
@@ -211,6 +217,7 @@ def type_entry_pynput(entry, tokens):  # pylint: disable=too-many-branches
         from pynput import keyboard
         from .tokens_pynput import AUTOTYPE_TOKENS
     except ModuleNotFoundError:
+        dmenu_err(PYNPUT_MISSING)
         return
     kbd = keyboard.Controller()
     enter_idx = True
@@ -460,7 +467,8 @@ def type_text(data):
 
     """
     if keepmenu.CLIPBOARD is True:
-        type_clipboard(data)
+        if not type_clipboard(data):
+            dmenu_err(keepmenu.clipboard_missing_msg())
         return
     library = 'pynput'
     if keepmenu.CONF.has_option('database', 'type_library'):
@@ -479,6 +487,7 @@ def type_text(data):
         try:
             from pynput import keyboard
         except ModuleNotFoundError:
+            dmenu_err(PYNPUT_MISSING)
             return
         kbd = keyboard.Controller()
         try:
@@ -492,10 +501,18 @@ def type_clipboard(text):
     """Copy text to clipboard and clear clipboard after 30 seconds
 
     Args: text - str
+    Returns: bool - False if no clipboard command is available
 
     """
+    cmd = keepmenu.get_clipboard_cmd()
+    if cmd is None:
+        return False
     text = text or ""  # Handle None type
-    run(split(keepmenu.CLIPBOARD_CMD), check=True, input=text.encode(keepmenu.ENC))
-    clear = Timer(30, lambda: run(split(keepmenu.CLIPBOARD_CMD), check=False, input=""))
+    try:
+        run(split(cmd), check=True, input=text.encode(keepmenu.ENC))
+    except CalledProcessError:
+        return False
+    clear = Timer(30, lambda: run(split(cmd), check=False, input=""))
     clear.daemon = True
     clear.start()
+    return True

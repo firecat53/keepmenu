@@ -9,12 +9,16 @@ of Keepass databases.
 \f[B]keepmenu\f[R] [\f[B]\(enautotype\f[R] pattern]
 [\f[B]\(enconfig\f[R] file] [\f[B]\(enclipboard\f[R]]
 [\f[B]\(endatabase\f[R] file] [\f[B]\(enkeyfile\f[R] file]
-[\f[B]\(enno\-prompt\f[R]] [\f[B]\(entotp\f[R]] [\f[B]\(enversion\f[R]]
+[\f[B]\(enno\-prompt\f[R]] [\f[B]\(enshow\f[R] term]
+[\f[B]\(enfield\f[R] name] [\f[B]\(entotp\f[R]] [\f[B]\(enversion\f[R]]
 .SH DESCRIPTION
 \f[B]Keepmenu\f[R] is a fast and minimal application to facilitate
 password entry and manage most aspects of Keepass .kdbx databases.
 It is inspired in part by Passhole, but is more dmenu and less command
 line focused.
+.PP
+With \f[B]\(enshow\f[R] it also works as a CLI\-only password manager,
+requiring only Pykeepass.
 .SH OPTIONS
 \f[B]\-a\f[R], \f[B]\(enautotype\f[R] Autotype sequence from
 https://keepass.info/help/base/autotype.html#autoseq .
@@ -26,6 +30,16 @@ Overrides global default from config.ini for current database.
 .PP
 \f[B]\-d\f[R], \f[B]\(endatabase\f[R] Path to Keepass database
 .PP
+\f[B]\-f\f[R], \f[B]\(enfield\f[R] Field to output with
+\f[B]\(enshow\f[R].
+Repeat for multiple fields, which are output one per line in the order
+given.
+One of \f[I]title\f[R], \f[I]username\f[R], \f[I]password\f[R],
+\f[I]url\f[R], \f[I]notes\f[R], \f[I]totp\f[R],
+\f[CR]S:<attribute>\f[R], or \f[I]all\f[R] for every field that has a
+value, labeled.
+Defaults to \f[I]password\f[R]
+.PP
 \f[B]\-h\f[R], \f[B]\(enhelp\f[R] Print help and exit
 .PP
 \f[B]\-k\f[R], \f[B]\(enkeyfile\f[R] Path to keyfile
@@ -33,7 +47,11 @@ Overrides global default from config.ini for current database.
 \f[B]\-n\f[R], \f[B]\(enno\-prompt\f[R] Do not prompt for database
 password
 .PP
-\f[B]\-s\f[R], \f[B]\(enshow\f[R] Search term(s)
+\f[B]\-s\f[R], \f[B]\(enshow\f[R] Search term(s).
+Outputs the matched entry\(cqs password (default) or the fields selected
+by \f[B]\(enfield\f[R] to stdout or to the clipboard with
+\f[B]\(enclipboard\f[R].
+Requires a single matching entry
 .PP
 \f[B]\-t\f[R], \f[B]\(entotp\f[R] TOTP mode
 .PP
@@ -47,6 +65,7 @@ keepmenu \-c /etc/keepmenu/config.ini
 keepmenu \-d \(ti/docs/totp_passwords.kdbx \-a \(aq{TOTP}{ENTER}\(aq
 keepmenu \-d \(ti/passwords.kdbx \-k \(ti/passwords.keyfile \-a \(aq{S:security question}{ENTER}\(aq
 keepmenu \-s \(dqproduction/ssh db\(dq \-d \(ti/passwords.kdbx
+keepmenu \-s \(dqproduction/ssh db\(dq \-d \(ti/passwords.kdbx \-f username \-f password
 .EE
 .SH CONFIGURATION
 If you start keepmenu for the first time without a config file, it will

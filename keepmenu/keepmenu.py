@@ -287,7 +287,14 @@ def get_passphrase(check=False, cli=False):
     msg = "Enter Password" if check is False else "Verify password"
     pinentry = keepmenu.CONF.get("dmenu", "pinentry", fallback=None)
     if cli is True:
-        password = getpass()
+        try:
+            password = getpass()
+        except (EOFError, OSError, AttributeError):
+            # No terminal to prompt on (e.g. run from a script with stdin
+            # closed). Treat it as a cancelled prompt.
+            print("No terminal available to read the password from. "
+                  "Set the password in config.ini or use --no-prompt.", file=sys.stderr)
+            return None
     elif pinentry:
         password = ""
         res = subprocess.run(pinentry,
@@ -380,7 +387,9 @@ class DmenuRunner(Process):
                     pass
                 elif self.server.args_flag.is_set():
                     dargs = self.server.get_args()
-                    keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
+                    if not dargs.get('show'):
+                        # Don't toggle clipboard mode for the GUI with --show
+                        keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
                     self.menu_open_another_database(**dargs)
                     self.server.args_flag.clear()
                     if self.server.totp_flag.is_set():
@@ -557,7 +566,13 @@ class DmenuRunner(Process):
 
         """
         if kwargs.get("show"):
-            self.show_password(**kwargs)
+            # run_once() sets keepmenu.CLIPBOARD from the request, so restore
+            # the daemon's own clipboard mode afterwards
+            prev_clipboard = keepmenu.CLIPBOARD
+            try:
+                self.show_password(**kwargs)
+            finally:
+                keepmenu.CLIPBOARD = prev_clipboard
             return
         prev_db = copy(self.database)
         self.database, self.open_databases = get_database(self.open_databases,
@@ -603,10 +618,7 @@ class DmenuRunner(Process):
 
         # If no database specified, use current database
         if not rbase:
-            kwargs_copy = kwargs.copy()
-            kwargs_copy['clipboard'] = False
-            kwargs_copy['return_errors'] = True
-            result = run_once(db=self.database, **kwargs_copy)
+            result = run_once(db=self.database, **dict(kwargs, return_errors=True))
             self.server._parent_conn.send(result or "")
             return
 
@@ -646,10 +658,7 @@ class DmenuRunner(Process):
 
         # Perform search on target database if found
         if target_db and target_db.kpo:
-            kwargs_copy = kwargs.copy()
-            kwargs_copy['clipboard'] = False
-            kwargs_copy['return_errors'] = True
-            result = run_once(db=target_db, **kwargs_copy)
+            result = run_once(db=target_db, **dict(kwargs, return_errors=True))
             self.server._parent_conn.send(result or "")
         else:
             error_msg = f"ERROR: Database {rbase} is not open and password is not available in config."

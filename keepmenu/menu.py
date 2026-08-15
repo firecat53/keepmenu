@@ -100,5 +100,11 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
 def dmenu_err(prompt):
     """Pops up a dmenu prompt with an error message
 
+    In CLI mode, print to stderr instead. A launcher isn't necessarily installed
+    and there's a terminal to print to.
+
     """
+    if keepmenu.CLI is True:
+        print(prompt, file=sys.stderr)
+        return None
     return dmenu_select(1, prompt)

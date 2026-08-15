@@ -25,11 +25,17 @@ For full installation documention see the [installation docs][docs/install.md].
 ## Requirements
 
 1. Python 3.7+
-2. [Pykeepass][1] >= 4.0.0 and [pynput][5]
-3. Bemenu, Dmenu, Wmenu, Fuzzel, Rofi, Tofi, Wofi, or Yofi
-4. xsel or wl-copy
-5. (optional) Pinentry
-6. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] or dotoolc (X or Wayland).
+2. [Pykeepass][1] >= 4.0.0
+
+Everything below is only needed for the interactive (launcher) mode. `--show`
+works with nothing but Pykeepass installed:
+
+3. [pynput][5] (`pip install keepmenu[autotype]`), or one of the alternate type
+   libraries below
+4. Bemenu, Dmenu, Wmenu, Fuzzel, Rofi, Tofi, Wofi, or Yofi
+5. xsel or wl-copy, for clipboard support
+6. (optional) Pinentry
+7. (optional) xdotool (for X), [ydotool][10] or [wtype][11](for Wayland), [dotool][12] or dotoolc (X or Wayland).
 
 ## Features
 
@@ -52,7 +58,8 @@ For full installation documention see the [installation docs][docs/install.md].
 - Display and manage expired passwords.
 - Add, edit and type TOTP codes.
 - Add, edit, type and delete custom attributes.
-- Run once mode to copy or print password to stdout
+- Run once mode to copy or print any field(s) to stdout, usable as a CLI-only
+  password manager with no launcher or GUI installed
 
 ## License
 
@@ -60,7 +67,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Usage
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t] [-n] [-s SEARCH] [-V]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t] [-n] [-s SEARCH] [-f FIELD] [-V]`
 
 - Run `keepmenu` or bind to keystroke combination.
 - Enter database path on first run.

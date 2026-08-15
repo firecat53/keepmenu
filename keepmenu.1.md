@@ -12,13 +12,16 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing of Keepa
 
 # SYNOPSIS
 
-**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--no-prompt**] [**--totp**] [**--version**]
+**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--no-prompt**] [**--show** term] [**--field** name] [**--totp**] [**--version**]
 
 # DESCRIPTION
 
 **Keepmenu** is a fast and minimal application to facilitate password entry and
 manage most aspects of Keepass .kdbx databases.  It is inspired in part by
 Passhole, but is more dmenu and less command line focused.
+
+With **--show** it also works as a CLI-only password manager, requiring only
+Pykeepass.
 
 # OPTIONS
 
@@ -30,13 +33,15 @@ Passhole, but is more dmenu and less command line focused.
 
 **-d**, **--database** Path to Keepass database
 
+**-f**, **--field** Field to output with **--show**. Repeat for multiple fields, which are output one per line in the order given. One of *title*, *username*, *password*, *url*, *notes*, *totp*, `S:<attribute>`, or *all* for every field that has a value, labeled. Defaults to *password*
+
 **-h**, **--help** Print help and exit
 
 **-k**, **--keyfile**  Path to keyfile
 
 **-n**, **--no-prompt**  Do not prompt for database password
 
-**-s**, **--show** Search term(s)
+**-s**, **--show** Search term(s). Outputs the matched entry's password (default) or the fields selected by **--field** to stdout or to the clipboard with **--clipboard**. Requires a single matching entry
 
 **-t**, **--totp**  TOTP mode
 
@@ -50,6 +55,7 @@ Passhole, but is more dmenu and less command line focused.
     keepmenu -d ~/docs/totp_passwords.kdbx -a '{TOTP}{ENTER}'
     keepmenu -d ~/passwords.kdbx -k ~/passwords.keyfile -a '{S:security question}{ENTER}'
     keepmenu -s "production/ssh db" -d ~/passwords.kdbx
+    keepmenu -s "production/ssh db" -d ~/passwords.kdbx -f username -f password
 
 # CONFIGURATION
 

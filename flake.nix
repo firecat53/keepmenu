@@ -33,7 +33,7 @@
         '';
         postVenvCreation = ''
           uv pip install hatch
-          uv pip install -e .
+          uv pip install -e '.[autotype]'
           # Prevent venv uv from overriding nixpkgs uv
           [ -f $(pwd)/.venv/bin/uv ] && rm $(pwd)/.venv/bin/uv*
         '';
@@ -53,6 +53,8 @@
             hatchling
             ;
         };
+        # pynput is the `autotype` extra in pyproject.toml, not a hard
+        # dependency. Kept here so the packaged app is fully featured.
         propagatedBuildInputs = builtins.attrValues {
           inherit
             (pkgs.python3Packages)

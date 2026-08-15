@@ -57,7 +57,69 @@ SEQUENCE = "{USERNAME}{TAB}{PASSWORD}{ENTER}"
 MAX_LEN = 24
 CONF = configparser.ConfigParser()
 CLIPBOARD = False
-CLIPBOARD_CMD = "true"
+CLIPBOARD_CMD = None
+# True when running non-interactively (--show), so errors go to stderr instead
+# of to a dmenu style launcher, which may not be installed at all.
+CLI = False
+
+
+def default_conf():
+    """Contents of the config file generated on first run.
+
+    database_1/keyfile_1 are commented out examples rather than empty values so
+    that a fresh config doesn't look like it holds a broken database entry.
+    Written as text because configparser can't emit comments.
+
+    Returns: str
+
+    """
+    return ("[dmenu]\n"
+            "dmenu_command = dmenu\n"
+            "\n"
+            "[dmenu_passphrase]\n"
+            "obscure = True\n"
+            "obscure_color = #222222\n"
+            "\n"
+            "[database]\n"
+            "# database_1 = ~/passwords.kdbx\n"
+            "# keyfile_1 = ~/passwords.key\n"
+            f"pw_cache_period_min = {CACHE_PERIOD_DEFAULT_MIN}\n"
+            f"autotype_default = {SEQUENCE}\n")
+
+
+def get_clipboard_cmd():
+    """Find an available clipboard command.
+
+    Detected on first use rather than at config load so that keepmenu works on
+    systems with no clipboard tool installed. The result is cached in
+    CLIPBOARD_CMD.
+
+    Returns: str command or None if no clipboard tool is available
+
+    """
+    global CLIPBOARD_CMD  # pylint: disable=global-statement
+    if CLIPBOARD_CMD is not None:
+        return CLIPBOARD_CMD
+    clips = ['wl-copy'] if os.environ.get('WAYLAND_DISPLAY') else \
+        ["xsel -b", "xclip -selection clip"]
+    for clip in clips:
+        try:
+            _ = run(shlex.split(clip), check=False, stdout=DEVNULL, stderr=DEVNULL, input="")
+        except OSError:
+            continue
+        CLIPBOARD_CMD = clip
+        return CLIPBOARD_CMD
+    return None
+
+
+def clipboard_missing_msg():
+    """Error message naming the clipboard commands keepmenu looks for
+
+    Returns: str
+
+    """
+    clips = ['wl-copy'] if os.environ.get('WAYLAND_DISPLAY') else ["xsel", "xclip"]
+    return f"{' or '.join(clips)} needed for clipboard support"
 
 
 def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-many-branches
@@ -69,7 +131,6 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     # pragma pylint: disable=global-statement,global-variable-not-assigned
     global CACHE_PERIOD_MIN, \
         CACHE_PERIOD_DEFAULT_MIN, \
-        CLIPBOARD_CMD, \
         CONF, \
         MAX_LEN, \
         ENV, \
@@ -79,32 +140,21 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     CONF = configparser.ConfigParser()
     conf_file = conf_file if conf_file is not None else CONF_FILE
     if not exists(conf_file):
-        try:
-            os.mkdir(os.path.dirname(conf_file))
-        except OSError:
-            pass
+        conf_dir = os.path.dirname(conf_file)
+        if conf_dir:
+            os.makedirs(conf_dir, exist_ok=True)
         with open(conf_file, 'w', encoding=ENC) as cfile:
-            CONF.add_section('dmenu')
-            CONF.set('dmenu', 'dmenu_command', 'dmenu')
-            CONF.add_section('dmenu_passphrase')
-            CONF.set('dmenu_passphrase', 'obscure', 'True')
-            CONF.set('dmenu_passphrase', 'obscure_color', '#222222')
-            CONF.add_section('database')
-            CONF.set('database', 'database_1', '')
-            CONF.set('database', 'keyfile_1', '')
-            CONF.set('database', 'pw_cache_period_min', str(CACHE_PERIOD_DEFAULT_MIN))
-            CONF.set('database', 'autotype_default', SEQUENCE)
-            CONF.write(cfile)
+            cfile.write(default_conf())
     try:
         CONF.read(conf_file)
-    except configparser.ParsingError as err:
+    except configparser.Error as err:
         dmenu_err(f"Config file error: {err}")
         sys.exit()
-    if CONF.has_option('dmenu', 'dmenu_command'):
-        command = shlex.split(CONF.get('dmenu', 'dmenu_command'))
-    else:
-        CONF.set('dmenu', 'dmenu_command', 'dmenu')
-        command = 'dmenu'
+    # Add empty config sections
+    for section in ('dmenu', 'dmenu_passphrase', 'database'):
+        if not CONF.has_section(section):
+            CONF.add_section(section)
+    command = shlex.split(CONF.get('dmenu', 'dmenu_command', fallback='dmenu'))
     if "-l" in command:
         MAX_LEN = int(command[command.index("-l") + 1])
     if CONF.has_option("database", "pw_cache_period_min"):
@@ -127,19 +177,6 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
                 dmenu_err("dotoolc not installed.\n"
                           "Please install or remove that option from config.ini")
                 sys.exit()
-    if os.environ.get('WAYLAND_DISPLAY'):
-        clips = ['wl-copy']
-    else:
-        clips = ["xsel -b", "xclip -selection clip"]
-    for clip in clips:
-        try:
-            _ = run(shlex.split(clip), check=False, stdout=DEVNULL, stderr=DEVNULL, input="")
-            CLIPBOARD_CMD = clip
-            break
-        except OSError:
-            continue
-    if CLIPBOARD_CMD == "true":
-        dmenu_err(f"{' or '.join([shlex.split(i)[0] for i in clips])} needed for clipboard support")
 
 
 def safe_deref(entry, field):

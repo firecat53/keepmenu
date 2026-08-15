@@ -5,12 +5,21 @@
 ## Requirements
 
 1. Python 3.7+.
-2. [Pykeepass][1] >= 4.0.0 and [pynput][2]. Install via pip or your
-   distribution's package manager, if available.
-3. Bemenu, Dmenu, Wmenu, Fuzzel, Rofi, Tofi, Wofi, or Yofi.
-4. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
+2. [Pykeepass][1] >= 4.0.0. Install via pip or your distribution's package
+   manager, if available.
+
+That's all that's needed to use keepmenu as a CLI-only password manager (see
+[CLI-only usage](usage.md#cli-only-usage)). The interactive launcher mode
+additionally needs:
+
+3. [pynput][2], for auto-typing with the default `type_library`. Installed by
+   `pip install keepmenu[autotype]`, or use one of the alternate type libraries
+   in item 7.
+4. Bemenu, Dmenu, Wmenu, Fuzzel, Rofi, Tofi, Wofi, or Yofi.
+5. xsel/xclip (for X) or wl-clipboard (for Wayland), for clipboard support.
+6. (optional) Pinentry. Make sure to set which flavor of pinentry command to use
    in the config file.
-5. (optional) xdotool (for X) or ydotool (>=1.0.0, for Wayland), wtype (for
+7. (optional) xdotool (for X) or ydotool (>=1.0.0, for Wayland), wtype (for
    Wayland), dotool/dotoolc (X or Wayland). If you have a lot of
    Unicode characters or use a non-U.S. English keyboard layout, you might have
    to experiment with these to determine which works properly for your use case.
@@ -31,15 +40,24 @@ Ensure Universe repository is enabled.
 
 ## Install (recommended)
 
-`$ pip install --user keepmenu`
+`$ pip install --user keepmenu[autotype]`
 
 Add ~/.local/bin to $PATH
+
+Drop the `[autotype]` extra for a CLI-only install with no pynput or if another
+type_library will be configured:
+`$ pip install --user keepmenu`
+
+**Note:** pynput used to be installed unconditionally. Upgrading an existing
+install with a plain `pip install -U keepmenu` leaves it in place, but in a fresh
+virtualenv you need the `[autotype]` extra to keep auto-typing working unless
+using something other than pynput.
 
 ### Install (virtualenv)
 
     $ python -m venv venv
     $ source venv/bin/activate
-    $ pip install keepmenu
+    $ pip install keepmenu[autotype]
 
 Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
 
@@ -55,8 +73,8 @@ Link to the executable `venv/bin/keemenu` when assigning a keyboard shortcut.
     $ git clone https://github.com/firecat53/keepmenu
     $ cd keepmenu
     $ git checkout <branch> (if desired)
-    $ pip install --user . OR
-    $ pip install --user -e . (for editable install)
+    $ pip install --user '.[autotype]' OR
+    $ pip install --user -e '.[autotype]' (for editable install)
 
 ### Available in [Archlinux AUR][1] and in Nix packages
 

@@ -242,13 +242,15 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(KM.CONF.has_option("dmenu_passphrase", "obscure") and
                         KM.CONF.get("dmenu_passphrase", "obscure") == "True")
         self.assertTrue(KM.CONF.has_section("database"))
-        self.assertTrue(KM.CONF.has_option("database", "database_1") and
-                        KM.CONF.get("database", "database_1") == '')
-        self.assertTrue(KM.CONF.has_option("database", "keyfile_1") and
-                        KM.CONF.get("database", "keyfile_1") == '')
+        # database_1/keyfile_1 are commented out examples, not empty values
+        self.assertFalse(KM.CONF.has_option("database", "database_1"))
+        self.assertFalse(KM.CONF.has_option("database", "keyfile_1"))
+        self.assertEqual(KM.keepmenu.get_databases(), [])
         self.assertTrue(KM.CONF.has_option("database", "pw_cache_period_min") and
                         KM.CONF.get("database", "pw_cache_period_min") ==
                         str(KM.CACHE_PERIOD_DEFAULT_MIN))
+        self.assertTrue(KM.CONF.has_option("database", "autotype_default") and
+                        KM.CONF.get("database", "autotype_default") == KM.SEQUENCE)
 
     def test_create_database(self):
         """Test database create
@@ -727,6 +729,171 @@ class TestFunctions(unittest.TestCase):
         # Test multiple matches with return_errors
         result = run_once.run_once(database=db_name, show='Test', return_errors=True)
         self.assertIsNotNone(result)
+        self.assertTrue(result.startswith('ERROR:'))
+
+
+class TestCli(unittest.TestCase):
+    """Test the CLI-only (--show/--field) functionality
+
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        KM.CONF_FILE = os.path.join(self.tmpdir, "keepmenu-config.ini")
+        self.db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", self.db_name)
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            conf_file.write("[database]\n"
+                            f"database_1 = {self.db_name}\n"
+                            "password_1 = password\n")
+        KM.reload_config()
+        self.kpo = PyKeePass(self.db_name, 'password')
+
+    def tearDown(self):
+        rmtree(self.tmpdir)
+        KM.CLI = False
+
+    def entry(self, title):
+        """Return the single entry matching title"""
+        matches = run_once.search_entries(self.kpo.entries, title)
+        self.assertEqual(len(matches), 1)
+        return matches[0]
+
+    def test_minimal_config(self):
+        """A hand written config without a [dmenu] section is usable
+
+        """
+        # setUp wrote a config with only a [database] section
+        self.assertTrue(KM.CONF.has_section("dmenu"))
+        self.assertEqual(KM.menu.dmenu_cmd(10, "Entries"),
+                         ["dmenu", "-p", "Entries", "-l", "10"])
+
+    def test_conf_dir_created(self):
+        """Config file is created when its parent directories don't exist
+
+        """
+        conf_file = os.path.join(self.tmpdir, "no", "such", "dir", "config.ini")
+        KM.reload_config(conf_file)
+        self.assertTrue(os.path.isfile(conf_file))
+
+    def test_cli_mode_errors_to_stderr(self):
+        """dmenu_err prints to stderr instead of calling a launcher in CLI mode
+
+        """
+        KM.CLI = True
+        with mock.patch('keepmenu.menu.dmenu_select') as sel, \
+                mock.patch('sys.stderr') as err:
+            KM.menu.dmenu_err("some error")
+        sel.assert_not_called()
+        err.write.assert_any_call("some error")
+
+    def test_normalize_field(self):
+        """Field names are case insensitive and braces are optional
+
+        """
+        for name in ('password', 'PASSWORD', '{password}', '{PASSWORD}', ' password '):
+            self.assertEqual(run_once.normalize_field(name), 'password')
+        for name in KM.run_once.STANDARD_FIELDS:
+            self.assertEqual(run_once.normalize_field(name), name)
+        self.assertEqual(run_once.normalize_field('all'), 'all')
+        self.assertEqual(run_once.normalize_field('ALL'), 'all')
+        # Attribute names keep their case
+        self.assertEqual(run_once.normalize_field('S:Attr 1'), 'S:Attr 1')
+        self.assertEqual(run_once.normalize_field('s:Attr 1'), 'S:Attr 1')
+        self.assertEqual(run_once.normalize_field('{S:Attr 1}'), 'S:Attr 1')
+        for name in ('bogus', '', 'S:', '{}'):
+            self.assertRaises(ValueError, run_once.normalize_field, name)
+
+    def test_get_field(self):
+        """Each standard field and custom attributes are returned
+
+        """
+        entry = self.entry('Scotty/Backblaze B2')
+        self.assertEqual(run_once.get_field(entry, 'title'), 'Backblaze B2')
+        self.assertEqual(run_once.get_field(entry, 'username'), 'firecat53')
+        self.assertTrue(run_once.get_field(entry, 'password').startswith('hikW'))
+        # Fields with no value return an empty string, not None
+        self.assertEqual(run_once.get_field(entry, 'url'), '')
+        self.assertEqual(run_once.get_field(entry, 'totp'), '')
+        self.assertEqual(run_once.get_field(entry, 'S:nonexistent'), '')
+
+        entry = self.entry('Additional Attributes')
+        self.assertEqual(run_once.get_field(entry, 'S:Attr 1'), 'one')
+        self.assertEqual(run_once.get_field(entry, 'S:Attr 2: 1'), 'four')
+
+        entry = self.entry('keepass2 totp - more')
+        with mock.patch('time.time', return_value=0):
+            self.assertEqual(run_once.get_field(entry, 'totp'), '04607023')
+            self.assertEqual(run_once.get_field(entry, 'timeotp'), '04607023')
+
+    def test_list_fields(self):
+        """Only fields with a value are listed, TOTP plumbing attrs excluded
+
+        list_fields determines what `-f all` outputs.
+
+        """
+        self.assertEqual(run_once.list_fields(self.entry('Scotty/Backblaze B2')),
+                         ['title', 'username', 'password'])
+        self.assertEqual(run_once.list_fields(self.entry('Additional Attributes')),
+                         ['title', 'S:Attr 1', 'S:Attr 2', 'S:Attr 2: 1'])
+        # 'TimeOtp-Secret-Base32' etc. are reported as 'totp', not as attributes
+        self.assertEqual(run_once.list_fields(self.entry('keepass2 totp - more')),
+                         ['title', 'username', 'password', 'url', 'totp'])
+
+    def test_show_fields(self):
+        """--field output ordering and 'all'
+
+        """
+        # Default is the password, matching the old --show behavior
+        self.assertTrue(run_once.run_once(database=self.db_name,
+                                          show='Scotty/Backblaze B2').startswith('hikW'))
+        # Values are returned bare, one per line, in the requested order
+        result = run_once.run_once(database=self.db_name,
+                                   show='Scotty/Backblaze B2',
+                                   field=['password', 'username'])
+        self.assertEqual(result.split('\n')[1], 'firecat53')
+        self.assertTrue(result.split('\n')[0].startswith('hikW'))
+        # 'all' is labeled
+        result = run_once.run_once(database=self.db_name,
+                                   show='Additional Attributes',
+                                   field=['all'])
+        self.assertEqual(result, 'title: Additional Attributes\n'
+                                 'S:Attr 1: one\n'
+                                 'S:Attr 2: two\n'
+                                 'S:Attr 2: 1: four')
+
+    def test_show_fields_errors(self):
+        """An unknown field name is an error
+
+        """
+        result = run_once.run_once(database=self.db_name,
+                                   show='Scotty/Backblaze B2',
+                                   field=['bogus'],
+                                   return_errors=True)
+        self.assertTrue(result.startswith('ERROR:'))
+        with mock.patch('sys.stderr'):
+            result = run_once.run_once(database=self.db_name,
+                                       show='Scotty/Backblaze B2',
+                                       field=['bogus'])
+        self.assertIsNone(result)
+
+    def test_show_fields_clipboard(self):
+        """Clipboard mode returns an empty string on success, an error if no
+        clipboard command is available
+
+        """
+        with mock.patch('keepmenu.run_once.type_clipboard', return_value=True) as clip:
+            result = run_once.run_once(database=self.db_name,
+                                       show='Scotty/Backblaze B2',
+                                       field=['username'],
+                                       clipboard=True,
+                                       return_errors=True)
+        clip.assert_called_once_with('firecat53')
+        self.assertEqual(result, '')
+        with mock.patch('keepmenu.run_once.type_clipboard', return_value=False):
+            result = run_once.run_once(database=self.db_name,
+                                       show='Scotty/Backblaze B2',
+                                       clipboard=True,
+                                       return_errors=True)
         self.assertTrue(result.startswith('ERROR:'))
 
 

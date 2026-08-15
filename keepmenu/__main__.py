@@ -211,6 +211,23 @@ def run(**kwargs):
     return dmenu
 
 
+def print_show_result(result):
+    """Print the result of a --show request and exit non-zero on error.
+
+    Args: result - string from run_once or from the daemon. None on failure, an
+                   'ERROR: ' prefixed message on a reported error, and an empty
+                   string when there is nothing to print (clipboard mode).
+
+    """
+    if result is None:
+        sys.exit(1)
+    if result.startswith("ERROR:"):
+        print(result[7:], file=sys.stderr)  # Strip "ERROR: " prefix
+        sys.exit(1)
+    if result:
+        print(result)
+
+
 def main():
     """Main script entrypoint
 
@@ -244,6 +261,18 @@ def main():
     )
 
     parser.add_argument(
+        "-f",
+        "--field",
+        type=str,
+        action="append",
+        required=False,
+        metavar="FIELD",
+        help="Field to output with --show. Repeat for multiple fields, in order. "
+             "Example: -f title -f username -f S:<attribute>. "
+             "Use 'all' to print every field with a value. Defaults to password",
+    )
+
+    parser.add_argument(
         "-d",
         "--database",
         type=str,
@@ -272,7 +301,7 @@ def main():
             "--show",
             type=str,
             required=False,
-            help="Return password of matched entry",
+            help="Output the password of the matched entry or the fields given by --field",
     )
 
     parser.add_argument(
@@ -293,6 +322,8 @@ def main():
     )
 
     args = vars(parser.parse_args())
+    if args["field"] and not args["show"]:
+        parser.error("--field requires --show")
 
     port, auth = get_auth()
     if port_in_use(port) is False and not args["show"]:
@@ -300,11 +331,9 @@ def main():
     elif port_in_use(port) is False and args["show"]:
         # If no server is running, just run directly in one-shot mode
         from keepmenu.run_once import run_once
-        password = run_once(**args)
-        if password:
-            print(password)
-            return
-        sys.exit(1)
+        keepmenu.CLI = True
+        print_show_result(run_once(return_errors=True, **args))
+        return
     try:
         manager = client(port, auth)
         conn = manager.get_pipe()  # pylint: disable=no-member
@@ -335,12 +364,7 @@ def main():
             # AutoProxy objects need _getvalue() to get the actual string
             if hasattr(result, '_getvalue'):
                 result = result._getvalue()
-            if result:
-                if result.startswith("ERROR:"):
-                    print(result[7:], file=sys.stderr)  # Strip "ERROR: " prefix
-                    sys.exit(1)
-                else:
-                    print(result)
+            print_show_result(result)
     except ConnectionRefusedError:
         # Don't print the ConnectionRefusedError if any other exceptions are
         # raised.

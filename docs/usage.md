@@ -12,7 +12,7 @@
 
 ## CLI Options
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-n] [-s SEARCH] [-V]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-n] [-s SEARCH] [-f FIELD] [-V]`
 
 --help, -h Output a usage message and exit.
 
@@ -28,9 +28,55 @@
 
 -n, --no-prompt Do not prompt for database password
 
--s SEARCH, --show Output password of matching SEARCH entry to stdout (or to clipboard with -C)
+-s SEARCH, --show Output the password of the matching SEARCH entry to stdout (or to clipboard with -C)
+
+-f FIELD, --field FIELD Field to output with --show. Repeat for multiple fields,
+which are output one per line in the order given. Defaults to the password
 
 -V, --version Show version and exit
+
+## CLI-only usage
+
+Keepmenu can be used as a CLI-only password manager with nothing but
+Pykeepass installed. Install it without the `autotype` extra (see
+[installation](install.md)) and use `--show`.
+
+`--show SEARCH` finds the single entry matching SEARCH in its title, username,
+URL or group path, and outputs its password. If more than one entry matches, the
+matches are listed on stderr and keepmenu exits non-zero, so narrow the search
+(a group path such as `Backups/Backblaze B2` is often enough).
+
+Add `--field` to choose what gets output. Field names are the standard
+[Keepass 2.x references][2] names, without the braces and in any case - braces are
+accepted too, if you quote them:
+
+    $ keepmenu -d ~/passwords.kdbx -s 'ssh github' -f username -f password
+    gituser
+    hunter2
+
+Valid field names are `title`, `username`, `password`, `url`, `notes`, `totp`,
+and `S:<attribute>` for a custom attribute. Values are output bare, one per line,
+in the order requested, which makes them easy to read in a script:
+
+    $ { read -r user; read -r pass; } < <(keepmenu -d ~/passwords.kdbx \
+        -s 'ssh github' -f username -f password)
+
+`-f all` outputs every field that has a value, labeled `name: value`.
+
+    $ keepmenu -d ~/passwords.kdbx -s 'ssh github' -f all
+    title: ssh github
+    username: gituser
+    password: hunter2
+    url: https://github.com
+    totp: 123456
+    S:API Key: sk-abc123
+
+With `-C`, the output is copied to the clipboard instead of stdout (and cleared
+after 30 seconds). This needs xsel/xclip or wl-clipboard installed.
+
+The database password is prompted for on the terminal unless it's already
+available from `password_1`/`password_cmd_1` in config.ini, or the database is
+already unlocked by a running keepmenu daemon. Use `-n` to never prompt.
 
 ## Features
 
@@ -69,6 +115,10 @@
       desired. With `-n`, passwords/keyfiles must be provided either through
       already open databases (daemon running), command line options or config
       file options (e.g. password_cmd_1).
+    - Pass `-f` to output other fields, or several fields in a chosen order. See
+      [CLI-only usage](#cli-only-usage).
+    - Works with no launcher, pynput or clipboard tool installed, so keepmenu can
+      be used as a CLI-only password manager on a headless machine.
 - *Edit*
     - Edit entry title, username, URL, attributes, and password (manually typed or auto-generate)
     - Edit notes using terminal or gui editor (set in config.ini, or uses $EDITOR)

@@ -37,6 +37,10 @@ classifiers = [
 ]
 dependencies = [
     "pykeepass>=4.0.0",
+]
+
+[project.optional-dependencies]
+autotype = [
     "pynput",
 ]
 
