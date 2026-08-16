@@ -946,5 +946,56 @@ class TestCli(unittest.TestCase):
         self.assertTrue(result.startswith('ERROR:'))
 
 
+class TestClipboard(unittest.TestCase):
+    """Test copying to and clearing the clipboard
+
+    """
+    def setUp(self):
+        self.orig_cli = KM.CLI
+        self.orig_cmd = KM.CLIPBOARD_CMD
+
+    def tearDown(self):
+        KM.CLI = self.orig_cli
+        KM.CLIPBOARD_CMD = self.orig_cmd
+
+    def test_clipboard_cmd_is_not_executed_to_detect_it(self):
+        """Running a clipboard command to see whether it exists empties the
+        clipboard as a side effect
+
+        """
+        KM.CLIPBOARD_CMD = None
+        with mock.patch.object(KM, 'run') as run_mock, \
+                mock.patch.object(KM.shutil, 'which', return_value='/usr/bin/clip'):
+            cmd = KM.get_clipboard_cmd()
+        run_mock.assert_not_called()
+        self.assertIsNotNone(cmd)
+
+    def test_clipboard_cleared_on_a_timer_in_daemon_mode(self):
+        """The daemon outlives the copy, so a timer thread is enough
+
+        """
+        KM.CLI = False
+        with mock.patch.object(KM.type, 'Timer') as timer, \
+                mock.patch.object(KM.type, 'Popen') as popen:
+            KM.type.clear_clipboard_later("xsel -b")
+        popen.assert_not_called()
+        timer.assert_called_once()
+        self.assertEqual(timer.call_args[0][0], KM.type.CLIPBOARD_CLEAR_SEC)
+
+    def test_clipboard_clear_is_detached_in_cli_mode(self):
+        """A one-shot --show exits as soon as it has copied, which kills a
+        timer thread and leaves the password in the clipboard for good
+
+        """
+        KM.CLI = True
+        with mock.patch.object(KM.type, 'Timer') as timer, \
+                mock.patch.object(KM.type, 'Popen') as popen:
+            KM.type.clear_clipboard_later("xsel -b")
+        timer.assert_not_called()
+        popen.assert_called_once()
+        self.assertEqual(popen.call_args[0][0][-2:], ["xsel", "-b"])
+        self.assertTrue(popen.call_args[1]['start_new_session'])
+
+
 if __name__ == "__main__":
     unittest.main()

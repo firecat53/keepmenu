@@ -152,9 +152,9 @@ def get_clipboard_cmd():
     clips = ['wl-copy'] if os.environ.get('WAYLAND_DISPLAY') else \
         ["xsel -b", "xclip -selection clip"]
     for clip in clips:
-        try:
-            _ = run(shlex.split(clip), check=False, stdout=DEVNULL, stderr=DEVNULL, input="")
-        except OSError:
+        # Look the command up rather than running it. Running it to see if it
+        # exists empties the clipboard as a side effect.
+        if shutil.which(shlex.split(clip)[0]) is None:
             continue
         CLIPBOARD_CMD = clip
         return CLIPBOARD_CMD

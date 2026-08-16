@@ -5,7 +5,8 @@
 # pylint: disable=import-outside-toplevel
 import re
 from shlex import split
-from subprocess import call, run, CalledProcessError
+from subprocess import call, run, CalledProcessError, DEVNULL, Popen
+import sys
 from threading import Timer
 import time
 
@@ -497,6 +498,35 @@ def type_text(data):
                       "Try setting `type_library = xdotool` in config.ini")
 
 
+CLIPBOARD_CLEAR_SEC = 30
+
+
+def clear_clipboard_later(cmd):
+    """Clear the clipboard after CLIPBOARD_CLEAR_SEC seconds
+
+    The daemon sticks around long enough to do this on a timer thread, but a
+    one-shot --show exits as soon as it has copied, which would kill the timer
+    and leave the password in the clipboard for good. Hand that case off to a
+    detached child so the shell still gets its prompt back immediately.
+
+    Args: cmd - str, clipboard command
+
+    """
+    if keepmenu.CLI is not True:
+        clear = Timer(CLIPBOARD_CLEAR_SEC,
+                      lambda: run(split(cmd), check=False, input=""))
+        clear.daemon = True
+        clear.start()
+        return
+    Popen([sys.executable, "-c",
+           "import subprocess, sys, time\n"
+           "time.sleep(float(sys.argv[1]))\n"
+           "subprocess.run(sys.argv[2:], check=False, input=b'')\n",
+           str(CLIPBOARD_CLEAR_SEC), *split(cmd)],
+          start_new_session=True,
+          stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)  # pylint: disable=consider-using-with
+
+
 def type_clipboard(text):
     """Copy text to clipboard and clear clipboard after 30 seconds
 
@@ -512,7 +542,5 @@ def type_clipboard(text):
         run(split(cmd), check=True, input=text.encode(keepmenu.ENC))
     except CalledProcessError:
         return False
-    clear = Timer(30, lambda: run(split(cmd), check=False, input=""))
-    clear.daemon = True
-    clear.start()
+    clear_clipboard_later(cmd)
     return True
