@@ -299,9 +299,12 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
             if not code_size_choice:
                 return
             try:
-                code_size_choice = int(time_step_choice)
+                code_size_choice = int(code_size_choice)
             except ValueError:
                 code_size_choice = 6
+        else:
+            # Cancelled at the settings prompt
+            return
 
         otp_url = (f"otpauth://totp/Main:none?secret={secret_key}&period={time_step_choice}"
                    f"&digits={code_size_choice}&issuer=Main")

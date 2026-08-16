@@ -955,6 +955,54 @@ class TestCli(unittest.TestCase):
         self.assertTrue(result.startswith('ERROR:'))
 
 
+class TestEditTotp(unittest.TestCase):
+    """Test entering TOTP settings
+
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        KM.CONF_FILE = os.path.join(self.tmpdir, "keepmenu-config.ini")
+        KM.reload_config(KM.CONF_FILE)
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        self.kpo = PyKeePass(db_name, 'password')
+        self.entry = self.kpo.entries[0]
+        self.entry.otp = ""
+
+    def tearDown(self):
+        rmtree(self.tmpdir)
+
+    def edit_totp(self, selections):
+        """Run edit_totp() against a canned list of launcher selections"""
+        with mock.patch.object(KM.edit, 'dmenu_select', side_effect=selections), \
+                mock.patch.object(KM.edit, 'get_otp_url', return_value=""):
+            KM.edit.edit_totp(self.entry)
+
+    def test_custom_code_size(self):
+        """Test the code size prompt sets the code size, not the time step
+
+        """
+        self.edit_totp(["Enter secret key", SECRET1, "Use custom settings",
+                        "SHA-1", "45", "8"])
+
+        self.assertIn("period=45", self.entry.otp)
+        self.assertIn("digits=8", self.entry.otp)
+        with mock.patch('time.time', return_value=1260):
+            self.assertEqual(len(KM.totp.gen_otp(self.entry.otp)), 8)
+
+    def test_cancel_settings_prompt(self):
+        """Test cancelling out of the settings prompts leaves the entry alone
+
+        """
+        for selections in (["Enter secret key", SECRET1, ""],
+                           ["Enter secret key", SECRET1, "Use custom settings", ""],
+                           ["Enter secret key", SECRET1, "Use custom settings", "SHA-1", ""],
+                           ["Enter secret key", SECRET1, "Use custom settings",
+                            "SHA-1", "30", ""]):
+            self.edit_totp(selections)
+            self.assertEqual(self.entry.otp, "")
+
+
 class TestClipboard(unittest.TestCase):
     """Test copying to and clearing the clipboard
 
