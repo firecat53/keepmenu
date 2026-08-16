@@ -7,6 +7,7 @@ import locale
 import os
 import shlex
 import shutil
+import stat
 from subprocess import run, DEVNULL
 import sys
 import tempfile
@@ -27,10 +28,54 @@ __version__ = "1.5.1"
 # logger.addHandler(file_handler)
 
 
+def check_private_path(path, isdir):
+    """Check that a path is a user owned, non-symlink file or directory that no
+    other user can read.
+
+    The auth file holds the BaseManager port and authkey, and that manager
+    speaks pickle, so anyone who can read or replace it can run code as us and
+    read every unlocked database. The $TMPDIR fallback for the runtime
+    directory is a world writable directory, so nothing there can be trusted
+    without checking it.
+
+    Args: path - os.path
+          isdir - bool, True if path is expected to be a directory
+
+    Returns: None if the path is safe to use, otherwise an error string
+
+    """
+    try:
+        stt = os.lstat(path)
+    except OSError as err:
+        return f"unable to check {path}: {err}"
+    if not (stat.S_ISDIR(stt.st_mode) if isdir else stat.S_ISREG(stt.st_mode)):
+        return f"{path} is not a {'directory' if isdir else 'regular file'}"
+    if stt.st_uid != os.getuid():
+        return f"{path} is not owned by the current user"
+    if stt.st_mode & 0o077:
+        return f"{path} is accessible by other users (mode {stt.st_mode & 0o777:03o})"
+    return None
+
+
+def insecure_path_exit(path, isdir):
+    """Exit if a path isn't private to the current user.
+
+    Args: path - os.path
+          isdir - bool, True if path is expected to be a directory
+
+    """
+    err = check_private_path(path, isdir)
+    if err is not None:
+        print(f"Refusing to use an insecure keepmenu runtime path: {err}.\n"
+              "Remove it (or fix its ownership and permissions) and try again.",
+              file=sys.stderr)
+        sys.exit(1)
+
+
 def get_runtime_dir():
     """Get the runtime directory for auth file storage.
 
-    Prefers $XDG_RUNTIME_DIR/keepmenu/. Falls back to $TMPDIR/keepmenu-<uid>/ 
+    Prefers $XDG_RUNTIME_DIR/keepmenu/. Falls back to $TMPDIR/keepmenu-<uid>/
 
     Returns: str path to runtime directory
 
@@ -40,8 +85,12 @@ def get_runtime_dir():
         runtime_dir = join(xdg_runtime, 'keepmenu')
     else:
         runtime_dir = join(tempfile.gettempdir(), f'keepmenu-{os.getuid()}')
-    if not exists(runtime_dir):
+    try:
         os.makedirs(runtime_dir, mode=0o700)
+    except FileExistsError:
+        # Pre-existing, so it wasn't necessarily created by us with mode 0700
+        pass
+    insecure_path_exit(runtime_dir, isdir=True)
     return runtime_dir
 
 

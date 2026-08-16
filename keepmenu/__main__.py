@@ -10,9 +10,8 @@ from getpass import getpass
 from multiprocessing.managers import BaseManager
 import os
 from os.path import exists, expanduser
-import random
+import secrets
 import socket
-import string
 from subprocess import call
 import sys
 
@@ -51,12 +50,21 @@ def get_auth():
 
     """
     auth = configparser.ConfigParser()
-    if not exists(keepmenu.AUTH_FILE):
-        fd_ = os.open(keepmenu.AUTH_FILE, os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        # O_EXCL|O_NOFOLLOW so that a file or symlink planted by another user
+        # can never be written to or followed. O_EXCL also means a concurrent
+        # instance can't have the file half written when we read it below.
+        fd_ = os.open(keepmenu.AUTH_FILE,
+                      os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                      0o600)
+    except FileExistsError:
+        pass
+    else:
         with open(fd_, 'w', encoding=keepmenu.ENC) as a_file:
             auth.set('DEFAULT', 'port', str(find_free_port()))
             auth.set('DEFAULT', 'authkey', random_str())
             auth.write(a_file)
+    keepmenu.insecure_path_exit(keepmenu.AUTH_FILE, isdir=False)
     try:
         auth.read(keepmenu.AUTH_FILE)
         port = auth.get('DEFAULT', 'port')
@@ -72,11 +80,13 @@ def get_auth():
 def random_str():
     """Generate random auth string for BaseManager
 
+    The BaseManager RPC is pickle based, so this key is what keeps another
+    local user from running code in the daemon. It needs a CSPRNG.
+
     Returns: string
 
     """
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(15))
+    return secrets.token_hex(32)
 
 
 def client(port, auth):

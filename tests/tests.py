@@ -91,6 +91,24 @@ class TestRuntimeDir(unittest.TestCase):
         expected = os.path.join(custom_tmpdir, f'keepmenu-{os.getuid()}')
         self.assertEqual(runtime_dir, expected)
 
+    def test_insecure_runtime_dir_refused(self):
+        """Test that a pre-existing world accessible runtime dir is refused
+
+        A local attacker can create $TMPDIR/keepmenu-<uid>/ before we do, then
+        read the port and authkey we write into it.
+
+        """
+        if 'XDG_RUNTIME_DIR' in os.environ:
+            del os.environ['XDG_RUNTIME_DIR']
+        custom_tmpdir = os.path.join(self.tmpdir, 'tmp')
+        os.makedirs(custom_tmpdir, mode=0o777)
+        os.environ['TMPDIR'] = custom_tmpdir
+        tempfile.tempdir = None
+        os.makedirs(os.path.join(custom_tmpdir, f'keepmenu-{os.getuid()}'), mode=0o777)
+
+        with self.assertRaises(SystemExit):
+            KM.get_runtime_dir()
+
 
 class TestServer(unittest.TestCase):
     """Test various BaseManager server functions
@@ -117,6 +135,37 @@ class TestServer(unittest.TestCase):
         port2, key2 = KM.__main__.get_auth()
         self.assertEqual(port2, port)
         self.assertEqual(key2, key)
+
+    def test_auth_file_is_private(self):
+        """Test the auth file is created 0600 and holds a strong authkey
+
+        """
+        _, key = KM.__main__.get_auth()
+        self.assertEqual(os.stat(KM.AUTH_FILE).st_mode & 0o777, 0o600)
+        self.assertGreaterEqual(len(key), 32)
+        self.assertIsNone(KM.check_private_path(KM.AUTH_FILE, isdir=False))
+
+    def test_insecure_auth_file_refused(self):
+        """Test that a world readable auth file is refused rather than used
+
+        """
+        with open(KM.AUTH_FILE, 'w', encoding=KM.ENC) as a_file:
+            a_file.write("[DEFAULT]\nport = 1234\nauthkey = attacker\n")
+        os.chmod(KM.AUTH_FILE, 0o666)
+
+        with self.assertRaises(SystemExit):
+            KM.__main__.get_auth()
+
+    def test_symlinked_auth_file_refused(self):
+        """Test that a symlink planted at the auth file path isn't followed
+
+        """
+        target = os.path.join(self.tmpdir, "target")
+        os.symlink(target, KM.AUTH_FILE)
+
+        with self.assertRaises(SystemExit):
+            KM.__main__.get_auth()
+        self.assertFalse(os.path.exists(target))
 
     def test_client_without_server(self):
         """Ensure client raises an error with no server running
