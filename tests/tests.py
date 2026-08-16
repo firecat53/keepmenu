@@ -613,6 +613,15 @@ class TestFunctions(unittest.TestCase):
                     digits=6
                 )), '093610')
 
+        # A period other than the 30 second default has to be honoured
+        for otp_url in [otp_url_1, otp_url_2]:
+            with mock.patch('time.time', return_value=1260):
+                self.assertEqual(KM.totp.gen_otp(otp_url.format(
+                    secret=SECRET1,
+                    period=60,
+                    digits=6
+                )), '409754')
+
         # keeotp's otp field empirically doesn't support steam encoding
         for otp_url in [otp_url_1]:
             with mock.patch('time.time', return_value=0):
@@ -674,11 +683,11 @@ class TestFunctions(unittest.TestCase):
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_multi_entry)), "009551")
         with mock.patch('time.time', return_value=1260):
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_entry)), "626854")
-            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "59008166")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "54549407")
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_multi_entry)), "093610")
         with mock.patch('time.time', return_value=1270):
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_entry)), "626854")
-            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "59008166")
+            self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_more_entry)), "54549407")
             self.assertEqual(KM.totp.gen_otp(KM.totp.get_otp_url(kp2_multi_entry)), "093610")
 
 

@@ -88,7 +88,7 @@ def gen_otp(otp_url):
     if 'secret' in query_string:
         params['key'] = query_string['secret'][0]
         try:
-            params['time_step'] = int(query_string['periods'][0])
+            params['time_step'] = int(query_string['period'][0])
         except KeyError:
             pass
         try:
