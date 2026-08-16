@@ -8,7 +8,7 @@ from os.path import expanduser
 import keepmenu
 import os
 import sys
-from keepmenu.keepmenu import get_database, get_entries
+from keepmenu.keepmenu import get_database
 from keepmenu.totp import get_otp_url, TOTP_FIELDS
 from keepmenu.type import PLACEHOLDER_AUTOTYPE_TOKENS, type_clipboard
 
@@ -210,8 +210,8 @@ def run_once(db=None, **kwargs):
             print(error_msg, file=sys.stderr)
             return None
 
-        # Get entries
-        db.kpo = get_entries(db, cli_mode=True)
+        # get_database() has already opened the database. Opening it again here
+        # means paying for the key derivation twice on every lookup.
         if db.kpo is None:
             error_msg = "Error: Could not retrieve entries from database"
             if return_errors:
