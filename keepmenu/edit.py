@@ -235,7 +235,7 @@ def edit_totp(kp_entry):  # pylint: disable=too-many-statements,too-many-branche
     """
     otp_url = get_otp_url(kp_entry)
 
-    if otp_url is not None:
+    if otp_url:
         inputs = [
             "Enter secret key",
             "Type TOTP",

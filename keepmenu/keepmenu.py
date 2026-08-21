@@ -219,6 +219,9 @@ def get_initial_db():
         create = dmenu_select(0, f"Create new database {db_name} (y/n)?")
         if create.lower() == "y":
             kpo = create_db(db_name)
+            if not kpo:
+                # create_db() has already reported why
+                return False
             keyfile_name = kpo.keyfile
         else:
             dmenu_err("Database not created. Try again.")

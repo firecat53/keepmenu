@@ -998,17 +998,22 @@ class TestEditTotp(unittest.TestCase):
         rmtree(self.tmpdir)
 
     def edit_totp(self, selections):
-        """Run edit_totp() against a canned list of launcher selections"""
+        """Run edit_totp() against a canned list of launcher selections
+
+        The entry has no TOTP secret, so the first prompt is "Secret Key?".
+        """
         with mock.patch.object(KM.edit, 'dmenu_select', side_effect=selections), \
+                mock.patch.object(KM.edit, 'dmenu_err') as err, \
                 mock.patch.object(KM.edit, 'get_otp_url', return_value=""):
             KM.edit.edit_totp(self.entry)
+        # dmenu_err pops a real launcher window that blocks until dismissed
+        err.assert_not_called()
 
     def test_custom_code_size(self):
         """Test the code size prompt sets the code size, not the time step
 
         """
-        self.edit_totp(["Enter secret key", SECRET1, "Use custom settings",
-                        "SHA-1", "45", "8"])
+        self.edit_totp([SECRET1, "Use custom settings", "SHA-1", "45", "8"])
 
         self.assertIn("period=45", self.entry.otp)
         self.assertIn("digits=8", self.entry.otp)
@@ -1019,13 +1024,54 @@ class TestEditTotp(unittest.TestCase):
         """Test cancelling out of the settings prompts leaves the entry alone
 
         """
-        for selections in (["Enter secret key", SECRET1, ""],
-                           ["Enter secret key", SECRET1, "Use custom settings", ""],
-                           ["Enter secret key", SECRET1, "Use custom settings", "SHA-1", ""],
-                           ["Enter secret key", SECRET1, "Use custom settings",
-                            "SHA-1", "30", ""]):
+        for selections in ([SECRET1, ""],
+                           [SECRET1, "Use custom settings", ""],
+                           [SECRET1, "Use custom settings", "SHA-1", ""],
+                           [SECRET1, "Use custom settings", "SHA-1", "30", ""]):
             self.edit_totp(selections)
             self.assertEqual(self.entry.otp, "")
+
+    def test_type_totp_not_offered_without_a_secret(self):
+        """get_otp_url() returns '' rather than None for an entry with no
+        TOTP, so "Type TOTP" used to be offered for every entry and typed
+        nothing when picked
+
+        """
+        with mock.patch.object(KM.edit, 'dmenu_select', side_effect=[""]) as sel, \
+                mock.patch.object(KM.edit, 'dmenu_err'), \
+                mock.patch.object(KM.edit, 'get_otp_url', return_value=""), \
+                mock.patch.object(KM.edit, 'type_text') as type_text:
+            KM.edit.edit_totp(self.entry)
+        self.assertEqual([i[0][1] for i in sel.call_args_list], ["Secret Key?"])
+        type_text.assert_not_called()
+
+    def test_type_totp_offered_with_a_secret(self):
+        """An entry that does have a TOTP secret still gets the menu
+
+        """
+        url = f"otpauth://totp/Main:none?secret={SECRET1}&period=30&digits=6"
+        with mock.patch.object(KM.edit, 'dmenu_select', side_effect=["Type TOTP"]), \
+                mock.patch.object(KM.edit, 'dmenu_err'), \
+                mock.patch.object(KM.edit, 'get_otp_url', return_value=url), \
+                mock.patch.object(KM.edit, 'type_text') as type_text:
+            KM.edit.edit_totp(self.entry)
+        type_text.assert_called_once_with(KM.totp.gen_otp(url))
+
+
+class TestInitialDb(unittest.TestCase):
+    """Test the first run database prompts
+
+    """
+    def test_cancelled_create_db(self):
+        """create_db() returns False when the two passphrases don't match, so
+        reading kpo.keyfile blew up with an AttributeError
+
+        """
+        with mock.patch.object(KM.keepmenu, 'dmenu_select',
+                               side_effect=["/nonexistent/new.kdbx", "y"]), \
+                mock.patch.object(KM.keepmenu, 'create_db', return_value=False), \
+                mock.patch.object(KM.keepmenu, 'dmenu_err'):
+            self.assertFalse(KM.keepmenu.get_initial_db())
 
 
 class TestClipboard(unittest.TestCase):
