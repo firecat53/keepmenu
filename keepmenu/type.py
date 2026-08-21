@@ -155,7 +155,6 @@ def type_entry(entry, db_autotype=None):
         sequence = entry.autotype_sequence
     tokens = tokenize_autotype(sequence)
 
-    library = "pynput"
     libraries = {'pynput': type_entry_pynput,
                  'xdotool': type_entry_xdotool,
                  'ydotool': type_entry_ydotool,

@@ -99,7 +99,6 @@ def client(port, auth):
     mgr.register('get_pipe')
     mgr.register('read_args_from_pipe')
     mgr.register('totp_mode')
-    mgr.register('get_current_database_path')
     mgr.register('get_open_database_paths')
     mgr.register('get_config_passwordable_paths')
     mgr.register('receive_show_result')
@@ -121,12 +120,8 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
         self.args_flag = Event()
         self.totp_flag = Event()
         self.start_flag.set()
-        self.args = None
-        self.current_database_path = None
         self._parent_conn, self._child_conn = Pipe(duplex=True)
         self.shared_state = shared_state
-        self.open_database_paths = set()
-        self.config_passwordable_paths = set()
 
     def run(self):
         _ = self.server()
@@ -178,8 +173,6 @@ class Server(Process):  # pylint: disable=too-many-instance-attributes
         mgr.register('get_pipe', callable=self._get_pipe)
         mgr.register('read_args_from_pipe', callable=self.args_flag.set)
         mgr.register('totp_mode', callable=self.totp_flag.set)
-        mgr.register('get_current_database_path',
-                     callable=lambda: self.shared_state.current_database_path if self.shared_state else None)
         mgr.register('get_open_database_paths', callable=_get_open_paths)
         mgr.register('get_config_passwordable_paths', callable=_get_config_paths)
         mgr.register('receive_show_result', callable=self.receive_show_result)
@@ -196,7 +189,6 @@ def run(**kwargs):
     shared_state = state_manager.Namespace()
     shared_state.open_database_paths = []
     shared_state.config_passwordable_paths = []
-    shared_state.current_database_path = None
 
     server = None
     try:
@@ -204,9 +196,6 @@ def run(**kwargs):
         if kwargs.get('totp'):
             server.totp_flag.set()
         dmenu = DmenuRunner(server, shared_state=shared_state, **kwargs)
-        # Set the initial database path registered for the server callable
-        if dmenu.database and dmenu.database.dbase:
-            shared_state.current_database_path = dmenu.database.dbase
         dmenu.daemon = True
         server.start()
         dmenu.start()

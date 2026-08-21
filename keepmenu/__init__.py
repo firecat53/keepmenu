@@ -177,15 +177,7 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     Args: conf_file - os.path
 
     """
-    # pragma pylint: disable=global-statement,global-variable-not-assigned
-    global CACHE_PERIOD_MIN, \
-        CACHE_PERIOD_DEFAULT_MIN, \
-        CONF, \
-        MAX_LEN, \
-        ENV, \
-        ENC, \
-        SEQUENCE
-    # pragma pylint: enable=global-variable-undefined,global-variable-not-assigned
+    global CACHE_PERIOD_MIN, CONF, MAX_LEN, SEQUENCE  # pylint: disable=global-statement
     CONF = configparser.ConfigParser()
     conf_file = conf_file if conf_file is not None else CONF_FILE
     if not exists(conf_file):

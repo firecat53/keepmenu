@@ -29,19 +29,23 @@ def dmenu_cmd(num_lines, prompt):
                 "yofi": ["-p", str(prompt), "dialog"],
                 "fuzzel": ["-p", str(prompt) + " ", "-l", str(num_lines)]}
     command = shlex.split(keepmenu.CONF.get('dmenu', 'dmenu_command', fallback='dmenu'))
-    command.extend(commands.get(basename(command[0]), []))
+    launcher = basename(command[0])
+    command.extend(commands.get(launcher, []))
     pwprompts = ("Password", "password", "client_secret", "Verify password", "Enter Password")
     obscure = keepmenu.CONF.getboolean('dmenu_passphrase', 'obscure', fallback=True)
     if any(i == prompt for i in pwprompts) and obscure is True:
-        pass_prompts = {"dmenu": dmenu_pass(basename(command[0])),
-                        "wmenu": dmenu_pass(basename(command[0])),
-                        "rofi": ['-password'],
+        pass_prompts = {"rofi": ['-password'],
                         "bemenu": ['-x', 'indicator', '*'],
                         "tofi": ["--hide-input=true", "--hidden-character=*"],
                         "wofi": ['-P'],
                         "yofi": ['--password'],
                         "fuzzel": ['--password']}
-        command.extend(pass_prompts.get(basename(command[0]), []))
+        # dmenu_pass runs the launcher to check for the password patch, so
+        # only call it for the launcher actually in use.
+        if launcher in ('dmenu', 'wmenu'):
+            command.extend(dmenu_pass(launcher))
+        else:
+            command.extend(pass_prompts.get(launcher, []))
     return command
 
 

@@ -346,6 +346,21 @@ class TestFunctions(unittest.TestCase):
                "-l", "20", "-nb", "#222222", "-nf", "#222222"]
         self.assertTrue(KM.menu.dmenu_cmd(20, "Password") == res)
 
+    def test_dmenu_pass_probes_the_launcher_once(self):
+        """dmenu_pass() runs `<launcher> -h` to detect the password patch, so
+        building a password prompt must not call it once per dict key
+
+        """
+        KM.CONF.set('dmenu', 'dmenu_command', 'dmenu')
+        with mock.patch.object(KM.menu, 'dmenu_pass', return_value=['-P']) as dpass:
+            self.assertEqual(KM.menu.dmenu_cmd(10, "Password")[-1], '-P')
+        dpass.assert_called_once_with('dmenu')
+        # Launchers with a native password flag never probe
+        KM.CONF.set('dmenu', 'dmenu_command', 'rofi')
+        with mock.patch.object(KM.menu, 'dmenu_pass') as dpass:
+            self.assertIn('-password', KM.menu.dmenu_cmd(10, "Password"))
+        dpass.assert_not_called()
+
     def test_generate_prompt(self):
         """Test properly generating prompt using various values of max_length
         (the title_path option in the config)

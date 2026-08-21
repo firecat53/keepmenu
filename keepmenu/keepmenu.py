@@ -590,8 +590,6 @@ class DmenuRunner(Process):
                 self.open_databases[self.database.dbase].is_active = True
             return
         self.expiring = get_expiring_entries(self.database.kpo.entries)
-        if self.shared_state is not None:
-            self.shared_state.current_database_path = self.database.dbase
         self._update_server_db_state()
         self.dmenu_run(self.database.totp)
 
