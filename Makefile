@@ -1,13 +1,18 @@
 VENV = .venv
 PYTHON = $(VENV)/bin/python
-PIP = $(VENV)/bin/pip
+# Via the interpreter, so a venv whose console scripts are missing or
+# non-executable still works.
+PIP = $(PYTHON) -m pip
 
 all: venv
 
 $(VENV)/bin/activate: pyproject.toml
 	python3 -m venv $(VENV)
 	$(PIP) install -U pip wheel
-	$(PIP) install '.[autotype]'
+	# Editable, to match flake.nix. A non-editable install silently
+	# replaces the flake's editable one, and then `make test` tests a
+	# snapshot of the tree rather than the tree.
+	$(PIP) install -e '.[autotype]'
 
 venv: $(VENV)/bin/activate
 

@@ -26,8 +26,10 @@
         venvDir = "./.venv";
         C_INCLUDE_PATH = "${pkgs.linuxHeaders}/include";
         HATCH_ENV_TYPE_VIRTUAL_UV_PATH = "${pkgs.uv}/bin/uv"; # use Nix uv instead of hatch downloaded binary
-        PYTHONPATH = "$PYTHONPATH:$PWD";
         shellHook = ''
+          # Exported here rather than as a mkShell attribute, which Nix would
+          # pass through literally as the string "$PYTHONPATH:$PWD".
+          export PYTHONPATH="$PYTHONPATH:$PWD"
           venvShellHook
           alias keepmenu="python -m keepmenu"
         '';
