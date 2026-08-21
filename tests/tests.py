@@ -1,6 +1,8 @@
 """Unit tests for keepmenu
 
 """
+import contextlib
+import io
 from multiprocessing.managers import BaseManager
 import os
 from shutil import copyfile, rmtree
@@ -106,8 +108,10 @@ class TestRuntimeDir(unittest.TestCase):
         tempfile.tempdir = None
         os.makedirs(os.path.join(custom_tmpdir, f'keepmenu-{os.getuid()}'), mode=0o777)
 
-        with self.assertRaises(SystemExit):
+        err = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(err):
             KM.get_runtime_dir()
+        self.assertIn("accessible by other users", err.getvalue())
 
 
 class TestServer(unittest.TestCase):
@@ -153,8 +157,10 @@ class TestServer(unittest.TestCase):
             a_file.write("[DEFAULT]\nport = 1234\nauthkey = attacker\n")
         os.chmod(KM.AUTH_FILE, 0o666)
 
-        with self.assertRaises(SystemExit):
+        err = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(err):
             KM.__main__.get_auth()
+        self.assertIn("accessible by other users", err.getvalue())
 
     def test_symlinked_auth_file_refused(self):
         """Test that a symlink planted at the auth file path isn't followed
@@ -163,8 +169,10 @@ class TestServer(unittest.TestCase):
         target = os.path.join(self.tmpdir, "target")
         os.symlink(target, KM.AUTH_FILE)
 
-        with self.assertRaises(SystemExit):
+        err = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(err):
             KM.__main__.get_auth()
+        self.assertIn("not a regular file", err.getvalue())
         self.assertFalse(os.path.exists(target))
 
     def test_client_without_server(self):
@@ -189,7 +197,6 @@ class TestServer(unittest.TestCase):
         """
         port, key = KM.__main__.get_auth()
         mgr = BaseManager(address=('127.0.0.1', port), authkey=key)
-        mgr.get_server()
         mgr.start()  # pylint: disable=consider-using-with
         self.assertIsInstance(KM.__main__.client(port, key), BaseManager)
         mgr.shutdown()
