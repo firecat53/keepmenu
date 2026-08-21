@@ -279,6 +279,20 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(pword.isdisjoint(set(string.ascii_lowercase)))
         self.assertTrue(pword.isdisjoint(set('   ')))
 
+    def test_generated_password_shuffled_with_a_csprng(self):
+        """The character order is part of the password, so it can't come from
+        the Mersenne Twister
+
+        """
+        chars = {'Letters': {'upper': string.ascii_uppercase,
+                             'lower': string.ascii_lowercase}}
+        with mock.patch('random.shuffle') as mt_shuffle, \
+                mock.patch.object(KM.edit, 'SystemRandom') as sysrandom:
+            pword = KM.edit.gen_passwd(chars, 10)
+        self.assertEqual(len(pword), 10)
+        mt_shuffle.assert_not_called()
+        sysrandom.return_value.shuffle.assert_called_once()
+
     def test_conf(self):
         """Test generating config file when none exists
 
@@ -833,6 +847,17 @@ class TestCli(unittest.TestCase):
         KM.reload_config(conf_file)
         self.assertTrue(os.path.isfile(conf_file))
 
+    def test_conf_file_is_private(self):
+        """docs/configure.md documents storing database passwords in
+        config.ini, so it can't be created world readable
+
+        """
+        conf_dir = os.path.join(self.tmpdir, "fresh")
+        conf_file = os.path.join(conf_dir, "config.ini")
+        KM.reload_config(conf_file)
+        self.assertEqual(os.stat(conf_file).st_mode & 0o777, 0o600)
+        self.assertEqual(os.stat(conf_dir).st_mode & 0o777, 0o700)
+
     def test_cli_mode_errors_to_stderr(self):
         """dmenu_err prints to stderr instead of calling a launcher in CLI mode
 
@@ -1052,6 +1077,47 @@ class TestClipboard(unittest.TestCase):
         popen.assert_called_once()
         self.assertEqual(popen.call_args[0][0][-2:], ["xsel", "-b"])
         self.assertTrue(popen.call_args[1]['start_new_session'])
+
+
+class TestDotool(unittest.TestCase):
+    """Test the dotool typing backend
+
+    """
+    def dotool_input(self, to_type, delay=None):
+        """Return the stdin dotool would be given to type to_type"""
+        with mock.patch.object(KM.type, 'run') as run_mock, \
+                mock.patch.object(KM.type, '_effective_delay', return_value=delay):
+            KM.type._dotool_type(to_type)  # pylint: disable=protected-access
+        if not run_mock.call_args_list:
+            return None
+        self.assertEqual(run_mock.call_args[0][0], ['dotool'])
+        return run_mock.call_args[1]['input']
+
+    def test_single_line(self):
+        """A value with no newline is one type command
+
+        """
+        self.assertEqual(self.dotool_input("hunter2"), "type hunter2")
+        self.assertEqual(self.dotool_input("hunter2", delay="25"),
+                         "typedelay 25\ntype hunter2")
+
+    def test_newlines_cannot_inject_commands(self):
+        """dotool reads one command per line from stdin, so a newline in a
+        value must not start a new dotool command
+
+        """
+        self.assertEqual(self.dotool_input("pw\nkey super"),
+                         "type pw\nkey enter\ntype key super")
+        self.assertEqual(self.dotool_input("line1\r\nline2\rline3"),
+                         "type line1\nkey enter\ntype line2\nkey enter\ntype line3")
+
+    def test_blank_lines_preserved(self):
+        """An empty line still presses enter, and types nothing
+
+        """
+        self.assertEqual(self.dotool_input("a\n\nb"),
+                         "type a\nkey enter\nkey enter\ntype b")
+        self.assertIsNone(self.dotool_input(""))
 
 
 if __name__ == "__main__":

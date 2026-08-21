@@ -3,8 +3,7 @@
 """
 from datetime import datetime, timezone
 import os
-import random
-from secrets import choice
+from secrets import choice, SystemRandom
 import shlex
 import string
 from subprocess import call
@@ -416,7 +415,8 @@ def gen_passwd(chars, length=20):
     password = "".join(choice(k) for k in sets)
     password += "".join(choice(alphabet) for i in range(length - len(sets)))
     tpw = list(password)
-    random.shuffle(tpw)
+    # SystemRandom, not random: the ordering is part of the password.
+    SystemRandom().shuffle(tpw)
     return "".join(tpw)
 
 

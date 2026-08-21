@@ -395,14 +395,26 @@ def type_entry_wtype(entry, tokens):
 
 
 def _dotool_type(to_type, client=False):
-    """Type a string using dotool/dotoolc with optional typedelay"""
+    """Type a string using dotool/dotoolc with optional typedelay
+
+    dotool reads one command per line from stdin, so a value containing a
+    newline would turn its own remaining lines into dotool commands. Send each
+    line as its own "type" command and press enter between them instead.
+    """
     tool = 'dotoolc' if client else 'dotool'
     delay = _effective_delay()
-    input_str = ""
+    cmds = []
     if delay is not None:
-        input_str = f"typedelay {delay}\n"
-    input_str += f"type {to_type}"
-    _ = run([tool], check=True, encoding=keepmenu.ENC, input=input_str)
+        cmds.append(f"typedelay {delay}")
+    lines = to_type.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    for idx, line in enumerate(lines):
+        if idx:
+            cmds.append("key enter")
+        if line:
+            cmds.append(f"type {line}")
+    if not cmds:
+        return
+    _ = run([tool], check=True, encoding=keepmenu.ENC, input="\n".join(cmds))
 
 
 def type_entry_dotool(entry, tokens):

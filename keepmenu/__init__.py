@@ -191,8 +191,11 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     if not exists(conf_file):
         conf_dir = os.path.dirname(conf_file)
         if conf_dir:
-            os.makedirs(conf_dir, exist_ok=True)
-        with open(conf_file, 'w', encoding=ENC) as cfile:
+            os.makedirs(conf_dir, mode=0o700, exist_ok=True)
+        # 0600 because docs/configure.md documents keeping database passwords
+        # in here. The mode only applies to a file we create ourselves.
+        fd_ = os.open(conf_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with open(fd_, 'w', encoding=ENC) as cfile:
             cfile.write(default_conf())
     try:
         CONF.read(conf_file)
