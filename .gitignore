@@ -9,3 +9,4 @@ build/
 dist/
 result/
 tests/.test.kdbx.lock
+.claude/settings.local.json
