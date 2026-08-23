@@ -15,7 +15,7 @@ from os.path import exists, expanduser, join
 
 from keepmenu.menu import dmenu_err
 
-__version__ = "1.5.1"
+__version__ = "1.6.0"
 
 
 # Setup logging for debugging. Usage: logger.info(...)
