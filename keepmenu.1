@@ -9,8 +9,9 @@ of Keepass databases.
 \f[B]keepmenu\f[R] [\f[B]\(enautotype\f[R] pattern]
 [\f[B]\(enconfig\f[R] file] [\f[B]\(enclipboard\f[R]]
 [\f[B]\(endatabase\f[R] file] [\f[B]\(enkeyfile\f[R] file]
-[\f[B]\(enno\-prompt\f[R]] [\f[B]\(enshow\f[R] term]
-[\f[B]\(enfield\f[R] name] [\f[B]\(entotp\f[R]] [\f[B]\(enversion\f[R]]
+[\f[B]\(enlock\f[R]] [\f[B]\(enno\-prompt\f[R]] [\f[B]\(enshow\f[R]
+term] [\f[B]\(enfield\f[R] name] [\f[B]\(entotp\f[R]]
+[\f[B]\(enversion\f[R]]
 .SH DESCRIPTION
 \f[B]Keepmenu\f[R] is a fast and minimal application to facilitate
 password entry and manage most aspects of Keepass .kdbx databases.
@@ -44,6 +45,9 @@ Defaults to \f[I]password\f[R]
 .PP
 \f[B]\-k\f[R], \f[B]\(enkeyfile\f[R] Path to keyfile
 .PP
+\f[B]\-l\f[R], \f[B]\(enlock\f[R] Lock all open databases and stop the
+keepmenu daemon.
+.PP
 \f[B]\-n\f[R], \f[B]\(enno\-prompt\f[R] Do not prompt for database
 password
 .PP
@@ -66,6 +70,7 @@ keepmenu \-d \(ti/docs/totp_passwords.kdbx \-a \(aq{TOTP}{ENTER}\(aq
 keepmenu \-d \(ti/passwords.kdbx \-k \(ti/passwords.keyfile \-a \(aq{S:security question}{ENTER}\(aq
 keepmenu \-s \(dqproduction/ssh db\(dq \-d \(ti/passwords.kdbx
 keepmenu \-s \(dqproduction/ssh db\(dq \-d \(ti/passwords.kdbx \-f username \-f password
+keepmenu \-l
 .EE
 .SH CONFIGURATION
 If you start keepmenu for the first time without a config file, it will

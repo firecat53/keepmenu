@@ -12,7 +12,7 @@ keepmenu - Fully featured Dmenu/Rofi frontend for autotype and managing of Keepa
 
 # SYNOPSIS
 
-**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--no-prompt**] [**--show** term] [**--field** name] [**--totp**] [**--version**]
+**keepmenu** [**--autotype** pattern] [**--config** file] [**--clipboard**] [**--database** file] [**--keyfile** file] [**--lock**] [**--no-prompt**] [**--show** term] [**--field** name] [**--totp**] [**--version**]
 
 # DESCRIPTION
 
@@ -39,6 +39,8 @@ Pykeepass.
 
 **-k**, **--keyfile**  Path to keyfile
 
+**-l**, **--lock**  Lock all open databases and stop the keepmenu daemon.
+
 **-n**, **--no-prompt**  Do not prompt for database password
 
 **-s**, **--show** Search term(s). Outputs the matched entry's password (default) or the fields selected by **--field** to stdout or to the clipboard with **--clipboard**. Requires a single matching entry
@@ -56,6 +58,7 @@ Pykeepass.
     keepmenu -d ~/passwords.kdbx -k ~/passwords.keyfile -a '{S:security question}{ENTER}'
     keepmenu -s "production/ssh db" -d ~/passwords.kdbx
     keepmenu -s "production/ssh db" -d ~/passwords.kdbx -f username -f password
+    keepmenu -l
 
 # CONFIGURATION
 

@@ -12,7 +12,7 @@
 
 ## CLI Options
 
-`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-n] [-s SEARCH] [-f FIELD] [-V]`
+`keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-l] [-n] [-s SEARCH] [-f FIELD] [-V]`
 
 --help, -h Output a usage message and exit.
 
@@ -25,6 +25,8 @@
 -d DATABASE, --database DATABASE File path to a database to open, skipping the database selection menu
 
 -k KEY_FILE, --keyfile KEY_FILE File path of the keyfile needed to open the database specified by --database/-d
+
+-l, --lock Lock all open databases and stop the keepmenu daemon.
 
 -n, --no-prompt Do not prompt for database password
 

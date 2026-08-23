@@ -390,13 +390,18 @@ class DmenuRunner(Process):
                     pass
                 elif self.server.args_flag.is_set():
                     dargs = self.server.get_args()
-                    if not dargs.get('show'):
-                        # Don't toggle clipboard mode for the GUI with --show
-                        keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
-                    self.menu_open_another_database(**dargs)
                     self.server.args_flag.clear()
-                    if self.server.totp_flag.is_set():
-                        self.server.totp_flag.clear()
+                    if dargs.get('lock'):
+                        # The daemon is the only thing holding the decrypted
+                        # databases, so locking them is just shutting it down.
+                        self.menu_kill_daemon()
+                    else:
+                        if not dargs.get('show'):
+                            # Don't toggle clipboard mode for the GUI with --show
+                            keepmenu.CLIPBOARD = dargs.get('clipboard', False) or keepmenu.CLIPBOARD
+                        self.menu_open_another_database(**dargs)
+                        if self.server.totp_flag.is_set():
+                            self.server.totp_flag.clear()
                 else:
                     self.dmenu_run(self.server.totp_flag.is_set())
                     self.server.totp_flag.clear()

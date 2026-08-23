@@ -2,6 +2,7 @@
 
 """
 import contextlib
+from contextlib import closing
 import io
 from multiprocessing.managers import BaseManager
 import os
@@ -10,6 +11,7 @@ import socket
 import string
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 from pykeepass import PyKeePass
@@ -1186,6 +1188,157 @@ class TestDotool(unittest.TestCase):
         self.assertEqual(self.dotool_input("a\n\nb"),
                          "type a\nkey enter\nkey enter\ntype b")
         self.assertIsNone(self.dotool_input(""))
+
+
+class TestLock(unittest.TestCase):
+    """Test --lock stopping the daemon, which is what closes its databases
+
+    """
+    def test_lock_arg_from_client(self):
+        """A --lock request sent to the daemon kills it, which is what drops
+        the open databases
+
+        """
+        server = mock.Mock()
+        server.kill_flag.is_set.side_effect = [False, True]
+        server.args_flag.is_set.return_value = True
+        server.get_args.return_value = {'lock': True}
+        server.cache_time_expired.is_set.return_value = False
+        # A daemon with one open database, without running DmenuRunner.__init__
+        # (which opens a database and needs a launcher)
+        run = KM.keepmenu.DmenuRunner.__new__(KM.keepmenu.DmenuRunner)
+        dbo = KM.keepmenu.DataBase(dbase="tests/test.kdbx", pword="password")
+        dbo.kpo = "pykeepass object"
+        run.database = dbo
+        run.open_databases = {dbo.dbase: dbo}
+        run.shared_state = None
+        run.server = server
+        run.run()
+        server.kill_flag.set.assert_called_once_with()
+        # The lock must not fall through to the database selection menu
+        server.get_args.assert_called_once_with()
+
+    def test_lock_without_daemon_starts_nothing(self):
+        """--lock with no daemon running has nothing to lock, and must not
+        start a daemon (which would open a database instead)
+
+        """
+        with mock.patch.object(KM.__main__, 'get_auth',
+                               return_value=(None, None)) as auth_mock, \
+             mock.patch.object(KM.__main__, 'port_in_use', return_value=False), \
+             mock.patch.object(KM.__main__, 'run') as run_mock, \
+             mock.patch.object(KM.__main__, 'client') as client_mock, \
+             mock.patch.object(sys, 'argv', ['keepmenu', '--lock']):
+            KM.__main__.main()
+        run_mock.assert_not_called()
+        client_mock.assert_not_called()
+        auth_mock.assert_called_once_with(create=False)
+
+
+class TestAuthFile(unittest.TestCase):
+    """Test which runs create the auth file
+
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.auth_file = os.path.join(self.tmpdir, ".keepmenu-auth")
+        self.patch = mock.patch.object(KM, 'AUTH_FILE', self.auth_file)
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
+        rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_no_auth_file_means_no_daemon(self):
+        """A lookup only run doesn't create the auth file
+
+        """
+        self.assertEqual(KM.__main__.get_auth(create=False), (None, None))
+        self.assertFalse(os.path.exists(self.auth_file))
+
+    def test_lookup_finds_a_running_daemon(self):
+        """A daemon writes the auth file before it starts, so a lookup only run
+        still finds its port and authkey
+
+        """
+        port, authkey = KM.__main__.get_auth()
+        self.assertTrue(os.path.exists(self.auth_file))
+        self.assertEqual(KM.__main__.get_auth(create=False), (port, authkey))
+
+    def test_stale_port_does_not_hang(self):
+        """A daemon that dies without cleanup leaves an auth file, and its port
+        can be taken by an unrelated process that never answers the manager
+        handshake. Connecting to it has to give up instead of blocking.
+
+        """
+        with closing(socket.socket()) as sock:
+            sock.bind(('127.0.0.1', 0))
+            sock.listen(1)
+            port = sock.getsockname()[1]
+            with mock.patch.object(KM.__main__, 'DAEMON_CONNECT_TIMEOUT', 1):
+                start = time.monotonic()
+                self.assertIsNone(KM.__main__.connect_to_daemon(port, b'authkey'))
+                self.assertLess(time.monotonic() - start, 10)
+
+    def test_port_probe_gives_up_on_a_wedged_listener(self):
+        """A process that is listening but has stopped accepting leaves
+        connect() retrying for minutes. The probe has to give up instead.
+
+        """
+        with closing(socket.socket()) as srv:
+            srv.bind(('127.0.0.1', 0))
+            srv.listen(1)
+            port = srv.getsockname()[1]
+            queued, full = [], False
+            for _ in range(6):
+                conn = socket.socket()
+                conn.settimeout(0.5)
+                try:
+                    conn.connect(('127.0.0.1', port))
+                    queued.append(conn)
+                except OSError:
+                    conn.close()
+                    full = True
+                    break
+            try:
+                start = time.monotonic()
+                in_use = KM.__main__.port_in_use(port, timeout=1)
+                self.assertLess(time.monotonic() - start, 10)
+                if full:
+                    # The accept queue filled up, so this is the wedged case
+                    self.assertFalse(in_use)
+            finally:
+                for conn in queued:
+                    conn.close()
+
+    def test_stale_auth_file_is_removed(self):
+        """A run that finds a stranger on the auth file's port removes the file,
+        so this run and every later one start clean
+
+        """
+        with closing(socket.socket()) as sock:
+            sock.bind(('127.0.0.1', 0))
+            sock.listen(1)
+            with open(self.auth_file, 'w', encoding=KM.ENC) as a_file:
+                a_file.write("[DEFAULT]\n"
+                             f"port = {sock.getsockname()[1]}\n"
+                             f"authkey = {'a' * 64}\n")
+            os.chmod(self.auth_file, 0o600)
+            with mock.patch.object(KM.__main__, 'DAEMON_CONNECT_TIMEOUT', 1), \
+                 mock.patch.object(KM.__main__, 'run') as run_mock, \
+                 mock.patch.object(sys, 'argv', ['keepmenu', '--lock']):
+                KM.__main__.main()
+        run_mock.assert_not_called()
+        self.assertFalse(os.path.exists(self.auth_file))
+
+    def test_daemon_run_creates_auth_file(self):
+        """The runs that may start a daemon still create the auth file
+
+        """
+        port, authkey = KM.__main__.get_auth(create=True)
+        self.assertTrue(os.path.exists(self.auth_file))
+        self.assertIsInstance(port, int)
+        self.assertIsInstance(authkey, bytes)
 
 
 if __name__ == "__main__":
