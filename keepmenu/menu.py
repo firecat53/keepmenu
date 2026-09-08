@@ -26,8 +26,8 @@ def dmenu_cmd(num_lines, prompt):
                          f"--prompt-text={str(prompt)}: ",
                          f"--num-results={str(num_lines)}"],
                 "wofi": ["--dmenu", "-p", str(prompt), "-L", str(num_lines + 1)],
-                "yofi": ["-p", str(prompt), "dialog"],
-                "fuzzel": ["-p", str(prompt) + " ", "-l", str(num_lines)]}
+                "yofi": ["-p", str(prompt)],
+                "fuzzel": ["--dmenu", "-p", str(prompt) + " ", "-l", str(num_lines)]}
     command = shlex.split(keepmenu.CONF.get('dmenu', 'dmenu_command', fallback='dmenu'))
     launcher = basename(command[0])
     command.extend(commands.get(launcher, []))
@@ -46,6 +46,9 @@ def dmenu_cmd(num_lines, prompt):
             command.extend(dmenu_pass(launcher))
         else:
             command.extend(pass_prompts.get(launcher, []))
+    if launcher == "yofi":
+        # A subcommand, so it goes after every option, --password included
+        command.append("dialog")
     return command
 
 
@@ -82,7 +85,19 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
     Returns: sel - string
 
     """
+    # With no lines, rofi and fuzzel show only the input box, hiding a
+    # suggested value.
+    if inp and num_lines < 1:
+        num_lines = 1
     cmd = dmenu_cmd(num_lines, prompt)
+    # wofi shows the prompt as GTK placeholder text, which disappears whenever
+    # the input box has focus - and it always does when there's no list. A
+    # blank row keeps focus on the list, and --exec-search makes enter return
+    # what was typed even when it matches that row.
+    wofi_filler = basename(cmd[0]) == "wofi" and not inp
+    if wofi_filler:
+        cmd.append("--exec-search")
+        inp = " \n"
     try:
         res = run(cmd,
                   capture_output=True,
@@ -98,7 +113,11 @@ def dmenu_select(num_lines, prompt="Entries", inp=""):
         # Don't exit on display errors (expected in headless environments)
         if "display" not in res.stderr.lower():
             sys.exit(1)
-    return res.stdout.rstrip('\n') if res.stdout is not None else None
+    if res.stdout is None:
+        return None
+    sel = res.stdout.rstrip('\n')
+    # Enter on an empty wofi input box selects the blank row
+    return "" if wofi_filler and sel == " " else sel
 
 
 def dmenu_err(prompt):

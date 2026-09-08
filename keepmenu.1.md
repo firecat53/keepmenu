@@ -62,8 +62,15 @@ Pykeepass.
 
 # CONFIGURATION
 
-If you start keepmenu for the first time without a config file, it will prompt
-you for database and keyfile locations and save them in a default config file.
+If you start keepmenu for the first time without a config file, one is written
+for you. The launcher, terminal and autotype library are detected from what is
+installed. When more than one candidate is found and keepmenu was started from a
+terminal, it asks which to use. It then prompts you for database and keyfile
+locations and saves them in that config file.
+
+Starting with **-d** (and optionally **-k**) skips that prompt and records the
+database in the config once it opens, provided the config holds no databases
+yet. **--show** never writes to the config.
 
 OR Copy config.ini.example to ~/.config/keepmenu/config.ini and use it as a
 reference for additional options.

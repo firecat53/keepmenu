@@ -606,11 +606,11 @@ def create_db(db_name="", keyfile="", password=""):
 
     """
     if not db_name:
-        db_name = dmenu_select(1, "Database Name (including path)")
+        db_name = dmenu_select(1, "Database path")
         if not db_name:
             return False
     if not keyfile:
-        keyfile = dmenu_select(1, "Keyfile (optional, including path)")
+        keyfile = dmenu_select(1, "Keyfile (optional)")
     if not password:
         password = keepmenu.keepmenu.get_passphrase()
         password_check = keepmenu.keepmenu.get_passphrase(check=True)
@@ -618,7 +618,12 @@ def create_db(db_name="", keyfile="", password=""):
             dmenu_err("Passwords do not match, database not created")
             return False
     from pykeepass import create_database  # pylint: disable=import-outside-toplevel
-    kpo = create_database(filename=os.path.expanduser(db_name),
-                          password=password,
-                          keyfile=os.path.expanduser(keyfile))
+    try:
+        kpo = create_database(filename=os.path.expanduser(db_name),
+                              password=password,
+                              keyfile=os.path.expanduser(keyfile))
+    except OSError as err:
+        # A directory that doesn't exist, or one we can't write to
+        dmenu_err(f"Database not created: {err.strerror}: {err.filename or db_name}")
+        return False
     return kpo

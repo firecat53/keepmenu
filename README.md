@@ -70,6 +70,8 @@ works with nothing but Pykeepass installed:
 `keepmenu [-h] [-a AUTOTYPE] [-c CONF_FILE] [-C] [-d DATABASE] [-k KEY_FILE] [-t] [-n] [-s SEARCH] [-f FIELD] [-V]`
 
 - Run `keepmenu` or bind to keystroke combination.
+- If run initially from the terminal, `keepmenu` will prompt for desired
+  launcher/terminal/type library and configure an initial config.ini.
 - Enter database path on first run.
 - Start typing to match entries.
 - [Configure](docs/configure.md) config.ini as desired.

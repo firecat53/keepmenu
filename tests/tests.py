@@ -1,6 +1,7 @@
 """Unit tests for keepmenu
 
 """
+import configparser
 import contextlib
 from contextlib import closing
 import io
@@ -18,10 +19,22 @@ from pykeepass import PyKeePass
 
 import keepmenu as KM
 from keepmenu import __main__  # noqa: F401
+from keepmenu import firstrun
 from keepmenu import run_once
 
 SECRET1 = 'ZYTYYE5FOAGW5ML7LRWUL4WTZLNJAMZS'
 SECRET2 = 'PW4YAYYZVDE5RK2AOLKUATNZIKAFQLZO'
+
+
+# Pin first run detection for the whole module. Without this, every
+# reload_config() on a path that doesn't exist yet writes whatever launcher is
+# installed on the machine running the tests, and anything that then calls
+# dmenu_select opens a real window. firstrun itself is tested in TestFirstRun,
+# which calls it directly rather than through reload_config.
+mock.patch.object(
+    KM, 'detect',
+    return_value={"launcher": None, "terminal": None, "type_library": None}
+).start()
 
 
 class TestRuntimeDir(unittest.TestCase):
@@ -1228,6 +1241,7 @@ class TestLock(unittest.TestCase):
              mock.patch.object(KM.__main__, 'port_in_use', return_value=False), \
              mock.patch.object(KM.__main__, 'run') as run_mock, \
              mock.patch.object(KM.__main__, 'client') as client_mock, \
+             mock.patch.object(KM.__main__, 'first_run_setup'), \
              mock.patch.object(sys, 'argv', ['keepmenu', '--lock']):
             KM.__main__.main()
         run_mock.assert_not_called()
@@ -1326,6 +1340,7 @@ class TestAuthFile(unittest.TestCase):
             os.chmod(self.auth_file, 0o600)
             with mock.patch.object(KM.__main__, 'DAEMON_CONNECT_TIMEOUT', 1), \
                  mock.patch.object(KM.__main__, 'run') as run_mock, \
+                 mock.patch.object(KM.__main__, 'first_run_setup'), \
                  mock.patch.object(sys, 'argv', ['keepmenu', '--lock']):
                 KM.__main__.main()
         run_mock.assert_not_called()
@@ -1339,6 +1354,501 @@ class TestAuthFile(unittest.TestCase):
         self.assertTrue(os.path.exists(self.auth_file))
         self.assertIsInstance(port, int)
         self.assertIsInstance(authkey, bytes)
+
+
+class TestSaveConfigOptions(unittest.TestCase):
+    """Test the config writer
+
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.conf_file = os.path.join(self.tmpdir, "config.ini")
+        KM.CONF = configparser.ConfigParser()
+
+    def tearDown(self):
+        rmtree(self.tmpdir)
+
+    def write(self, text):
+        with open(self.conf_file, 'w', encoding=KM.ENC) as fobj:
+            fobj.write(text)
+
+    def reread(self):
+        conf = configparser.ConfigParser()
+        conf.read(self.conf_file)
+        return conf
+
+    def test_sets_an_option(self):
+        self.write("[database]\npw_cache_period_min = 360\n")
+        KM.reload_config(self.conf_file)
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/db.kdbx'})
+        self.assertEqual(self.reread().get('database', 'database_1'), '/db.kdbx')
+
+    def test_replaces_an_existing_setting(self):
+        self.write("[database]\ndatabase_1 = /old.kdbx\n")
+        KM.reload_config(self.conf_file)
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/new.kdbx'})
+        self.assertEqual(self.reread().get('database', 'database_1'), '/new.kdbx')
+
+    def test_keeps_the_other_settings(self):
+        """The file is rebuilt from CONF, so everything parsed has to come back
+
+        """
+        self.write("[dmenu]\ndmenu_command = rofi\n\n[database]\n"
+                   "pw_cache_period_min = 30\n")
+        KM.reload_config(self.conf_file)
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/db.kdbx'})
+        conf = self.reread()
+        self.assertEqual(conf.get('dmenu', 'dmenu_command'), 'rofi')
+        self.assertEqual(conf.get('database', 'pw_cache_period_min'), '30')
+
+    def test_creates_a_missing_section(self):
+        self.write("[dmenu]\ndmenu_command = rofi\n")
+        KM.reload_config(self.conf_file)
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/db.kdbx'})
+        self.assertEqual(self.reread().get('database', 'database_1'), '/db.kdbx')
+
+    def test_keeps_the_file_mode(self):
+        """The config can hold database passwords, so 0600 has to survive
+
+        """
+        self.write("[database]\n")
+        os.chmod(self.conf_file, 0o600)
+        KM.reload_config(self.conf_file)
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/db.kdbx'})
+        self.assertEqual(os.stat(self.conf_file).st_mode & 0o777, 0o600)
+
+    def test_updates_conf_in_memory(self):
+        """The running process has to see the change without a reload"""
+        self.write("[database]\n")
+        KM.reload_config(self.conf_file)
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/db.kdbx'})
+        self.assertEqual(KM.CONF.get('database', 'database_1'), '/db.kdbx')
+
+    def test_escaped_percent_survives_the_rebuild(self):
+        """[password_chars] documents %% for a literal %. Rebuilding the file
+        round-trips every value through ConfigParser, so a mangled escape here
+        would corrupt password generation on the first database save
+
+        """
+        self.write("[database]\n\n[password_chars]\n"
+                   "punctuation = !?#*@-+$%%\n")
+        KM.reload_config(self.conf_file)
+        before = KM.CONF.get('password_chars', 'punctuation')
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/db.kdbx'})
+        KM.reload_config(self.conf_file)
+        self.assertEqual(KM.CONF.get('password_chars', 'punctuation'), before)
+        self.assertEqual(before, "!?#*@-+$%")
+
+    def test_writes_both_options(self):
+        self.write("[database]\n")
+        KM.reload_config(self.conf_file)
+        KM.save_config_options(self.conf_file, 'database',
+                               {'database_1': '/db.kdbx', 'keyfile_1': '/db.key'})
+        conf = self.reread()
+        self.assertEqual(conf.get('database', 'database_1'), '/db.kdbx')
+        self.assertEqual(conf.get('database', 'keyfile_1'), '/db.key')
+
+
+class TestSaveDatabaseToConfig(unittest.TestCase):
+    """Test that `keepmenu -d <db>` records the database it opened
+
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.dbase = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", self.dbase)
+        self.conf_file = os.path.join(self.tmpdir, "config.ini")
+        self.fresh()
+
+    def tearDown(self):
+        rmtree(self.tmpdir)
+
+    def fresh(self, database_section=""):
+        with open(self.conf_file, 'w', encoding=KM.ENC) as fobj:
+            fobj.write("[dmenu]\ndmenu_command = dmenu\n\n[database]\n"
+                       "# database_1 = ~/passwords.kdbx\n"
+                       "# keyfile_1 = ~/passwords.key\n" + database_section)
+        KM.reload_config(self.conf_file)
+
+    def saved(self):
+        conf = configparser.ConfigParser()
+        conf.read(self.conf_file)
+        return conf.get('database', 'database_1', fallback=None)
+
+    def test_saved_on_first_open(self):
+        KM.keepmenu.get_database(database=self.dbase, password="password",
+                                 config=self.conf_file)
+        self.assertEqual(self.saved(), self.dbase)
+
+    def test_keyfile_saved_alongside(self):
+        db_ = KM.keepmenu.DataBase(dbase=self.dbase, kfile="/db.key")
+        KM.keepmenu.save_database_to_config(db_, self.conf_file)
+        conf = configparser.ConfigParser()
+        conf.read(self.conf_file)
+        self.assertEqual(conf.get('database', 'keyfile_1'), "/db.key")
+
+    def test_keyfile_left_alone_when_there_isnt_one(self):
+        """An empty keyfile_1 would be read back as a keyfile path of ''"""
+        KM.keepmenu.get_database(database=self.dbase, password="password",
+                                 config=self.conf_file)
+        conf = configparser.ConfigParser()
+        conf.read(self.conf_file)
+        self.assertIsNone(conf.get('database', 'keyfile_1', fallback=None))
+
+    def test_not_saved_when_config_already_has_a_database(self):
+        """A curated config must not gain entries behind the user's back"""
+        self.fresh("database_1 = /some/other.kdbx\n")
+        KM.keepmenu.get_database(database=self.dbase, password="password",
+                                 config=self.conf_file)
+        self.assertEqual(self.saved(), "/some/other.kdbx")
+
+    def test_not_saved_in_cli_mode(self):
+        """--show is the scripting interface and shouldn't rewrite config"""
+        KM.keepmenu.get_database(cli=True, database=self.dbase,
+                                 password="password", config=self.conf_file)
+        self.assertIsNone(self.saved())
+
+    def test_not_saved_when_the_database_fails_to_open(self):
+        """A bad password or path must not be written into the config"""
+        with mock.patch.object(KM.keepmenu, 'dmenu_err'):
+            KM.keepmenu.get_database(database=self.dbase, password="wrong",
+                                     config=self.conf_file)
+        self.assertIsNone(self.saved())
+
+    def test_written_to_the_config_actually_in_use(self):
+        """-c pointed get_initial_db() at the default config, not this one"""
+        self.assertNotEqual(self.conf_file, KM.CONF_FILE)
+        KM.keepmenu.get_database(database=self.dbase, password="password",
+                                 config=self.conf_file)
+        self.assertEqual(self.saved(), self.dbase)
+
+    def test_read_only_config_skipped_quietly(self):
+        """A read-only config (a Nix store symlink, say) is deliberate"""
+        os.chmod(self.conf_file, 0o400)
+        with mock.patch.object(KM.keepmenu, 'dmenu_err') as err:
+            KM.keepmenu.get_database(database=self.dbase, password="password",
+                                     config=self.conf_file)
+        err.assert_not_called()
+        self.assertIsNone(self.saved())
+
+    def test_percent_in_path_saved(self):
+        """configparser rejects a bare % as interpolation syntax"""
+        db_ = KM.keepmenu.DataBase(dbase="/dbs/100%.kdbx")
+        KM.keepmenu.save_database_to_config(db_, self.conf_file)
+        self.assertEqual(self.saved(), "/dbs/100%.kdbx")
+        self.assertEqual(KM.CONF.get('database', 'database_1'), "/dbs/100%.kdbx")
+
+    def test_initial_db_saved_as_a_full_path(self):
+        """A relative path must not depend on where keepmenu was started"""
+        cwd = os.getcwd()
+        os.chdir(self.tmpdir)
+        try:
+            with mock.patch.object(KM.keepmenu, 'dmenu_select',
+                                   side_effect=["test.kdbx", ""]):
+                self.assertTrue(KM.keepmenu.get_initial_db(self.conf_file))
+        finally:
+            os.chdir(cwd)
+        self.assertEqual(self.saved(), os.path.realpath(self.dbase))
+
+    def test_create_in_missing_directory_is_an_error_not_a_crash(self):
+        missing = os.path.join(self.tmpdir, "nope", "new.kdbx")
+        with mock.patch.object(KM.edit, 'dmenu_select', return_value=""), \
+                mock.patch.object(KM.edit, 'dmenu_err') as err:
+            self.assertFalse(KM.edit.create_db(missing, password="pw"))
+        self.assertIn("Database not created", err.call_args.args[0])
+
+    def test_cli_with_nothing_configured_is_an_error_not_a_crash(self):
+        """dbs is empty here, and dbs[0] raised IndexError"""
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            db_, _ = KM.keepmenu.get_database(cli=True, config=self.conf_file)
+        self.assertIsNone(db_)
+        self.assertIn("No database specified", err.getvalue())
+
+
+class TestLauncherPrompts(unittest.TestCase):
+    """Launcher arguments that the generated config's bare launcher names
+    depend on
+
+    """
+    def select(self, launcher, stdout, *args):
+        """Run dmenu_select against `launcher` with the real dmenu_cmd
+
+        Returns: (result, argv the launcher was run with, stdin it was given)
+
+        """
+        conf = configparser.ConfigParser()
+        conf.add_section('dmenu')
+        conf.set('dmenu', 'dmenu_command', launcher)
+        res = mock.Mock(stdout=stdout, returncode=0, stderr="")
+        with mock.patch.object(KM, 'CONF', conf), \
+                mock.patch.object(KM.menu, 'run', return_value=res) as run:
+            result = KM.menu.dmenu_select(*args)
+        return result, run.call_args.args[0], run.call_args.kwargs['input']
+
+    def test_bare_fuzzel_gets_dmenu_mode(self):
+        """Without --dmenu fuzzel is an app launcher that ignores stdin"""
+        _, cmd, _ = self.select('fuzzel', "", 5, "Entries")
+        self.assertEqual(cmd[:2], ['fuzzel', '--dmenu'])
+
+    def test_yofi_dialog_comes_last(self):
+        """dialog is a subcommand: yofi rejects options after it"""
+        for prompt in ("Entries", "Password"):
+            _, cmd, _ = self.select('yofi', "", 5, prompt)
+            self.assertEqual(cmd[-1], 'dialog', prompt)
+            self.assertEqual('--password' in cmd, prompt == "Password")
+
+    def test_suggestion_gets_a_line(self):
+        """rofi and fuzzel hide stdin entirely with zero lines"""
+        for launcher in ('rofi', 'fuzzel'):
+            _, cmd, _ = self.select(launcher, "", 0, "Prompt", "suggested")
+            self.assertEqual(cmd[cmd.index('-l') + 1], '1', launcher)
+        _, cmd, _ = self.select('rofi', "", 0, "Prompt")
+        self.assertEqual(cmd[cmd.index('-l') + 1], '0')
+
+    def test_wofi_free_text_keeps_prompt(self):
+        """wofi hides its prompt while the input box has focus, which it
+        always has when there are no rows
+
+        """
+        _, cmd, stdin = self.select('wofi', "", 0, "Enter path")
+        self.assertEqual(stdin, " \n")
+        self.assertIn('--exec-search', cmd)
+        # Enter on the empty box selects the blank row itself
+        self.assertEqual(self.select('wofi', " \n", 0, "Enter path")[0], "")
+        self.assertEqual(self.select('wofi', "correct horse\n", 0, "Password")[0],
+                         "correct horse")
+        # Menus with rows, and other launchers, are left alone
+        res, cmd, stdin = self.select('wofi', " \n", 2, "Pick", "a\n \nb")
+        self.assertEqual((res, stdin), (" ", "a\n \nb"))
+        self.assertNotIn('--exec-search', cmd)
+        _, cmd, stdin = self.select('rofi', "", 0, "Enter path")
+        self.assertEqual(stdin, "")
+        self.assertNotIn('--exec-search', cmd)
+
+
+class TestFirstRun(unittest.TestCase):
+    """Test launcher/terminal/type_library detection for a fresh config
+
+    """
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.env = dict(os.environ)
+        os.environ.pop('WAYLAND_DISPLAY', None)
+        os.environ.pop('XDG_SESSION_TYPE', None)
+        os.environ.pop('XDG_CURRENT_DESKTOP', None)
+
+    def tearDown(self):
+        rmtree(self.tmpdir)
+        os.environ.clear()
+        os.environ.update(self.env)
+
+    @staticmethod
+    def installed(*names):
+        """which() that reports only `names` as installed"""
+        return lambda name: f"/usr/bin/{name}" if name in names else None
+
+    def test_x11_drops_wayland_only_launchers(self):
+        """Wayland only launchers can't open a window under X11 at all
+
+        """
+        with mock.patch.object(firstrun, 'which',
+                               self.installed('fuzzel', 'wofi', 'rofi', 'dmenu')):
+            self.assertEqual(firstrun.installed_launchers(), ['rofi', 'dmenu'])
+
+    def test_wayland_ranks_native_launchers_first(self):
+        """X11 launchers still work through XWayland, they just rank lower
+
+        """
+        os.environ['WAYLAND_DISPLAY'] = 'wayland-0'
+        with mock.patch.object(firstrun, 'which',
+                               self.installed('dmenu', 'rofi', 'wofi', 'fuzzel')):
+            self.assertEqual(firstrun.installed_launchers(),
+                             ['fuzzel', 'wofi', 'rofi', 'dmenu'])
+
+    def test_preference_order_within_a_group(self):
+        """dmenu is last: it's as often a dependency as it is a choice
+
+        """
+        with mock.patch.object(firstrun, 'which',
+                               self.installed('dmenu', 'bemenu', 'rofi')):
+            self.assertEqual(firstrun.installed_launchers(),
+                             ['rofi', 'bemenu', 'dmenu'])
+
+    def test_no_launcher_installed(self):
+        with mock.patch.object(firstrun, 'which', self.installed()):
+            self.assertEqual(firstrun.installed_launchers(), [])
+            self.assertIsNone(firstrun.pick("?", [], interactive=False))
+
+    def test_type_library_only_set_on_wayland(self):
+        """pynput, the default, types nothing at all on Wayland
+
+        """
+        with mock.patch.object(firstrun, 'which', self.installed('wtype', 'ydotool')):
+            self.assertIsNone(firstrun.detect_type_library())
+            os.environ['XDG_SESSION_TYPE'] = 'wayland'
+            self.assertEqual(firstrun.detect_type_library(), 'wtype')
+
+    def test_type_library_none_when_nothing_installed(self):
+        """reload_config exits on a type_library that isn't installed, so a
+        Wayland session with no backend must leave the option out
+
+        """
+        os.environ['WAYLAND_DISPLAY'] = 'wayland-0'
+        with mock.patch.object(firstrun, 'which', self.installed('dmenu')):
+            self.assertIsNone(firstrun.detect_type_library())
+
+    def test_type_library_no_wtype_without_virtual_keyboard(self):
+        """GNOME and KDE lack the protocol wtype types through
+
+        """
+        os.environ['WAYLAND_DISPLAY'] = 'wayland-0'
+        with mock.patch.object(firstrun, 'which',
+                               self.installed('wtype', 'ydotool', 'dotool')):
+            for desktop in ('GNOME', 'ubuntu:GNOME', 'KDE'):
+                os.environ['XDG_CURRENT_DESKTOP'] = desktop
+                self.assertEqual(firstrun.installed_type_libraries(),
+                                 ['ydotool', 'dotool'], desktop)
+            os.environ['XDG_CURRENT_DESKTOP'] = 'sway'
+            self.assertEqual(firstrun.installed_type_libraries(),
+                             ['wtype', 'ydotool', 'dotool'])
+
+    def test_type_library_asks_with_requirements(self):
+        """Each backend is listed with what it needs to work, and it's asked
+        even when launcher and terminal are unambiguous
+
+        """
+        os.environ['WAYLAND_DISPLAY'] = 'wayland-0'
+        out = io.StringIO()
+        with mock.patch.object(firstrun, 'which',
+                               self.installed('fuzzel', 'foot', 'wtype', 'ydotool')), \
+                mock.patch.object(firstrun, 'has_tty', return_value=True), \
+                mock.patch.object(firstrun.sys, 'stdin', io.StringIO('2\n')), \
+                contextlib.redirect_stderr(out):
+            choices = firstrun.detect(interactive=True)
+        self.assertEqual(choices, {'launcher': 'fuzzel', 'terminal': 'foot',
+                                   'type_library': 'ydotool'})
+        self.assertIn('Setting up keepmenu', out.getvalue())
+        for lib in ('wtype', 'ydotool'):
+            self.assertIn(f"{lib} - {firstrun.WAYLAND_TYPE_LIBRARIES[lib]}",
+                          out.getvalue())
+
+    def test_pick_takes_the_first_without_a_tty(self):
+        """The usual case: keepmenu started from a keybinding
+
+        """
+        with mock.patch.object(firstrun, 'has_tty', return_value=False):
+            self.assertEqual(
+                firstrun.pick("?", ['rofi', 'dmenu'], interactive=True), 'rofi')
+
+    def test_pick_asks_when_interactive(self):
+        with mock.patch.object(firstrun, 'has_tty', return_value=True), \
+                mock.patch.object(firstrun.sys, 'stdin', io.StringIO('2\n')), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(
+                firstrun.pick("?", ['rofi', 'dmenu'], interactive=True), 'dmenu')
+
+    def test_pick_empty_answer_takes_the_default(self):
+        with mock.patch.object(firstrun, 'has_tty', return_value=True), \
+                mock.patch.object(firstrun.sys, 'stdin', io.StringIO('\n')), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(
+                firstrun.pick("?", ['rofi', 'dmenu'], interactive=True), 'rofi')
+
+    def test_pick_questions_stay_off_stdout(self):
+        """stdout may be `pw=$(keepmenu --show x)` collecting the secret
+
+        """
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(firstrun, 'has_tty', return_value=True), \
+                mock.patch.object(firstrun.sys, 'stdin', io.StringIO('2\n')), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            firstrun.pick("?", ['rofi', 'dmenu'], interactive=True)
+        self.assertEqual(out.getvalue(), "")
+        self.assertIn("Choice [1-2", err.getvalue())
+
+    def test_pick_eof_takes_the_default(self):
+        with mock.patch.object(firstrun, 'has_tty', return_value=True), \
+                mock.patch.object(firstrun.sys, 'stdin', io.StringIO('')), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(
+                firstrun.pick("?", ['rofi', 'dmenu'], interactive=True), 'rofi')
+
+    def test_has_tty_needs_stderr(self):
+        """The questions go to stderr, so there's nobody to ask without it
+
+        """
+        tty = mock.Mock(isatty=mock.Mock(return_value=True))
+        pipe = mock.Mock(isatty=mock.Mock(return_value=False))
+        with mock.patch.object(firstrun.sys, 'stdin', tty), \
+                mock.patch.object(firstrun.sys, 'stderr', pipe):
+            self.assertFalse(firstrun.has_tty())
+        with mock.patch.object(firstrun.sys, 'stdin', tty), \
+                mock.patch.object(firstrun.sys, 'stderr', tty):
+            self.assertTrue(firstrun.has_tty())
+
+    def test_first_run_setup_ctrl_c_writes_nothing(self):
+        conf_file = os.path.join(self.tmpdir, "config.ini")
+        with mock.patch.object(__main__, 'detect', side_effect=KeyboardInterrupt), \
+                contextlib.redirect_stderr(io.StringIO()), \
+                self.assertRaises(SystemExit):
+            __main__.first_run_setup(conf_file)
+        self.assertFalse(os.path.exists(conf_file))
+
+    def test_x11_drops_wayland_only_terminals(self):
+        with mock.patch.object(firstrun, 'which',
+                               self.installed('foot', 'footclient', 'xterm')):
+            self.assertEqual(firstrun.installed_terminals(), ['xterm'])
+            os.environ['WAYLAND_DISPLAY'] = 'wayland-0'
+            self.assertEqual(firstrun.installed_terminals(),
+                             ['foot', 'footclient', 'xterm'])
+
+    def test_single_string_e_terminals_never_offered(self):
+        """Their -e takes one command string, not `-e editor file`"""
+        for name in ('gnome-terminal', 'xfce4-terminal', 'terminator'):
+            self.assertNotIn(name, firstrun.TERMINALS)
+
+    def test_generated_config_is_valid_and_private(self):
+        """A config written from detected values has to parse, and hold 0600
+
+        """
+        conf_file = os.path.join(self.tmpdir, "sub", "config.ini")
+        KM.write_config(conf_file, launcher='fuzzel', terminal='foot',
+                        type_library='wtype')
+        self.assertEqual(os.stat(conf_file).st_mode & 0o777, 0o600)
+        conf = configparser.ConfigParser()
+        conf.read(conf_file)
+        self.assertEqual(conf.get('dmenu', 'dmenu_command'), 'fuzzel')
+        self.assertEqual(conf.get('database', 'terminal'), 'foot')
+        self.assertEqual(conf.get('database', 'type_library'), 'wtype')
+
+    def test_generated_config_omits_undetected_options(self):
+        """An empty terminal/type_library would override the code defaults
+
+        """
+        conf_file = os.path.join(self.tmpdir, "config.ini")
+        KM.write_config(conf_file, launcher=None, terminal=None,
+                        type_library=None)
+        conf = configparser.ConfigParser()
+        conf.read(conf_file)
+        self.assertEqual(conf.get('dmenu', 'dmenu_command'), 'dmenu')
+        self.assertFalse(conf.has_option('database', 'terminal'))
+        self.assertFalse(conf.has_option('database', 'type_library'))
+
+    def test_first_run_setup_leaves_an_existing_config_alone(self):
+        conf_file = os.path.join(self.tmpdir, "config.ini")
+        with open(conf_file, 'w', encoding=KM.ENC) as fobj:
+            fobj.write("[dmenu]\ndmenu_command = wofi\n")
+        __main__.first_run_setup(conf_file)
+        with open(conf_file, encoding=KM.ENC) as fobj:
+            self.assertEqual(fobj.read(), "[dmenu]\ndmenu_command = wofi\n")
 
 
 if __name__ == "__main__":

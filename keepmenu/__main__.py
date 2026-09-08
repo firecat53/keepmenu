@@ -17,6 +17,7 @@ from subprocess import call
 import sys
 
 import keepmenu
+from keepmenu.firstrun import detect, no_launcher_msg
 from keepmenu.keepmenu import DmenuRunner
 
 # Python 3.14 changes the default to 'forkserver' on Linux.
@@ -303,6 +304,31 @@ def print_show_result(result):
         print(result)
 
 
+def first_run_setup(cfile=None):
+    """Create the config file, asking about anything ambiguous.
+
+    Runs in the client, which is the only process that may still have a
+    terminal: the daemon has none, and neither does an invocation started from
+    a keybinding. reload_config() writes the same file non-interactively if
+    this doesn't get there first.
+
+    Args: cfile - config file path from --config, or None for the default
+
+    """
+    conf_file = expanduser(cfile) if cfile else keepmenu.CONF_FILE
+    if exists(conf_file):
+        return
+    try:
+        choices = detect(interactive=True)
+    except KeyboardInterrupt:
+        print("\nSetup cancelled, no config written.", file=sys.stderr)
+        sys.exit(1)
+    keepmenu.write_config(conf_file, **choices)
+    print(f"Created {conf_file}", file=sys.stderr)
+    if choices["launcher"] is None:
+        print(no_launcher_msg(conf_file), file=sys.stderr)
+
+
 def main():
     """Main script entrypoint
 
@@ -408,6 +434,9 @@ def main():
     args = vars(parser.parse_args())
     if args["field"] and not args["show"]:
         parser.error("--field requires --show")
+
+    # Before anything forks, while there may still be a terminal to ask on
+    first_run_setup(args.get("config"))
 
     # Only a run that may start a daemon creates the auth file. --lock and
     # --show just need to find one, and an auth file left behind by a run that

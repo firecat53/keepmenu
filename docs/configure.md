@@ -2,8 +2,26 @@
 
 [Installation](install.md) - [Usage](usage.md)
 
-If you start keepmenu for the first time without a config file, it will prompt
-you for database and keyfile locations and save them in a default config file.
+### First run
+
+Started without a config file, keepmenu writes one at
+`~/.config/keepmenu/config.ini` (mode 0600), then prompts through the launcher
+for the database and keyfile locations and records them as `database_1` /
+`keyfile_1`.
+
+Starting with `keepmenu -d <path/to/db.kdbx>` (optionally with `-k <keyfile>`)
+skips that prompt, and the database is recorded the same way once it opens.
+That only happens when the config holds no databases at all. `--show` never
+writes to the config, since it's the scripting interface.
+
+Both paths rewrite the file from the settings keepmenu parsed, so comments you
+have added to it are dropped at that point. Values are preserved, `%%` escapes
+in `[password_chars]` included.
+
+If started from a terminal, `keepmenu` prompts for which launcher, type_library
+and terminal to use from a list of installed options. If started from a
+keybinding, it will select automatically. `config.ini` can then be edited as
+needed.
 
 OR Copy config.ini.example to ~/.config/keepmenu/config.ini and use it as a
 reference for additional options.

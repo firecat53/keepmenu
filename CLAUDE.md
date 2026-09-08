@@ -68,10 +68,22 @@ to prompt: which databases are unlocked, and which have a password or
 - `keepmenu/__init__.py` — module-level globals (`CONF`, `SEQUENCE`, `CLIPBOARD`,
   `CACHE_PERIOD_MIN`, `MAX_LEN`, `CLI`), `reload_config()`, runtime-dir and
   permission checks. Config changes go through `reload_config`, which mutates
-  those globals; tests call it with a temp path.
+  those globals; tests call it with a temp path. `save_config_options` rebuilds
+  the file from `CONF`, dropping its comments but round-tripping every value —
+  `%%` escapes in `[password_chars]` included, which a test pins.
 - `keepmenu/keepmenu.py` — `DataBase` dataclass, database opening/selection
   (`get_database`), and `DmenuRunner` with one `menu_*` method per top-level
-  menu item.
+  menu item. `get_initial_db` (GUI prompt) and `save_database_to_config` (`-d`)
+  are the only things that write back to config.ini, both via
+  `keepmenu.save_config_options`, and both only when no database is configured
+  yet. Never from cli mode — `--show` must not rewrite config as a side effect.
+- `keepmenu/firstrun.py` — first run detection: which launcher, terminal and
+  autotype library to write into a config that doesn't exist yet. Imports
+  nothing else from keepmenu, so it can run before the config is loaded.
+  `reload_config` calls `detect()` non-interactively; `__main__.first_run_setup`
+  calls it with `interactive=True` in the client, the only process that may
+  still have a terminal to ask on. Adding launcher support means adding it here
+  *and* in `menu.py`.
 - `keepmenu/menu.py` — builds the launcher argv. Per-launcher flags live in the
   `commands` dict in `dmenu_cmd`; a second dict handles password-obscuring
   flags. Adding launcher support means adding entries here.
@@ -96,7 +108,10 @@ names.
 
 `tests/tests.py` is a single unittest module (no pytest, no `__init__.py`). It
 covers the daemon handshake and auth file, the CLI/`--show` paths, config
-parsing, tokenizing, TOTP and clipboard. Fixtures: `tests/test.kdbx` (password
+parsing, first run detection, tokenizing, TOTP and clipboard. `keepmenu.detect`
+is patched out for the whole module: without it every generated config points at
+whatever launcher the test machine has installed, and tests that reach
+`dmenu_select` open real windows. Fixtures: `tests/test.kdbx` (password
 `password`) and `tests/keepmenu-config.ini`. Tests that touch config set
 `KM.CONF_FILE` to a temp dir and call `KM.reload_config()` — do the same rather
 than writing to the real `~/.config/keepmenu/config.ini`.

@@ -13,6 +13,7 @@ import sys
 import tempfile
 from os.path import exists, expanduser, join
 
+from keepmenu.firstrun import detect
 from keepmenu.menu import dmenu_err
 
 __version__ = "1.6.0"
@@ -112,28 +113,79 @@ CLIPBOARD_CMD = None
 CLI = False
 
 
-def default_conf():
+def default_conf(launcher=None, terminal=None, type_library=None):
     """Contents of the config file generated on first run.
 
     database_1/keyfile_1 are commented out examples rather than empty values so
     that a fresh config doesn't look like it holds a broken database entry.
     Written as text because configparser can't emit comments.
 
+    Args: launcher - dmenu_command to write, or None for the dmenu default
+          terminal - terminal to open editors in, omitted when None
+          type_library - autotype backend, omitted when None to use pynput
+
     Returns: str
 
     """
-    return ("[dmenu]\n"
-            "dmenu_command = dmenu\n"
-            "\n"
-            "[dmenu_passphrase]\n"
-            "obscure = True\n"
-            "obscure_color = #222222\n"
-            "\n"
-            "[database]\n"
-            "# database_1 = ~/passwords.kdbx\n"
-            "# keyfile_1 = ~/passwords.key\n"
-            f"pw_cache_period_min = {CACHE_PERIOD_DEFAULT_MIN}\n"
-            f"autotype_default = {SEQUENCE}\n")
+    lines = ["[dmenu]",
+             f"dmenu_command = {launcher or 'dmenu'}",
+             "",
+             "[dmenu_passphrase]",
+             "obscure = True",
+             "obscure_color = #222222",
+             "",
+             "[database]",
+             "# database_1 = ~/passwords.kdbx",
+             "# keyfile_1 = ~/passwords.key",
+             f"pw_cache_period_min = {CACHE_PERIOD_DEFAULT_MIN}",
+             f"autotype_default = {SEQUENCE}"]
+    if terminal:
+        lines.append(f"terminal = {terminal}")
+    if type_library:
+        lines.append(f"type_library = {type_library}")
+    return "\n".join(lines) + "\n"
+
+
+def write_config(conf_file, **choices):
+    """Write a fresh config file, creating its directory if needed.
+
+    Mode 0600 because database passwords may be stored here. The mode only
+    applies to a file we create ourselves.
+
+    Args: conf_file - os.path
+          choices - launcher/terminal/type_library, as returned by
+                    firstrun.detect()
+
+    """
+    conf_dir = os.path.dirname(conf_file)
+    if conf_dir:
+        os.makedirs(conf_dir, mode=0o700, exist_ok=True)
+    fd_ = os.open(conf_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with open(fd_, 'w', encoding=ENC) as cfile:
+        cfile.write(default_conf(**choices))
+
+
+def save_config_options(conf_file, section, options):
+    """Set options in a config file.
+
+    ConfigParser rebuilds the file from the values it parsed, so any comments
+    in it are lost. CONF is updated first so the running process sees the
+    change without a reload.
+
+    Args: conf_file - os.path of the file to write, which must already exist
+          section - str section name, added if it's missing
+          options - dict of {option: value} to set, as plain values: a % in
+                    one (a path, say) is escaped here, or CONF.set would reject
+                    it as interpolation syntax
+
+    """
+    if not CONF.has_section(section):
+        CONF.add_section(section)
+    for option, value in options.items():
+        CONF.set(section, option, str(value).replace('%', '%%'))
+    # The file already exists, so this keeps its mode - 0600 for one we wrote
+    with open(conf_file, 'w', encoding=ENC) as cfile:
+        CONF.write(cfile)
 
 
 def get_clipboard_cmd():
@@ -181,14 +233,10 @@ def reload_config(conf_file = None):  # pylint: disable=too-many-statements,too-
     CONF = configparser.ConfigParser()
     conf_file = conf_file if conf_file is not None else CONF_FILE
     if not exists(conf_file):
-        conf_dir = os.path.dirname(conf_file)
-        if conf_dir:
-            os.makedirs(conf_dir, mode=0o700, exist_ok=True)
-        # 0600 because docs/configure.md documents keeping database passwords
-        # in here. The mode only applies to a file we create ourselves.
-        fd_ = os.open(conf_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with open(fd_, 'w', encoding=ENC) as cfile:
-            cfile.write(default_conf())
+        # Non-interactive: this also runs in the daemon and under --show, which
+        # have no terminal to ask on. __main__.first_run_setup() has usually
+        # written the file already, having asked.
+        write_config(conf_file, **detect())
     try:
         CONF.read(conf_file)
     except configparser.Error as err:

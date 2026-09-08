@@ -8,6 +8,7 @@ import errno
 import functools
 from getpass import getpass
 from multiprocessing import Process
+import os
 from os.path import expanduser, isfile, realpath
 import shlex
 import subprocess
@@ -123,7 +124,7 @@ def get_database(open_databases=None, cli=False, no_prompt=False, select=False, 
     
     if not dbs_cfg and not clidb.dbase and not open_databases and not cli:
         # First run database opening
-        res = get_initial_db()
+        res = get_initial_db(kwargs.get('config'))
         if res is True:
             db_, open_databases = get_database()
             dbs = [db_]
@@ -174,6 +175,15 @@ def get_database(open_databases=None, cli=False, no_prompt=False, select=False, 
             dbs.append(db_)
         if not sel or not dbs:
             return None, open_databases
+    if not dbs:
+        # cli mode with nothing in config and no -d. The first run menu above
+        # is GUI only, so there is nothing left to fall back to.
+        msg = "No database specified. Use -d or set database_1 in config.ini."
+        if cli:
+            print(msg, file=sys.stderr)
+        else:
+            dmenu_err(msg)
+        return None, open_databases
     if not isfile(dbs[0].dbase):
         dmenu_err("Database does not exist. Check path and filename.")
     elif cli and len(dbs) > 1:
@@ -187,6 +197,13 @@ def get_database(open_databases=None, cli=False, no_prompt=False, select=False, 
             return None, open_databases
     if dbs[0].kpo is None:
         dbs[0].kpo = get_entries(dbs[0], cli_mode=cli)
+    if clidb.dbase and not dbs_cfg and not cli and dbs[0].kpo is not None:
+        # -d against a config holding no databases at all. Remember it, the
+        # same way get_initial_db() remembers one picked from the GUI menu.
+        # Only once it has actually opened, so a bad path or password doesn't
+        # get written in. Not in cli mode: --show is the scripting interface
+        # and shouldn't rewrite config as a side effect.
+        save_database_to_config(dbs[0], kwargs.get('config'))
     for db_ in open_databases.values():
         db_.is_active = False
     if dbs[0].dbase not in open_databases:
@@ -204,20 +221,50 @@ def get_database(open_databases=None, cli=False, no_prompt=False, select=False, 
     return dbs[0], open_databases
 
 
-def get_initial_db():
+def save_database_to_config(db_, cfile=None):
+    """Record a database (and its keyfile) in the config file as database_1.
+
+    Only called for a config that has no databases in it yet, so database_1 is
+    always the free slot.
+
+    Args: db_ - DataBase object that has been opened successfully
+          cfile - config file path from --config, or None for the default
+
+    """
+    conf_file = expanduser(cfile) if cfile else keepmenu.CONF_FILE
+    if not os.access(conf_file, os.W_OK):
+        # A read-only config (a home-manager symlink into the Nix store, say)
+        # is deliberate. Saving is a convenience, so don't complain about it
+        # on every start.
+        return
+    options = {'database_1': db_.dbase}
+    if db_.kfile:
+        options['keyfile_1'] = db_.kfile
+    try:
+        keepmenu.save_config_options(conf_file, 'database', options)
+    except OSError as err:
+        dmenu_err(f"Could not save the database to {conf_file}: {err}")
+
+
+def get_initial_db(cfile=None):
     """Ask for and set initial database name and keyfile if not entered in
     config file. Create new database if desired.
 
+    Args: cfile - config file path from --config, or None for the default
+
     """
-    db_name = dmenu_select(0, "Enter path to existing "
-                              "Keepass database or to create new database. "
-                              "~/ for $HOME is ok")
+    # Prompts stay short: fuzzel is 30 characters wide by default, and a
+    # prompt wider than the launcher pushes the input box out of sight.
+    db_name = dmenu_select(0, "Database path")
     if not db_name:
         dmenu_err("No database entered. Try again.")
         return False
-    if not isfile(expanduser(db_name)):
-        create = dmenu_select(0, f"Create new database {db_name} (y/n)?")
-        if create.lower() == "y":
+    # Saved resolved, like -d, so a relative path doesn't depend on the
+    # directory keepmenu happened to be started from
+    db_name = realpath(expanduser(db_name))
+    if not isfile(db_name):
+        create = dmenu_select(2, "Create database?", "Yes\nNo")
+        if (create or "").lower().startswith("y"):
             kpo = create_db(db_name)
             if not kpo:
                 # create_db() has already reported why
@@ -227,13 +274,19 @@ def get_initial_db():
             dmenu_err("Database not created. Try again.")
             return False
     else:
-        keyfile_name = dmenu_select(0, "Enter path to keyfile (optional). ~/ for $HOME is ok")
+        keyfile_name = dmenu_select(0, "Keyfile (optional)")
+    if keyfile_name:
+        keyfile_name = realpath(expanduser(keyfile_name))
 
-    with open(keepmenu.CONF_FILE, 'w', encoding=keepmenu.ENC) as conf_file:
-        keepmenu.CONF.set('database', 'database_1', db_name)
-        if keyfile_name:
-            keepmenu.CONF.set('database', 'keyfile_1', keyfile_name)
-        keepmenu.CONF.write(conf_file)
+    conf_file = expanduser(cfile) if cfile else keepmenu.CONF_FILE
+    options = {'database_1': db_name}
+    if keyfile_name:
+        options['keyfile_1'] = keyfile_name
+    try:
+        keepmenu.save_config_options(conf_file, 'database', options)
+    except OSError as err:
+        dmenu_err(f"Could not save the database to {conf_file}: {err}")
+        return False
     return True
 
 
