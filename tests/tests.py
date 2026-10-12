@@ -147,10 +147,7 @@ class TestServer(unittest.TestCase):
         """
         port, key = KM.__main__.get_auth()
         self.assertIsInstance(port, int)
-        if sys.version_info.major < 3:
-            self.assertIsInstance(key, str)
-        else:
-            self.assertIsInstance(key, bytes)
+        self.assertIsInstance(key, bytes)
         port2, key2 = KM.__main__.get_auth()
         self.assertEqual(port2, port)
         self.assertEqual(key2, key)

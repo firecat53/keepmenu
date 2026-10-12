@@ -4,7 +4,7 @@
 
 ## Requirements
 
-1. Python 3.7+.
+1. Python 3.11+.
 2. [Pykeepass][1] >= 4.0.0. Install via pip or your distribution's package
    manager, if available.
 

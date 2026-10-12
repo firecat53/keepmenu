@@ -24,7 +24,7 @@ For full installation documention see the [installation docs][docs/install.md].
 
 ## Requirements
 
-1. Python 3.7+
+1. Python 3.11+
 2. [Pykeepass][1] >= 4.0.0
 
 Everything below is only needed for the interactive (launcher) mode. `--show`
