@@ -1,6 +1,7 @@
 """Read and copy Keepass database entries using dmenu style launchers
 
 """
+from collections import Counter
 from copy import copy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -12,6 +13,7 @@ import os
 from os.path import expanduser, isfile, realpath
 import re
 import shlex
+import struct
 import subprocess
 import sys
 from threading import Timer
@@ -36,6 +38,9 @@ class DataBase:
         totp - bool, TOTP mode
         kpo - PyKeePass object
         is_active - bool, is this the currently active database
+        name - string, display name shown instead of the path (from
+               database_name_n, or the KeePassXC public name when
+               use_public_name_n is set)
 
     """
     dbase: str = ""
@@ -45,10 +50,113 @@ class DataBase:
     totp: bool = False
     is_active: bool = False
     kpo: str = None  # Placeholder for pykeepass object
+    name: str = None
 
     def __post_init__(self):
         self.dbase = realpath(expanduser(self.dbase)) if self.dbase else ""
         self.kfile = realpath(expanduser(self.kfile)) if self.kfile else ""
+
+    @property
+    def display(self):
+        """Name to show in menus: the display name if set, else the path"""
+        return self.name or self.dbase
+
+
+# KDBX signature (sig1, sig2) and the outer header field holding the public
+# custom data. KeePassXC keeps the "Public Database Metadata" name there.
+KDBX_SIGNATURE = (0x9AA2D903, 0xB54BFB67)
+KDBX_HEADER_END = 0
+KDBX_HEADER_PUBLIC_CUSTOM_DATA = 12
+KDBX_HEADER_MAX_FIELD = 1024 * 1024
+VARIANT_STRING = 0x18
+PUBLIC_NAME_KEY = "KPXC_PUBLIC_NAME"
+
+
+def _parse_variant_strings(data):
+    """Return the string items of a KDBX 4 VariantDictionary as a dict.
+
+    Other value types are skipped. A malformed dictionary returns whatever was
+    read before the error.
+
+    """
+    items = {}
+    pos = 2  # skip the 2 byte version
+    try:
+        while pos < len(data):
+            vtype = data[pos]
+            pos += 1
+            if vtype == 0:
+                break
+            (klen,) = struct.unpack_from('<I', data, pos)
+            pos += 4
+            key = data[pos:pos + klen].decode('utf-8', errors='replace')
+            pos += klen
+            (vlen,) = struct.unpack_from('<I', data, pos)
+            pos += 4
+            value = data[pos:pos + vlen]
+            pos += vlen
+            if vtype == VARIANT_STRING:
+                items[key] = value.decode('utf-8', errors='replace')
+    except (struct.error, IndexError):
+        pass
+    return items
+
+
+def read_public_name(path):
+    """Read the KeePassXC public database name (Database settings >
+    Public Database Metadata) from a .kdbx file.
+
+    It lives unencrypted in the KDBX 4 outer header, so no password is needed
+    and it can be shown before the database is unlocked. pykeepass leaves that
+    header field as raw bytes, so it is parsed here.
+
+    Returns: string, or None if the file can't be read, isn't KDBX 4 or has no
+             public name
+
+    """
+    try:
+        with open(path, 'rb') as fh:
+            head = fh.read(12)
+            if len(head) < 12:
+                return None
+            sig1, sig2, _minor, major = struct.unpack('<IIHH', head)
+            if (sig1, sig2) != KDBX_SIGNATURE or major < 4:
+                return None
+            while True:
+                field = fh.read(5)
+                if len(field) < 5:
+                    return None
+                fid, size = struct.unpack('<BI', field)
+                if fid == KDBX_HEADER_END or size > KDBX_HEADER_MAX_FIELD:
+                    return None
+                data = fh.read(size)
+                if len(data) < size:
+                    return None
+                if fid == KDBX_HEADER_PUBLIC_CUSTOM_DATA:
+                    return _parse_variant_strings(data).get(PUBLIC_NAME_KEY) or None
+    except OSError:
+        return None
+
+
+def database_menu_labels(dbs):
+    """Labels for the database selection menu, one per DataBase in dbs.
+
+    Databases are shown by display name. If two of them end up with the same
+    label, the named ones get their path appended so they can be told apart.
+
+    """
+    counts = Counter(i.display for i in dbs)
+    home = expanduser("~")
+    labels = []
+    for db_ in dbs:
+        if db_.name and counts[db_.display] > 1:
+            path = db_.dbase
+            if path.startswith(home + os.sep):
+                path = "~" + path[len(home):]
+            labels.append(f"{db_.name} ({path})")
+        else:
+            labels.append(db_.display)
+    return labels
 
 
 DATABASE_KEY = re.compile(r'database_[^_]+')
@@ -106,6 +214,15 @@ def get_databases():
             pass
         if dbn:
             dbo = DataBase(dbase=dbn, kfile=keyfile, pword=passw, atype=autotype)
+            dbo.name = args_dict.get(f'database_name_{idx}') or None
+            if dbo.name is None:
+                try:
+                    use_public = keepmenu.CONF.getboolean('database', f'use_public_name_{idx}',
+                                                          fallback=False)
+                except ValueError:
+                    use_public = False
+                if use_public:
+                    dbo.name = read_public_name(dbo.dbase)
             dbs.append(dbo)
 
     return dbs
@@ -175,11 +292,19 @@ def get_database(open_databases=None, cli=False, no_prompt=False, select=False, 
                 dbs.append(copy(db_))
     else:
         dbs = dbs_cfg
+    # Display names always come from the current config, so databases that
+    # were opened via -d, or before a config change, pick them up too
+    cfg_names = {i.dbase: i.name for i in dbs_cfg}
+    for db_ in dbs:
+        if db_.dbase in cfg_names:
+            db_.name = cfg_names[db_.dbase]
     if (len(dbs) > 1 or select) and not cli:
-        inp = "\n".join(i.dbase for i in dbs) + "\nCreate Database"
+        labels = database_menu_labels(dbs)
+        inp = "\n".join(labels) + "\nCreate Database"
         sel = dmenu_select(len(dbs) + 1, "Select Database", inp=inp)
-        dbs = [i for i in dbs if i.dbase == sel]
-        if sel == "Create Database":
+        # Typing a path still works, as it did before display names
+        dbs = [db_ for label, db_ in zip(labels, dbs) if sel in (label, db_.dbase)][:1]
+        if not dbs and sel == "Create Database":
             kpo = create_db()
             if not kpo:
                 return None, open_databases
@@ -222,6 +347,7 @@ def get_database(open_databases=None, cli=False, no_prompt=False, select=False, 
         db_.is_active = False
     if dbs[0].dbase not in open_databases:
         open_databases[dbs[0].dbase] = copy(dbs[0])
+    open_databases[dbs[0].dbase].name = dbs[0].name
     if dbs[0].dbase in dbs_cfg_n:
         db_cfg_atype = dbs_cfg[dbs_cfg_n.index(dbs[0].dbase)].atype
         open_databases[dbs[0].dbase].atype = db_cfg_atype
@@ -540,7 +666,8 @@ class DmenuRunner(Process):
         if totp_mode:
             sel = self.menu_view_type_individual_entries(hid_groups, totp_only=True)
         else:
-            sel = view_all_entries(list(options), filtered_entries, self.database.dbase)
+            sel = view_all_entries(list(options), filtered_entries, self.database.dbase,
+                                   self.database.name)
 
         if not sel:
             return
@@ -569,7 +696,8 @@ class DmenuRunner(Process):
             i for i in self.database.kpo.entries if not
             any(j in "/".join(i.path[:-1]) for j in hid_groups) and (get_otp_url(i) if totp_only else True)
         ]
-        sel = view_all_entries(options, filtered_entries, self.database.dbase)
+        sel = view_all_entries(options, filtered_entries, self.database.dbase,
+                               self.database.name)
         try:
             entry = filtered_entries[int(sel.split('-', 1)[0])]
         except (ValueError, TypeError):
@@ -591,7 +719,7 @@ class DmenuRunner(Process):
 
         """
         options = []
-        sel = view_all_entries(options, entries, self.database.dbase)
+        sel = view_all_entries(options, entries, self.database.dbase, self.database.name)
         try:
             entry = entries[int(sel.split('-', 1)[0])]
         except (ValueError, TypeError):

@@ -14,10 +14,15 @@
 
 [database]
 # database_1 = <path/to/database> ~ for $HOME is ok
+# # Display name shown instead of the path
+# database_name_1 = Personal
 # keyfile_1 = <path/to/keyfile>
 # password_1 = database password  **INSECURE**
 # password_cmd_2 = <command to generate db password>
 # database_2 = <path/to/second database>
+# # Use the KeePassXC public database name (Database Settings > Public
+# # Database Metadata) as display name. database_name_2 takes precedence.
+# use_public_name_2 = True
 # # Override autotype default from database_2
 # autotype_default_2 = {TOTP}{ENTER}
 # etc....

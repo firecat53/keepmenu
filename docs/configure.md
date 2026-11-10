@@ -38,6 +38,8 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
 | `[dmenu_passphrase]`      | `obscure`                    | `False`                                 |                                                              |
 |                           | `obscure_color`              | `#222222`                               | Only applicable to dmenu                                     |
 | `[database]`              | `database_n`                 | None                                    | `n` is any integer                                           |
+|                           | `database_name_n`            | None                                    | Display name shown instead of the path                       |
+|                           | `use_public_name_n`          | `False`                                 | Use the KeePassXC public database name as display name       |
 |                           | `keyfile_n`                  | None                                    |                                                              |
 |                           | `password_n`                 | None                                    |                                                              |
 |                           | `password_cmd_n`             | None                                    |                                                              |
@@ -78,8 +80,10 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
 
     [database]
     database_1 = ~/docs/Passwords.kdbx
+    database_name_1 = Personal
     keyfile_1 = /mnt/usb/keyfile
     database_2 = ~/docs/totp_db.kdbx
+    use_public_name_2 = True
     autotype_default_2 = {TOTP}{ENTER}
     password_cmd_2 = gpg -qd ~/.pass.gpg
 
@@ -118,7 +122,18 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
     Minimal Punc = upper lower digits "punc min"
     Router Site = upper digits
 
-1. Add your database(s) and keyfile(s)
+1. Add your database(s) and keyfile(s). Optionally give each database a
+   display name, shown in the database selection menu and the `Entries:`
+   prompt instead of its path:
+   - `database_name_n = <name>` sets it directly.
+   - `use_public_name_n = True` uses the name set in KeePassXC under Database
+     Settings > General > Public Database Metadata (KeePassXC 2.7.10+, KDBX 4
+     only). It is stored unencrypted in the database file, so it can be shown
+     before the database is unlocked. `database_name_n` takes precedence.
+
+   If two databases end up with the same name, the selection menu adds the
+   path to tell them apart. With a display name, `title_path` only controls
+   whether the name is shown (`False`/`0` hides it); it is never truncated.
 2. Adjust `pw_cache_period_min` if desired. Default is 6 hours (360 min).
 3. Set the dmenu_command to the desired application, including configuration
    options.

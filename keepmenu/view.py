@@ -9,8 +9,10 @@ from keepmenu.menu import dmenu_select
 from keepmenu.totp import gen_otp, get_otp_url, TOTP_FIELDS
 
 
-def view_all_entries(options, kp_entries, dbname):
+def view_all_entries(options, kp_entries, dbname, display_name=None):
     """Generate numbered list of all Keepass entries and open with dmenu.
+
+    display_name - shown in the prompt instead of the database path if set
 
     Returns: dmenu selection
 
@@ -31,13 +33,13 @@ def view_all_entries(options, kp_entries, dbname):
     else:
         entries_s = kps
 
-    prompt = f"Entries: {dbname}"
+    prompt = f"Entries: {display_name or dbname}"
     if keepmenu.CONF.has_option('dmenu', 'title_path'):
         try:
             max_length = keepmenu.CONF.getboolean('dmenu', 'title_path')
         except ValueError:
             max_length = keepmenu.CONF.getint('dmenu', 'title_path')
-        prompt = generate_prompt(max_length, dbname)
+        prompt = generate_prompt(max_length, dbname, display_name)
 
     return dmenu_select(min(keepmenu.MAX_LEN, len(options) + len(kp_entries)),
                         inp=entries_s,
@@ -107,7 +109,7 @@ def view_notes(notes):
     return sel
 
 
-def generate_prompt(max_length, dbname):
+def generate_prompt(max_length, dbname, display_name=None):
     """Generate a prompt in the format "Entries: {}", with "{}" replaced by
     the full path to the database truncated to a certain length
 
@@ -116,9 +118,14 @@ def generate_prompt(max_length, dbname):
 
     dbname: the full path to the database
 
+    display_name: if set, shown in full instead of the path. max_length only
+    decides whether it is shown at all.
+
     """
     if max_length is False or max_length == 0:
         return "Entries"
+    if display_name:
+        return f"Entries: {display_name}"
     if max_length is True or max_length is None:
         return f"Entries: {dbname}"
     # Truncate the path so that it is no more than max_length
