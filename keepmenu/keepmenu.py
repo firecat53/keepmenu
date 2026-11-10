@@ -10,6 +10,7 @@ from getpass import getpass
 from multiprocessing import Process
 import os
 from os.path import expanduser, isfile, realpath
+import re
 import shlex
 import subprocess
 import sys
@@ -50,6 +51,19 @@ class DataBase:
         self.kfile = realpath(expanduser(self.kfile)) if self.kfile else ""
 
 
+DATABASE_KEY = re.compile(r'database_[^_]+')
+
+
+def is_database_key(key):
+    """True for the database_n keys in [database]
+
+    A plain prefix match would also pick up any other option whose name starts
+    with 'database' and read its value as a database path.
+
+    """
+    return DATABASE_KEY.fullmatch(key) is not None
+
+
 def get_databases():
     """Read databases from config
 
@@ -60,7 +74,7 @@ def get_databases():
     """
     dargs = keepmenu.CONF.items('database')
     args_dict = dict(dargs)
-    dbases = [i for i in args_dict if i.startswith('database')]
+    dbases = [i for i in args_dict if is_database_key(i)]
     dbs = []
     for dbase in dbases:
         dbn = args_dict[dbase]
@@ -422,7 +436,7 @@ class DmenuRunner(Process):
         except Exception:
             dargs = {}
         # find all database_N entries
-        db_keys = [k for k in dargs if k.startswith('database_')]
+        db_keys = [k for k in dargs if is_database_key(k)]
         for k in db_keys:
             idx = k.rsplit('_', 1)[-1]
             db_path = realpath(expanduser(dargs[k]))

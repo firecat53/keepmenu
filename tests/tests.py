@@ -429,6 +429,15 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(db1.__dict__, databases[0].__dict__)
         self.assertEqual(db2.__dict__, databases[1].__dict__)
 
+    def test_is_database_key(self):
+        """Only database_n keys are databases, not other database* options
+
+        """
+        for key in ('database_1', 'database_12', 'database_work'):
+            self.assertTrue(KM.keepmenu.is_database_key(key), key)
+        for key in ('database', 'database_', 'database_extra_1', 'databases_1', 'keyfile_1'):
+            self.assertFalse(KM.keepmenu.is_database_key(key), key)
+
     def test_open_database(self):
         """Test database opens properly
 
