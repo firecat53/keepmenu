@@ -87,6 +87,8 @@ Alternatively you can specify the file path to your config.ini using the -c/--co
 | `[dmenu_passphrase]`      | `obscure`                    | `False`                                 |
 |                           | `obscure_color`              | `#222222`                               |
 | `[database]`              | `database_n`                 | None                                    |
+|                           | `database_name_n`            | None                                    |
+|                           | `use_public_name_n`          | `False`                                 |
 |                           | `keyfile_n`                  | None                                    |
 |                           | `password_n`                 | None                                    |
 |                           | `password_cmd_n`             | None                                    |

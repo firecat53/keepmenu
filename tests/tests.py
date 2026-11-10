@@ -403,6 +403,13 @@ class TestFunctions(unittest.TestCase):
                         "Entries")
         self.assertTrue(KM.view.generate_prompt(False, dbname) ==
                         "Entries")
+        # A display name is shown whole; title_path only switches it off
+        self.assertEqual(KM.view.generate_prompt(10, dbname, "My Passwords"),
+                         "Entries: My Passwords")
+        self.assertEqual(KM.view.generate_prompt(True, dbname, "My Passwords"),
+                         "Entries: My Passwords")
+        self.assertEqual(KM.view.generate_prompt(0, dbname, "My Passwords"), "Entries")
+        self.assertEqual(KM.view.generate_prompt(False, dbname, "My Passwords"), "Entries")
 
     def test_get_databases(self):
         """Test reading database information from config
@@ -428,6 +435,127 @@ class TestFunctions(unittest.TestCase):
         db2 = KM.keepmenu.DataBase(dbase=db_name_2, atype='{TOTP}{ENTER}')
         self.assertEqual(db1.__dict__, databases[0].__dict__)
         self.assertEqual(db2.__dict__, databases[1].__dict__)
+
+    def test_is_database_key(self):
+        """Only database_n keys are databases, not other database* options
+
+        """
+        for key in ('database_1', 'database_12', 'database_work'):
+            self.assertTrue(KM.keepmenu.is_database_key(key), key)
+        for key in ('database', 'database_', 'database_extra_1', 'databases_1', 'keyfile_1'):
+            self.assertFalse(KM.keepmenu.is_database_key(key), key)
+
+    @staticmethod
+    def _kdbx_header(major=4, public=None):
+        """Bytes of a KDBX outer header, optionally with public custom data
+        holding a VariantDictionary of string items. Only the header is
+        written: read_public_name() never reads past it.
+
+        """
+        import struct  # pylint: disable=import-outside-toplevel
+        head = struct.pack('<IIHH', 0x9AA2D903, 0xB54BFB67, 1, major)
+        if public is not None:
+            vdict = b'\x00\x01'
+            for key, val in public.items():
+                key, val = key.encode(), val.encode()
+                vdict += (b'\x18' + struct.pack('<I', len(key)) + key +
+                          struct.pack('<I', len(val)) + val)
+            vdict += b'\x00'
+            head += struct.pack('<BI', 12, len(vdict)) + vdict
+        return head + struct.pack('<BI', 0, 4) + b'\r\n\r\n'
+
+    def _write(self, name, data):
+        path = os.path.join(self.tmpdir, name)
+        with open(path, 'wb') as fh:
+            fh.write(data)
+        return path
+
+    def test_read_public_name(self):
+        """KeePassXC public database name is read from the outer header
+
+        """
+        read = KM.keepmenu.read_public_name
+        named = self._write("named.kdbx", self._kdbx_header(
+            public={"KPXC_PUBLIC_COLOR": "#ff0000", "KPXC_PUBLIC_NAME": "Wörk"}))
+        self.assertEqual(read(named), "Wörk")
+        other = self._write("other.kdbx", self._kdbx_header(public={"KPXC_PUBLIC_COLOR": "#ff0000"}))
+        self.assertIsNone(read(other))
+        empty = self._write("empty.kdbx", self._kdbx_header(public={"KPXC_PUBLIC_NAME": ""}))
+        self.assertIsNone(read(empty))
+        self.assertIsNone(read(self._write("kdbx3.kdbx", self._kdbx_header(major=3))))
+        self.assertIsNone(read(self._write("trunc.kdbx", self._kdbx_header(
+            public={"KPXC_PUBLIC_NAME": "Work"})[:30])))
+        self.assertIsNone(read(self._write("junk.kdbx", b"not a database")))
+        self.assertIsNone(read(os.path.join(self.tmpdir, "missing.kdbx")))
+        self.assertIsNone(read("tests/test.kdbx"))
+
+    def test_get_databases_display_names(self):
+        """database_name_n wins over use_public_name_n, and neither is
+        mistaken for a database
+
+        """
+        public = self._write("public.kdbx", self._kdbx_header(public={"KPXC_PUBLIC_NAME": "From KeePassXC"}))
+        plain = self._write("plain.kdbx", self._kdbx_header())
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        KM.reload_config()
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', public)
+            KM.CONF.set('database', 'database_name_1', 'Explicit')
+            KM.CONF.set('database', 'use_public_name_1', 'True')
+            KM.CONF.set('database', 'database_2', public)
+            KM.CONF.set('database', 'use_public_name_2', 'yes')
+            KM.CONF.set('database', 'database_3', public)
+            KM.CONF.set('database', 'database_4', plain)
+            KM.CONF.set('database', 'use_public_name_4', 'True')
+            KM.CONF.set('database', 'database_5', public)
+            KM.CONF.set('database', 'use_public_name_5', 'nonsense')
+            KM.CONF.write(conf_file)
+        dbs = KM.keepmenu.get_databases()
+        self.assertEqual([i.dbase for i in dbs], [public, public, public, plain, public])
+        self.assertEqual([i.name for i in dbs], ['Explicit', 'From KeePassXC', None, None, None])
+        self.assertEqual([i.display for i in dbs],
+                         ['Explicit', 'From KeePassXC', public, plain, public])
+
+    def test_database_menu_labels(self):
+        """Selection menu shows names, adding the path only on a clash
+
+        """
+        home = os.path.expanduser("~")
+        dbs = [KM.keepmenu.DataBase(dbase="/a.kdbx", name="Work"),
+               KM.keepmenu.DataBase(dbase=f"{home}/b.kdbx", name="Work"),
+               KM.keepmenu.DataBase(dbase="/c.kdbx", name="Home"),
+               KM.keepmenu.DataBase(dbase="/d.kdbx")]
+        self.assertEqual(KM.keepmenu.database_menu_labels(dbs),
+                         ["Work (/a.kdbx)", "Work (~/b.kdbx)", "Home", "/d.kdbx"])
+
+    def test_select_database_by_name(self):
+        """The selection menu lists display names and opens the chosen one
+
+        """
+        db_name = os.path.join(self.tmpdir, "test.kdbx")
+        copyfile("tests/test.kdbx", db_name)
+        other = self._write("other.kdbx", self._kdbx_header())
+        copyfile("tests/keepmenu-config.ini", KM.CONF_FILE)
+        KM.reload_config()
+        with open(KM.CONF_FILE, 'w', encoding=KM.ENC) as conf_file:
+            KM.CONF.set('database', 'database_1', db_name)
+            KM.CONF.set('database', 'database_name_1', 'Main')
+            KM.CONF.set('database', 'database_2', other)
+            KM.CONF.write(conf_file)
+        with mock.patch.object(KM.keepmenu, 'dmenu_select', return_value="Main") as sel:
+            database, open_dbs = KM.keepmenu.get_database()
+        self.assertEqual(sel.call_args.kwargs['inp'], f"Main\n{other}\nCreate Database")
+        self.assertEqual(database.dbase, db_name)
+        self.assertEqual(database.name, "Main")
+        self.assertIsInstance(database.kpo, PyKeePass)
+        self.assertEqual(open_dbs[db_name].name, "Main")
+        # Typing the path still selects it
+        with mock.patch.object(KM.keepmenu, 'dmenu_select', return_value=db_name):
+            database, _ = KM.keepmenu.get_database()
+        self.assertEqual(database.dbase, db_name)
+        # A database opened with -d picks up its configured name
+        database, _ = KM.keepmenu.get_database(database=db_name)
+        self.assertEqual(database.name, "Main")
 
     def test_open_database(self):
         """Test database opens properly
